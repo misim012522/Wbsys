@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@yield('title', 'QueueLess') — {{ config('app.name') }}</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=dm-sans:400,500,600,700" rel="stylesheet" />
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endif
+    <style>
+        :root { --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
+        :root { --tenant-primary: {{ $tenantTheme['primary_color'] }}; }
+        .tenant-primary { color: var(--tenant-primary); }
+        .tenant-primary-bg { background-color: var(--tenant-primary); }
+        .tenant-primary-bg:hover { filter: brightness(0.95); }
+    </style>
+</head>
+<body 
+    class="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased"
+    @if(session('success')) data-success-message="{{ session('success') }}" @endif
+    @if(session('error')) data-error-message="{{ session('error') }}" @endif
+    @if(session('info')) data-info-message="{{ session('info') }}" @endif
+    @if(session('status')) data-status-message="{{ session('status') }}" @endif
+>
+    <!-- Toast Container (Sonner will render here) -->
+    <div id="toast-container"></div>
+
+    <header class="bg-white border-b border-slate-200 shadow-sm">
+        <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            @php $brandName = $tenantTheme['app_name']; $brandLogo = $tenantTheme['logo_url']; @endphp
+            @auth
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                        @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                        {{ $brandName }}
+                    </a>
+                @else
+                    <a href="{{ route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                        @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                        {{ $brandName }}
+                    </a>
+                @endif
+            @else
+                <a href="{{ route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                    {{ $brandName }}
+                </a>
+            @endauth
+            <div class="flex items-center gap-4">
+                @auth
+                    <a href="{{ route('dashboard') }}" class="text-sm text-slate-600 hover:text-slate-900">{{ auth()->user()->isAdmin() ? 'Admin' : 'My queue' }}</a>
+                    <span class="text-sm text-slate-500">{{ auth()->user()->name }}</span>
+                    <a href="{{ route('password.request') }}" class="text-sm text-slate-500 hover:text-slate-700">Reset password</a>
+                    <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
+                        @csrf
+                        <button 
+                            type="submit" 
+                            class="text-sm text-slate-600 hover:text-slate-900"
+                            onclick="window.showToast.success('Logged out successfully. Redirecting...'); setTimeout(() => document.getElementById('logout-form').submit(), 500);"
+                        >
+                            Log out
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
+                    <a href="{{ route('register') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Create account</a>
+                @endauth
+            </div>
+        </nav>
+    </header>
+
+    <!-- Legacy alert divs hidden - replaced by toast notifications -->
+    <div style="display: none;">
+        @if (session('success'))
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-lg text-sm">{{ session('success') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded-lg text-sm">{{ session('error') }}</div>
+        @endif
+        @if (session('info'))
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-lg text-sm">{{ session('info') }}</div>
+        @endif
+        @if (session('status'))
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-lg text-sm">{{ session('status') }}</div>
+        @endif
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        @yield('content')
+    </div>
+</body>
+</html>
