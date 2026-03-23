@@ -1,13 +1,6 @@
 import './bootstrap';
-import { Toaster } from 'sonner';
 import { displaySessionToasts, setupAxiosToastInterceptor } from './toastNotifications';
 import { setupFocusHandling, realtimeRefresh, setupQueueRefresh, setupAppointmentsRefresh, setupListRefresh } from './realtimeRefresh';
-
-// Initialize Toaster
-new Toaster({
-    position: 'top-right',
-    richColors: true,
-});
 
 // Setup axios interceptor for automatic toast notifications
 setupAxiosToastInterceptor(window.axios);

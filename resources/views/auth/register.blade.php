@@ -5,9 +5,7 @@
 @section('content')
 <div class="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 px-4 py-12 sm:px-6">
     <div class="w-full max-w-[440px]">
-        {{-- Card --}}
         <div class="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 sm:p-10">
-            {{-- Brand --}}
             <div class="mb-6 text-center">
                 <a href="{{ route('home') }}" class="inline-flex items-center gap-2 text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 rounded-lg">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
@@ -19,7 +17,7 @@
             </div>
 
             <h1 class="text-2xl font-bold text-slate-800">Create your account</h1>
-            <p class="mt-1 text-sm text-slate-500">For office staff. Select your office to manage the queue, QR code, and appointments.</p>
+            <p class="mt-1 text-sm text-slate-500">For tenant staff. Select your office to manage queues, QR codes, and appointments.</p>
 
             <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-4">
                 @csrf
@@ -41,7 +39,7 @@
                     <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Email <span class="text-red-500">*</span></label>
                     <input type="email" name="email" id="email" value="{{ old('email') }}" required
                         class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                        placeholder="you@school.edu">
+                        placeholder="you@company.com">
                     @error('email')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
                 </div>
                 <div>
@@ -56,14 +54,14 @@
                         <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Password <span class="text-red-500">*</span></label>
                         <input type="password" name="password" id="password" required
                             class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            placeholder="••••••••">
+                            placeholder="Enter password">
                         @error('password')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                     <div>
                         <label for="password_confirmation" class="block text-sm font-medium text-slate-700 mb-1.5">Confirm <span class="text-red-500">*</span></label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
                             class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            placeholder="••••••••">
+                            placeholder="Confirm password">
                     </div>
                 </div>
                 <div>
@@ -91,7 +89,7 @@
             </p>
         </div>
 
-        <p class="mt-6 text-center text-xs text-slate-400">QueueLess — School office queue & appointments</p>
+        <p class="mt-6 text-center text-xs text-slate-400">QueueLess - Queue and appointment management</p>
     </div>
 </div>
 @endsection

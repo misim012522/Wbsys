@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesCentralConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Module extends Model
 {
+    use UsesCentralConnection;
+
     protected $fillable = ['name', 'slug', 'description', 'price_monthly', 'is_active'];
 
     protected function casts(): array

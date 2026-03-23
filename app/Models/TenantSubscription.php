@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesCentralConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TenantSubscription extends Model
 {
+    use UsesCentralConnection;
+
     protected $fillable = ['tenant_id', 'plan_id', 'starts_at', 'ends_at', 'status'];
 
     protected function casts(): array

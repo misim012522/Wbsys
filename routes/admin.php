@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminAccountSettingsController;
 use App\Http\Controllers\CustomizationController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,8 @@ Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/offices/{office}/edit', [AdminController::class, 'editOffice'])->name('offices.edit')->middleware('tenant.resource:office');
     Route::put('/offices/{office}', [AdminController::class, 'updateOffice'])->name('offices.update')->middleware('tenant.resource:office');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
+    Route::get('/settings', [AdminAccountSettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [AdminAccountSettingsController::class, 'update'])->name('settings.update');
     Route::get('/customization', [CustomizationController::class, 'index'])->name('customization.index');
     Route::put('/customization', [CustomizationController::class, 'update'])->name('customization.update');
     Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');

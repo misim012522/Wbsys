@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Offices')
+@section('title', 'Queue Services')
 
 @section('content')
 <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">School Offices</h1>
+    <h1 class="text-2xl font-bold text-slate-800">Queue Services</h1>
     <a href="{{ route('student.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">My Dashboard</a>
 </div>
 
-<p class="text-slate-600 mb-6">Select an office to get a queue number or book an appointment.</p>
+<p class="text-slate-600 mb-6">Use your workspace services to get a queue number, book an appointment, or monitor the live queue.</p>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     @foreach($offices as $office)
@@ -33,6 +33,6 @@
 </div>
 
 @if($offices->isEmpty())
-    <p class="text-slate-500 text-center py-8">No offices available.</p>
+    <p class="text-slate-500 text-center py-8">No workspace services are available yet.</p>
 @endif
 @endsection

@@ -29,6 +29,9 @@ Route::post('/o/{slug}/queue', [PublicController::class, 'getQueue'])->name('que
 Route::get('/t/{referenceCode}', [PublicController::class, 'track'])->name('queue.track');
 Route::post('/o/{slug}/book', [PublicController::class, 'bookAppointment'])->name('queue.book');
 
+// Central and tenant app entry points
+require __DIR__.'/central.php';
+require __DIR__.'/tenant.php';
 /*
 |--------------------------------------------------------------------------
 | Guest Auth (login, register, password reset)
@@ -60,10 +63,14 @@ require __DIR__.'/api.php';
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'tenant.context'])->group(function () {
+Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+
+Route::middleware(['tenant.required', 'auth', 'tenant.context'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
+    require __DIR__.'/student.php';
 });

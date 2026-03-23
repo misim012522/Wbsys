@@ -7,6 +7,16 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $hasLegacySharedData = DB::table('offices')->whereNull('tenant_id')->exists()
+            || DB::table('users')->whereNull('tenant_id')->whereNotNull('office_id')->exists()
+            || DB::table('queue_entries')->whereNull('tenant_id')->exists()
+            || DB::table('appointments')->whereNull('tenant_id')->exists()
+            || DB::table('activity_logs')->whereNull('tenant_id')->exists();
+
+        if (! $hasLegacySharedData) {
+            return;
+        }
+
         $planId = DB::table('plans')->where('slug', 'pro')->value('id');
         if (! $planId) {
             $planId = DB::table('plans')->insertGetId([

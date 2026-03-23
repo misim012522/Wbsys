@@ -12,14 +12,14 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         $tenant = Tenant::where('slug', 'default')->first();
-        $admin = User::where('username', 'sysadmin')->orWhere('role', User::ROLE_ADMIN)->first();
+        $admin = User::where('username', 'admin')->orWhere('role', User::ROLE_ADMIN)->first();
 
         if ($admin) {
             $admin->update([
-                'name' => $admin->name ?: 'System Administrator',
-                'username' => 'sysadmin',
+                'name' => $admin->name ?: 'Administrator',
+                'username' => 'admin',
                 'email' => $admin->email ?: 'admin@queueless.local',
-                'password' => Hash::make('sysadmin'),
+                'password' => Hash::make('admin'),
                 'role' => User::ROLE_ADMIN,
                 'tenant_id' => $tenant?->id,
                 'email_verified_at' => $admin->email_verified_at ?? now(),
@@ -28,10 +28,10 @@ class AdminSeeder extends Seeder
         }
 
         User::create([
-            'name' => 'System Administrator',
-            'username' => 'sysadmin',
+            'name' => 'Administrator',
+            'username' => 'admin',
             'email' => 'admin@queueless.local',
-            'password' => Hash::make('sysadmin'),
+            'password' => Hash::make('admin'),
             'role' => User::ROLE_ADMIN,
             'tenant_id' => $tenant?->id,
             'email_verified_at' => now(),

@@ -13,9 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenant::class]);
         $middleware->alias([
+            'central.user' => \App\Http\Middleware\EnsureCentralUser::class,
+            'central.public' => \App\Http\Middleware\EnsureNotTenantWorkspace::class,
             'role' => \App\Http\Middleware\EnsureRole::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'tenant.context' => \App\Http\Middleware\EnsureTenantContext::class,
+            'tenant.required' => \App\Http\Middleware\EnsureTenantResolved::class,
             'tenant.resource' => \App\Http\Middleware\EnsureResourceBelongsToTenant::class,
         ]);
     })

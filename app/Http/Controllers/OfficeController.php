@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
+use App\Services\TenantPlanEnforcer;
 use App\Services\QrCodeService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,8 +14,14 @@ use Symfony\Component\HttpFoundation\Response;
 class OfficeController extends Controller
 {
     public function __construct(
-        private QrCodeService $qrCodeService
+        private QrCodeService $qrCodeService,
+        private TenantPlanEnforcer $tenantPlanEnforcer,
     ) {}
+
+    private function currentTenant(): ?\App\Models\Tenant
+    {
+        return app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
+    }
 
     public function dashboard()
     {
@@ -223,6 +230,10 @@ class OfficeController extends Controller
     /** Daily report for the officer's office only. */
     public function reports(Request $request)
     {
+        if (! $this->tenantPlanEnforcer->hasFeature($this->currentTenant(), 'reports')) {
+            return redirect()->route('office.dashboard')->with('error', 'Reports are not available on your current subscription plan.');
+        }
+
         $office = auth()->user()->office;
         if (! $office) {
             return redirect()->route('office.dashboard')->with('error', 'No office assigned.');
@@ -236,6 +247,10 @@ class OfficeController extends Controller
     /** Generate and download report (CSV or PDF). */
     public function downloadReport(Request $request)
     {
+        if (! $this->tenantPlanEnforcer->hasFeature($this->currentTenant(), 'reports')) {
+            return redirect()->route('office.dashboard')->with('error', 'Reports are not available on your current subscription plan.');
+        }
+
         $office = auth()->user()->office;
         if (! $office) {
             return redirect()->route('office.dashboard')->with('error', 'No office assigned.');

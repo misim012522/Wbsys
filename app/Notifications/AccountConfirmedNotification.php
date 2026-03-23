@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Models\User;
+use App\Support\TenantUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -34,13 +36,26 @@ class AccountConfirmedNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $loginUrl = route('login');
-        return (new MailMessage)
+        $tenant = $notifiable->tenant;
+        $loginUrl = TenantUrl::login($tenant);
+        $roleLabel = $notifiable->role === User::ROLE_STUDENT ? 'tenant account' : 'account';
+        $usageLine = $notifiable->role === User::ROLE_STUDENT
+            ? 'You can now log in and use your tenant workspace.'
+            : 'You can now log in and manage your office queue and appointments.';
+
+        $mail = (new MailMessage)
             ->subject('Your account has been confirmed')
             ->greeting('Hello ' . ($notifiable->name ?: 'there') . ',')
-            ->line('Your account has been confirmed by an administrator. You can now log in to manage your office queue and appointments.')
+            ->line("Your {$roleLabel} has been confirmed by an administrator.")
+            ->line($usageLine)
             ->action('Log in', $loginUrl)
             ->line('If you did not request an account, you can ignore this email.');
+
+        if ($tenant) {
+            $mail->line('Tenant: ' . $tenant->name);
+        }
+
+        return $mail;
     }
 
     /**

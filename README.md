@@ -59,6 +59,98 @@ Then open http://127.0.0.1:8000
 4. Log in → you’ll see your office queue, **QR code**, and reports. Display or print the QR so visitors can scan.
 5. End users do not log in; they scan the office QR code.
 
+## Tenant App
+
+- **Tenant app**: for end users (public). Entrypoint: `/tenant` (proxies to the public office pages like `/o/{slug}` and tracker `/t/{referenceCode}`).
+
+You can continue to use the existing routes (`/admin`, `/o/{slug}`, `/t/{referenceCode}`) — `/tenant` is a lightweight entrypoint that groups the public experience.
+
+Local subdomain / hosting notes
+
+- The app supports tenant resolution by domain or subdomain via the `ResolveTenant` middleware (it binds `current_tenant` / `current_tenant_id`). To test subdomains locally, add entries in your `hosts` file like:
+
+```text
+127.0.0.1    default.localhost
+127.0.0.1    acme.localhost
+```
+
+Then point your browser to `http://acme.localhost:8000/o/registrar` (or use the `subdomain` field on the tenant record). For more realistic hostnames, map `acme.yourapp.test` to `127.0.0.1`.
+
+- When using subdomains, ensure your web server or local PHP server accepts the host header (the built-in `php artisan serve` does). 
+
+ResolveTenant behavior
+
+- Middleware: `app/Http/Middleware/ResolveTenant.php` resolves `Tenant::active()` by `domain` first or by the first subdomain segment and binds `current_tenant` and `current_tenant_id` to the container. Authenticated users also set the tenant via `EnsureTenantContext`.
+
+Deployment & subdomain DNS examples
+
+Below are common deployment patterns and example configs you can adapt. These aim to host a single Laravel application that serves tenant subdomains.
+
+1) Wildcard subdomains (recommended for many tenants)
+
+- DNS: create a wildcard A record for your domain pointing to your server:
+
+```
+*.example.com    A    203.0.113.12
+example.com      A    203.0.113.12
+```
+
+- Nginx (example): single site serving the main app and tenant hosts. Use `server_name` with the apex domain and a wildcard.
+
+```
+server {
+	listen 80;
+server_name example.com *.example.com;
+	root /var/www/yourapp/public;
+
+	index index.php;
+
+	location / {
+		try_files $uri $uri/ /index.php?$query_string;
+	}
+
+	location ~ \.php$ {
+		fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+		fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+		include fastcgi_params;
+	}
+}
+```
+
+- SSL: For wildcard certificates use Let's Encrypt with DNS challenge (ACME) or purchase a wildcard cert. Example: `certbot -d example.com -d "*.example.com" --manual --preferred-challenges dns`.
+
+2) Session / cookie considerations
+
+- If you use subdomains and want cross-subdomain authentication (single sign-on across subdomains), set `SESSION_DOMAIN=.example.com` in `.env` and ensure `APP_URL` uses your main domain (for example `https://example.com`). Be careful — setting session cookies for a wide domain may have security implications.
+
+3) Trusted proxies & host header
+
+- In containerized or proxied setups, configure `TRUSTED_PROXIES` and `TRUSTED_HOSTS` if needed, and ensure the reverse proxy forwards the original `Host` header so `ResolveTenant` can detect the requested host.
+
+4) Let's Encrypt wildcard certificates
+
+- Wildcard certificates require DNS validation. Use your DNS provider's API with Certbot or a DNS management tool to automate issuance and renewal.
+
+5) Local testing with hosts file
+
+- For local testing add entries to your hosts file (Windows: `C:\Windows\System32\drivers\etc\hosts`):
+
+```
+127.0.0.1    acme.localhost
+127.0.0.1    default.localhost
+```
+
+Then use `php artisan serve` or your local webserver and hit `http://acme.localhost:8000/o/registrar` to simulate a tenant domain.
+
+6) Common deployment checklist
+
+- Run `php artisan migrate --force` during deploy.
+- Seed plans and roles with `php artisan db:seed --class=\Database\Seeders\SaasSeeder` for initial plan data.
+- Configure queue workers and schedulers (supervisord/systemd) for background jobs.
+- Monitor logs and set up backup for uploads stored under tenant paths (use `Tenant::storagePath()` when storing uploads).
+
+
+
 ---
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>

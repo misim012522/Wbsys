@@ -5,9 +5,9 @@
 @section('content')
 <div class="max-w-lg mx-auto">
     <div class="mb-6">
-        <a href="{{ route('student.offices') }}" class="text-sm text-slate-600 hover:text-slate-800">← Back to offices</a>
+        <a href="{{ route('student.offices') }}" class="text-sm text-slate-600 hover:text-slate-800">&lt; Back to offices</a>
     </div>
-    <h1 class="text-2xl font-bold text-slate-800 mb-2">Book appointment — {{ $office->name }}</h1>
+    <h1 class="text-2xl font-bold text-slate-800 mb-2">Book appointment - {{ $office->name }}</h1>
     <p class="text-slate-600 mb-6">Choose a date and time. Office hours are based on the schedule below.</p>
 
     @if($office->schedules->isNotEmpty())
@@ -16,7 +16,7 @@
             <ul class="space-y-1">
                 @foreach($office->schedules->sortBy('day_of_week') as $s)
                     @if($s->is_active)
-                        <li>{{ \App\Models\OfficeSchedule::DAYS[$s->day_of_week] ?? $s->day_of_week }}: {{ \Carbon\Carbon::parse($s->open_time)->format('g:i A') }} – {{ \Carbon\Carbon::parse($s->close_time)->format('g:i A') }}</li>
+                        <li>{{ \App\Models\OfficeSchedule::DAYS[$s->day_of_week] ?? $s->day_of_week }}: {{ \Carbon\Carbon::parse($s->open_time)->format('g:i A') }} - {{ \Carbon\Carbon::parse($s->close_time)->format('g:i A') }}</li>
                     @endif
                 @endforeach
             </ul>

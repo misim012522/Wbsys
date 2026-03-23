@@ -19,6 +19,7 @@ class LoginRequest extends FormRequest
         $rules = [
             'login' => ['required', 'string'],
             'password' => ['required'],
+            'tenant_id' => ['nullable', 'integer'],
         ];
 
         if (config('recaptcha.secret_key')) {

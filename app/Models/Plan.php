@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesCentralConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
+    use UsesCentralConnection;
+
     protected $fillable = [
         'name', 'slug', 'price_monthly', 'price_yearly', 'features',
         'max_offices', 'max_users_per_tenant', 'is_active',

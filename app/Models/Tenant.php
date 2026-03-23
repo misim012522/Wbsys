@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesCentralConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,8 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Tenant extends Model
 {
+    use UsesCentralConnection;
+
     protected $fillable = [
         'name', 'slug', 'plan_id', 'domain', 'subdomain',
+        'database_name',
+        'address', 'email', 'contact_name', 'contact_number',
         'settings', 'support_url', 'app_version', 'is_active',
     ];
 

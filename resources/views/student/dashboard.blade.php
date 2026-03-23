@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'My Dashboard')
+@section('title', 'My Workspace')
 
 @section('content')
 <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">My Dashboard</h1>
-    <a href="{{ route('student.offices') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Browse Offices</a>
+    <h1 class="text-2xl font-bold text-slate-800">My Workspace</h1>
+    <a href="{{ route('student.offices') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Queue Services</a>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -43,7 +43,7 @@
                     <li class="px-4 py-3 flex items-center justify-between">
                         <div>
                             <span class="font-semibold text-slate-800">{{ $a->office->name }}</span>
-                            <span class="text-slate-600 ml-2">{{ $a->appointment_date->format('M d') }} · {{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</span>
+                            <span class="text-slate-600 ml-2">{{ $a->appointment_date->format('M d') }} - {{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</span>
                         </div>
                         <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium
                             @if($a->status === 'pending') bg-amber-100 text-amber-800

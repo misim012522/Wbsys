@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesTenantConnection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OfficeSchedule extends Model
 {
+    use UsesTenantConnection;
+
     protected $fillable = [
         'office_id',
         'day_of_week',

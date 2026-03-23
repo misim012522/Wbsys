@@ -9,6 +9,20 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('queue_entries', function (Blueprint $table) {
+                $table->string('guest_name')->nullable()->after('user_id');
+                $table->string('guest_contact')->nullable()->after('guest_name');
+            });
+
+            Schema::table('appointments', function (Blueprint $table) {
+                $table->string('guest_name')->nullable()->after('user_id');
+                $table->string('guest_contact')->nullable()->after('guest_name');
+            });
+
+            return;
+        }
+
         Schema::table('queue_entries', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
         });
@@ -32,6 +46,18 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('queue_entries', function (Blueprint $table) {
+                $table->dropColumn(['guest_name', 'guest_contact']);
+            });
+
+            Schema::table('appointments', function (Blueprint $table) {
+                $table->dropColumn(['guest_name', 'guest_contact']);
+            });
+
+            return;
+        }
+
         Schema::table('queue_entries', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
             $table->dropColumn(['guest_name', 'guest_contact']);

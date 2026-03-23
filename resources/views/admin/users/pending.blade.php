@@ -7,7 +7,7 @@
     <h1 class="text-2xl font-bold text-slate-800">Pending accounts</h1>
     <div class="flex gap-2 flex-wrap">
         <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Staff accounts</a>
+        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">All user accounts</a>
         <a href="{{ route('admin.users.archived') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Archived</a>
     </div>
 </div>
@@ -19,13 +19,14 @@
     <p class="mb-4 px-4 py-2 rounded-lg bg-red-100 text-red-800 text-sm">{{ $message }}</p>
 @enderror
 
-<p class="text-slate-600 mb-6">These users have registered and are waiting for your approval. When you confirm an account, they will receive an email with a link to log in.</p>
+<p class="text-slate-600 mb-6">These tenant users have registered and are waiting for your approval. When you confirm an account, they will receive an email letting them know they can log in.</p>
 
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Name</th>
+                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Role</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Username</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Email</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Office</th>
@@ -37,9 +38,10 @@
             @forelse($users as $user)
                 <tr class="border-b border-slate-100">
                     <td class="px-4 py-3 text-slate-800 font-medium">{{ $user->name }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ str_replace('_', ' ', $user->role) }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->username }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ $user->office?->name ?? '—' }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ $user->office?->name ?? '-' }}</td>
                     <td class="px-4 py-3 text-slate-600 text-sm">{{ $user->created_at->format('M j, Y g:i A') }}</td>
                     <td class="px-4 py-3 text-right">
                         <form action="{{ route('admin.users.approve', $user) }}" method="POST" class="inline">
@@ -50,7 +52,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-slate-500 text-center">No pending accounts. New registrations will appear here.</td>
+                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No pending accounts. New registrations will appear here.</td>
                 </tr>
             @endforelse
         </tbody>

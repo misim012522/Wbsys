@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('title', 'QueueLess') — {{ config('app.name') }}</title>
+    <title>@yield('title', 'QueueLess') - {{ config('app.name') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=dm-sans:400,500,600,700" rel="stylesheet" />
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
@@ -17,46 +17,62 @@
         .tenant-primary-bg:hover { filter: brightness(0.95); }
     </style>
 </head>
-<body 
+<body
     class="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased"
     @if(session('success')) data-success-message="{{ session('success') }}" @endif
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
     @if(session('status')) data-status-message="{{ session('status') }}" @endif
 >
-    <!-- Toast Container (Sonner will render here) -->
     <div id="toast-container"></div>
 
     <header class="bg-white border-b border-slate-200 shadow-sm">
         <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            @php $brandName = $tenantTheme['app_name']; $brandLogo = $tenantTheme['logo_url']; @endphp
+            @php
+                $brandName = $tenantTheme['app_name'];
+                $brandLogo = $tenantTheme['logo_url'];
+                $tenantWorkspace = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
+            @endphp
+
             @auth
-                @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
-                        @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
-                        {{ $brandName }}
-                    </a>
-                @else
-                    <a href="{{ route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
-                        @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
-                        {{ $brandName }}
-                    </a>
-                @endif
+                <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                    {{ $brandName }}
+                </a>
             @else
-                <a href="{{ route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                <a href="{{ app()->bound('current_tenant') ? route('tenant.home') : route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
                     @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
                     {{ $brandName }}
                 </a>
             @endauth
+
             <div class="flex items-center gap-4">
                 @auth
-                    <a href="{{ route('dashboard') }}" class="text-sm text-slate-600 hover:text-slate-900">{{ auth()->user()->isAdmin() ? 'Admin' : 'My queue' }}</a>
-                    <span class="text-sm text-slate-500">{{ auth()->user()->name }}</span>
-                    <a href="{{ route('password.request') }}" class="text-sm text-slate-500 hover:text-slate-700">Reset password</a>
+                    @unless($tenantWorkspace && auth()->user()->isAdmin())
+                        <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-sm text-slate-600 hover:text-slate-900">
+                            {{ auth()->user()->isCentralUser() ? 'Central' : (auth()->user()->isAdmin() ? 'Admin' : (auth()->user()->isOfficeStaff() ? 'Office' : 'My workspace')) }}
+                        </a>
+                    @endunless
+
+                    <span class="text-sm text-slate-500">
+                        @if($tenantWorkspace && auth()->user()->isAdmin())
+                            {{ $tenantWorkspace->name }} Administrator
+                        @else
+                            {{ auth()->user()->name }}
+                        @endif
+                    </span>
+
+                    @if(! auth()->user()->isCentralUser())
+                        @if(auth()->user()->isAdmin())
+                            <a href="{{ route('admin.settings.edit') }}" class="text-sm text-slate-500 hover:text-slate-700">Account settings</a>
+                        @else
+                            <a href="{{ route('password.request') }}" class="text-sm text-slate-500 hover:text-slate-700">Reset password</a>
+                        @endif
+                    @endif
                     <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
                         @csrf
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             class="text-sm text-slate-600 hover:text-slate-900"
                             onclick="window.showToast.success('Logged out successfully. Redirecting...'); setTimeout(() => document.getElementById('logout-form').submit(), 500);"
                         >
@@ -64,14 +80,22 @@
                         </button>
                     </form>
                 @else
-                    <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
-                    <a href="{{ route('register') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Create account</a>
+                    @php
+                        $hideTenantGuestActions = app()->bound('current_tenant')
+                            && request()->routeIs('login', 'tenant.register');
+                    @endphp
+
+                    @if(app()->bound('current_tenant') && ! $hideTenantGuestActions)
+                        <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
+                        @unless(request()->routeIs('login'))
+                            <a href="{{ route('tenant.register') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Create account</a>
+                        @endunless
+                    @endif
                 @endauth
             </div>
         </nav>
     </header>
 
-    <!-- Legacy alert divs hidden - replaced by toast notifications -->
     <div style="display: none;">
         @if (session('success'))
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-lg text-sm">{{ session('success') }}</div>

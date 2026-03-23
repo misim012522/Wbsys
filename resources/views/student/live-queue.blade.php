@@ -5,9 +5,9 @@
 @section('content')
 <div class="max-w-2xl mx-auto">
     <div class="mb-6">
-        <a href="{{ route('student.offices') }}" class="text-sm text-slate-600 hover:text-slate-800">← Back to offices</a>
+        <a href="{{ route('student.offices') }}" class="text-sm text-slate-600 hover:text-slate-800">&lt; Back to offices</a>
     </div>
-    <h1 class="text-2xl font-bold text-slate-800 mb-2">{{ $office->name }} — Live Queue</h1>
+    <h1 class="text-2xl font-bold text-slate-800 mb-2">{{ $office->name }} - Live Queue</h1>
     <p class="text-slate-600 mb-8">Current queue for today. Refresh to see updates.</p>
 
     @if($current)

@@ -15,7 +15,7 @@
             <h1 class="text-2xl font-bold text-slate-800 mb-3">Account pending approval</h1>
 
             <p class="text-slate-600 mb-6">
-                Your registration has been received. An administrator will review your account and confirm it. You will receive an email at the address you provided once your account is confirmed. You can then log in to manage your office queue and appointments.
+                Your registration has been received. A tenant administrator will review your account and confirm it. You will receive an email at the address you provided once your account is confirmed. After approval, you can log in and use the tenant app.
             </p>
 
             <a href="{{ route('login') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition">

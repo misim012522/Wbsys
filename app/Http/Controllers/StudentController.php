@@ -35,12 +35,19 @@ class StudentController extends Controller
 
     public function offices()
     {
-        $offices = Office::where('is_active', true)->with('schedules')->get();
+        $offices = Office::query()
+            ->active()
+            ->forTenant(auth()->user()->tenant_id)
+            ->with('schedules')
+            ->orderedByName()
+            ->get();
         return view('student.offices', compact('offices'));
     }
 
     public function getQueueNumber(Office $office)
     {
+        $this->authorizeOffice($office);
+
         if (! $office->is_active) {
             return back()->with('error', 'This office is not accepting queue numbers.');
         }
@@ -56,6 +63,7 @@ class StudentController extends Controller
         }
 
         $entry = QueueEntry::create([
+            'tenant_id' => $office->tenant_id,
             'office_id' => $office->id,
             'user_id' => auth()->id(),
             'queue_number' => $nextNumber,
@@ -74,7 +82,7 @@ class StudentController extends Controller
             ->where('reference_code', $referenceCode)
             ->firstOrFail();
 
-        if ($entry->user_id !== auth()->id()) {
+        if ($entry->user_id !== auth()->id() || (int) $entry->tenant_id !== (int) auth()->user()->tenant_id) {
             abort(403);
         }
 
@@ -91,6 +99,8 @@ class StudentController extends Controller
 
     public function bookAppointment(Request $request, Office $office)
     {
+        $this->authorizeOffice($office);
+
         if (! $office->is_active) {
             return back()->with('error', 'This office is not accepting appointments.');
         }
@@ -125,6 +135,7 @@ class StudentController extends Controller
         }
 
         $appointment = Appointment::create([
+            'tenant_id' => $office->tenant_id,
             'office_id' => $office->id,
             'user_id' => auth()->id(),
             'appointment_date' => $date,
@@ -139,12 +150,15 @@ class StudentController extends Controller
 
     public function showBookAppointment(Office $office)
     {
+        $this->authorizeOffice($office);
         $office->load('schedules');
         return view('student.book-appointment', compact('office'));
     }
 
     public function liveQueue(Office $office)
     {
+        $this->authorizeOffice($office);
+
         $entries = $office->queueEntries()
             ->where('queue_date', today())
             ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
@@ -155,5 +169,12 @@ class StudentController extends Controller
         $current = $entries->whereIn('status', [QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])->first();
 
         return view('student.live-queue', compact('office', 'entries', 'current'));
+    }
+
+    private function authorizeOffice(Office $office): void
+    {
+        if ((int) $office->tenant_id !== (int) auth()->user()->tenant_id) {
+            abort(403);
+        }
     }
 }

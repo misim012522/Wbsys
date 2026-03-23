@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesCentralConnection;
 use Illuminate\Database\Eloquent\Model;
 
 class AppVersion extends Model
 {
+    use UsesCentralConnection;
+
     protected $fillable = ['version', 'release_notes', 'released_at', 'is_forced', 'download_url'];
 
     protected function casts(): array

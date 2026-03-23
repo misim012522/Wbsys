@@ -19,11 +19,11 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:64', 'unique:users,username', 'regex:/^[a-zA-Z0-9_.-]+$/'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'username' => ['required', 'string', 'max:64', 'unique:tenant.users,username', 'regex:/^[a-zA-Z0-9_.-]+$/'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:tenant.users,email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'confirmed', Password::defaults()],
-            'office_id' => ['required', 'exists:offices,id'],
+            'office_id' => ['required', 'exists:tenant.offices,id'],
         ];
     }
 

@@ -2,31 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Support\TenantUrl;
 
 class HomeController extends Controller
 {
     public function index()
     {
         if (auth()->check()) {
-            return redirect()->route('dashboard');
+            $user = auth()->user();
+
+            if ($user->tenant && ! app()->bound('current_tenant')) {
+                return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
+            }
+
+            return redirect()->away(TenantUrl::forUserDashboard($user));
         }
 
-        return view('home');
+        if (app()->bound('current_tenant')) {
+            return redirect()->away(TenantUrl::login(app('current_tenant')));
+        }
+
+        return redirect()->route('login');
     }
 
     public function dashboard()
     {
         $user = auth()->user();
 
-        if ($user->isAdmin()) {
-            return redirect()->route('admin.dashboard');
-        }
-
-        if ($user->isOfficeStaff()) {
-            return redirect()->route('office.dashboard');
-        }
-
-        return redirect()->route('home');
+        return redirect()->away(TenantUrl::forUserDashboard($user));
     }
 }
