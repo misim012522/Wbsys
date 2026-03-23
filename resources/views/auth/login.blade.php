@@ -19,7 +19,7 @@
             <h1 class="text-2xl font-bold text-slate-800">Welcome back</h1>
             <p class="mt-1 text-sm text-slate-500">
                 @if(app()->bound('current_tenant'))
-                    Sign in with your account and we will open the right workspace for you.
+                    Sign in with your tenant administrator or staff account to open this workspace.
                 @else
                     Use your account and we will route you to the correct app automatically.
                 @endif
@@ -63,13 +63,13 @@
                 </button>
             </form>
 
-            @if(app()->bound('current_tenant'))
+            @if(! app()->bound('current_tenant'))
                 <p class="mt-4 text-center text-sm text-slate-500">
-                    Need an account? <a href="{{ route('tenant.register') }}" class="font-medium text-emerald-600 hover:text-emerald-700 hover:underline">Register here</a>.
+                    Register as tenant? <a href="{{ route('central.register') }}" class="font-medium text-emerald-600 hover:text-emerald-700 hover:underline">Register here</a>.
                 </p>
             @else
                 <p class="mt-4 text-center text-sm text-slate-500">
-                    Register as tenant? <a href="{{ route('central.register') }}" class="font-medium text-emerald-600 hover:text-emerald-700 hover:underline">Register here</a>.
+                    Tenant admin access is created from the central registration flow.
                 </p>
             @endif
         </div>

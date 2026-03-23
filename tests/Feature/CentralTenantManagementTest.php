@@ -13,6 +13,7 @@ use App\Models\TenantSubscription;
 use App\Models\User;
 use App\Notifications\TenantCredentialsNotification;
 use App\Services\TenantDatabaseManager;
+use App\Support\TenantUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
@@ -53,6 +54,18 @@ test('central dashboard shows the tenant table', function () {
         'approved_at' => now(),
     ]);
 
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => Plan::where('slug', 'pro')->value('id'),
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_registrar_office',
+        'address' => 'Main Campus, Building A',
+        'email' => 'registrar@example.test',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
     $this->actingAs($developer)
         ->get(route('central.dashboard'))
         ->assertOk()
@@ -61,6 +74,12 @@ test('central dashboard shows the tenant table', function () {
         ->assertSee('Plans')
         ->assertSee('Subscriptions')
         ->assertSee('Tenant Name')
+        ->assertSee('Tenant Domain')
+        ->assertSee('Tenant credentials are sent by email during registration.')
+        ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
+        ->assertSee(\App\Support\TenantUrl::login($tenant), false)
+        ->assertSee('registrar.lvh.me')
+        ->assertSee('Central users can verify or open the tenant domain')
         ->assertDontSee('Register tenant');
 });
 
@@ -109,4 +128,59 @@ test('tenant registration creates tenant database, tenant admin, and emails cred
     Notification::assertSentTo($admin, TenantCredentialsNotification::class);
 
     Carbon::setTestNow();
+});
+
+test('different tenants generate different workspace hosts', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+
+    $registrar = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_registrar_office',
+        'is_active' => true,
+    ]);
+
+    $cashier = Tenant::create([
+        'name' => 'Cashier Office',
+        'slug' => 'cashier-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'cashier',
+        'database_name' => 'tenant_cashier_office',
+        'is_active' => true,
+    ]);
+
+    expect(TenantUrl::login($registrar))->toBe('http://registrar.localhost/login');
+    expect(TenantUrl::login($cashier))->toBe('http://cashier.localhost/login');
+    expect(TenantUrl::login($registrar))->not->toBe(TenantUrl::login($cashier));
+});
+
+test('central admin can delete a tenant from the dashboard route', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+
+    $developer = User::factory()->create([
+        'username' => 'developer',
+        'role' => User::ROLE_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_registrar_office',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($developer)
+        ->delete(route('central.tenants.destroy', $tenant))
+        ->assertRedirect(route('central.dashboard'))
+        ->assertSessionHas('success');
+
+    expect(Tenant::find($tenant->id))->toBeNull();
 });

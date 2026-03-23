@@ -80,16 +80,9 @@
                         </button>
                     </form>
                 @else
-                    @php
-                        $hideTenantGuestActions = app()->bound('current_tenant')
-                            && request()->routeIs('login', 'tenant.register');
-                    @endphp
-
-                    @if(app()->bound('current_tenant') && ! $hideTenantGuestActions)
+                    @if(app()->bound('current_tenant') && ! request()->routeIs('login'))
                         <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
-                        @unless(request()->routeIs('login'))
-                            <a href="{{ route('tenant.register') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Create account</a>
-                        @endunless
+                        <a href="{{ route('tenant.home') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Tenant workspace</a>
                     @endif
                 @endauth
             </div>

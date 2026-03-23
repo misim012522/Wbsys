@@ -9,6 +9,7 @@ use App\Models\TenantSubscription;
 use App\Notifications\TenantCredentialsNotification;
 use App\Services\TenantDatabaseManager;
 use App\Support\CentralPricing;
+use App\Support\TenantDashboardProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -91,6 +92,9 @@ class CentralController extends Controller
                             'primary_color' => '#2563eb',
                             'app_name' => $tenantName,
                             'logo_url' => null,
+                        ],
+                        'dashboard' => [
+                            'profile' => TenantDashboardProfile::inferFromName($tenantName),
                         ],
                     ],
                     'is_active' => true,

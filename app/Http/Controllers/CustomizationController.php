@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\TenantDashboardProfile;
 use Illuminate\Http\Request;
 
 /**
@@ -22,6 +23,14 @@ class CustomizationController extends Controller
             'logoUrl' => $tenant->getSetting('theme.logo_url'),
             'supportUrl' => $tenant->support_url,
             'appName' => $tenant->getSetting('theme.app_name', config('app.name')),
+            'dashboardProfile' => $tenant->getSetting('dashboard.profile', TenantDashboardProfile::inferFromName($tenant->name)),
+            'dashboardProfiles' => [
+                'general' => 'General',
+                'registrar' => 'Registrar',
+                'cashier' => 'Cashier',
+                'clinic' => 'Clinic',
+                'guidance' => 'Guidance',
+            ],
             'guestQueueEnabled' => $tenant->getSetting('customization.guest_queue', true),
             'appointmentsEnabled' => $tenant->getSetting('customization.appointments', true),
             'showServiceType' => $tenant->getSetting('customization.show_service_type', true),
@@ -48,6 +57,7 @@ class CustomizationController extends Controller
             'appointments' => ['nullable', 'boolean'],
             'show_service_type' => ['nullable', 'boolean'],
             'show_purpose_field' => ['nullable', 'boolean'],
+            'dashboard_profile' => ['nullable', 'in:general,registrar,cashier,clinic,guidance'],
             'label_queue' => ['nullable', 'string', 'max:32'],
             'label_office' => ['nullable', 'string', 'max:32'],
             'label_appointment' => ['nullable', 'string', 'max:32'],
@@ -64,6 +74,7 @@ class CustomizationController extends Controller
         $tenant->setSetting('customization.appointments', $request->boolean('appointments'));
         $tenant->setSetting('customization.show_service_type', $request->boolean('show_service_type'));
         $tenant->setSetting('customization.show_purpose_field', $request->boolean('show_purpose_field'));
+        $tenant->setSetting('dashboard.profile', $validated['dashboard_profile'] ?? TenantDashboardProfile::inferFromName($tenant->name));
 
         $labels = $tenant->getSetting('customization.labels', []);
         $labels['queue'] = $validated['label_queue'] ?? 'Queue';

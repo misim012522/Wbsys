@@ -1,39 +1,67 @@
 @extends('layouts.public')
 
-@section('title', ($tenant?->name ?? config('app.name')) . ' - Tenant App')
+@section('title', ($tenant?->name ?? config('app.name')) . ' - Tenant Workspace')
 
 @section('content')
-<div class="mt-6">
-    <h1 class="text-2xl font-bold text-slate-800">
-        {{ $tenant?->name ?? config('app.name') }}
-    </h1>
-    @if($tenant)
-        <p class="mt-2 text-sm text-slate-600">
-            This app is for approved members of {{ $tenant->name }}. Create an account or log in to access the workspace.
-        </p>
-    @else
-        <p class="mt-2 text-sm text-slate-600">
-            Open this page from your tenant workspace link or tenant subdomain to register and access the tenant app.
-        </p>
-    @endif
-</div>
+<section class="mt-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+    <div class="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
+        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-8 py-10 text-white sm:px-10 sm:py-12">
+            <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">Tenant Workspace</p>
+            <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+                {{ $tenant?->name ?? config('app.name') }}
+            </h1>
+            <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+                @if($tenant)
+                    This tenant domain is the shared admin workspace for {{ $tenant->name }}. The administrator and tenant staff use the same pages, UI, and backend on every tenant domain.
+                @else
+                    Open this page from a tenant domain to access that tenant's shared admin workspace and public service links.
+                @endif
+            </p>
 
-@if($tenant)
-    <div class="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h2 class="text-lg font-semibold text-slate-800">Get started</h2>
-                <p class="mt-1 text-sm text-slate-500">Register for an account, wait for admin approval, then log in to request queue numbers and appointments.</p>
+            @auth
+                @if(auth()->user()->isCentralUser())
+                    <div class="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm leading-6 text-slate-100">
+                        <p class="font-semibold text-white">Central account detected</p>
+                        <p class="mt-1">You are currently signed in as a central user. To open the tenant admin dashboard, log out first and then sign in with this tenant's admin or staff account.</p>
+                        <form method="POST" action="{{ route('logout') }}" class="mt-4 inline-flex">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+                                Log out and switch account
+                            </button>
+                        </form>
+                    </div>
+                @endif
+            @endauth
+
+            <div class="mt-8 flex flex-wrap gap-3">
+                @guest
+                    <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+                        Open workspace login
+                    </a>
+                @endguest
+                <span class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
+                    End users continue through QR/public links
+                </span>
             </div>
-            <div class="flex flex-col gap-3 sm:flex-row">
-                <a href="{{ route('tenant.register') }}" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-                    Create account
-                </a>
-                <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                    Log in
-                </a>
+        </div>
+
+        <div class="px-8 py-10 sm:px-10 sm:py-12">
+            <h2 class="text-lg font-semibold text-slate-900">How this tenant is used</h2>
+            <div class="mt-6 space-y-4 text-sm leading-7 text-slate-600">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="font-semibold text-slate-900">Tenant admin pages</p>
+                    <p class="mt-1">Admin login, dashboard, reports, user management, QR tools, and settings all live inside the tenant workspace.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="font-semibold text-slate-900">Office staff dashboard</p>
+                    <p class="mt-1">Logged-in office staff use the office dashboard inside the same tenant workspace to manage queue calls, appointments, QR codes, reports, and activity.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="font-semibold text-slate-900">Public external users</p>
+                    <p class="mt-1">Visitors continue using the public QR, queue, and appointment pages without creating or signing in to a tenant workspace account.</p>
+                </div>
             </div>
         </div>
     </div>
-@endif
+</section>
 @endsection

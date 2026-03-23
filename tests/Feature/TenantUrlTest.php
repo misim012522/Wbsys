@@ -11,8 +11,8 @@ test('tenant url helper builds a login url from the tenant subdomain', function 
         'subdomain' => 'registrar',
     ]);
 
-    expect(TenantUrl::login($tenant))->toBe('http://registrar.localhost/login');
-    expect(TenantUrl::passwordReset($tenant))->toBe('http://registrar.localhost/forgot-password');
+    expect(TenantUrl::login($tenant))->toBe('http://registrar.lvh.me/login');
+    expect(TenantUrl::passwordReset($tenant))->toBe('http://registrar.lvh.me/forgot-password');
 });
 
 test('tenant url helper prefers a custom tenant domain when present', function () {
@@ -25,6 +25,7 @@ test('tenant url helper prefers a custom tenant domain when present', function (
     ]);
 
     expect(TenantUrl::login($tenant))->toBe('https://portal.registrar.example.com/login');
+    expect(TenantUrl::workspace($tenant))->toBe('https://portal.registrar.example.com/');
 });
 
 test('tenant url helper falls back to the app url when no tenant is provided', function () {

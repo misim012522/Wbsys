@@ -82,6 +82,24 @@
             </div>
         </div>
 
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Dashboard Profile</h2>
+            <p class="text-sm text-slate-600 mb-4">Choose which tenant dashboard style fits this workspace. This controls the tenant-specific dashboard widgets and helper content.</p>
+            <div>
+                <label for="dashboard_profile" class="block text-sm font-medium text-slate-700 mb-1">Profile</label>
+                <select
+                    name="dashboard_profile"
+                    id="dashboard_profile"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                    @foreach($dashboardProfiles as $value => $label)
+                        <option value="{{ $value }}" @selected(old('dashboard_profile', $dashboardProfile) === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <p class="text-xs text-slate-500 mt-2">Example: use `Registrar` for document/application-heavy workflows, or `Cashier` for payment counter operations.</p>
+            </div>
+        </div>
+
         {{-- Custom labels --}}
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
             <h2 class="text-lg font-semibold text-slate-800 mb-4">Labels</h2>

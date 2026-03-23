@@ -72,5 +72,4 @@ Route::middleware(['tenant.required', 'auth', 'tenant.context'])->group(function
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
-    require __DIR__.'/student.php';
 });

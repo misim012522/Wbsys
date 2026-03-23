@@ -33,14 +33,7 @@ class TenantUrl
             return self::centralDashboard();
         }
 
-        $path = match ($user?->dashboardRouteName()) {
-            'admin.dashboard' => '/admin',
-            'office.dashboard' => '/office',
-            'student.dashboard' => '/tenant/app',
-            default => '/dashboard',
-        };
-
-        return self::forPath($tenant, $path);
+        return self::forPath($tenant, '/dashboard');
     }
 
     public static function login(?Tenant $tenant): string
@@ -76,6 +69,10 @@ class TenantUrl
     {
         $baseHost = trim($baseHost);
         $localTenantBaseDomain = trim((string) env('LOCAL_TENANT_BASE_DOMAIN', 'lvh.me'));
+
+        if (is_string($tenant->domain) && trim($tenant->domain) !== '') {
+            return trim($tenant->domain);
+        }
 
         if ($tenant->subdomain === null || $tenant->subdomain === '') {
             return $baseHost;

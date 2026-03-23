@@ -38,10 +38,15 @@ class AccountConfirmedNotification extends Notification
     {
         $tenant = $notifiable->tenant;
         $loginUrl = TenantUrl::login($tenant);
-        $roleLabel = $notifiable->role === User::ROLE_STUDENT ? 'tenant account' : 'account';
-        $usageLine = $notifiable->role === User::ROLE_STUDENT
-            ? 'You can now log in and use your tenant workspace.'
-            : 'You can now log in and manage your office queue and appointments.';
+        $roleLabel = match ($notifiable->role) {
+            User::ROLE_OFFICE_STAFF => 'office staff account',
+            default => 'account',
+        };
+
+        $usageLine = match ($notifiable->role) {
+            User::ROLE_OFFICE_STAFF => 'You can now log in to your office dashboard and manage queue and appointment work for your assigned office.',
+            default => 'You can now log in and manage your office queue and appointments.',
+        };
 
         $mail = (new MailMessage)
             ->subject('Your account has been confirmed')

@@ -170,11 +170,6 @@ class TenantDatabaseManager
             ['name' => 'Office Staff', 'description' => 'Serve queue and appointments']
         );
 
-        Role::firstOrCreate(
-            ['tenant_id' => null, 'slug' => User::ROLE_STUDENT],
-            ['name' => 'Student', 'description' => 'Queue and book appointments']
-        );
-
         $adminPerms = Permission::whereIn('slug', [
             'offices.manage',
             'queue.manage',

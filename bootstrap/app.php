@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenant::class]);
         $middleware->alias([
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'central.user' => \App\Http\Middleware\EnsureCentralUser::class,
             'central.public' => \App\Http\Middleware\EnsureNotTenantWorkspace::class,
             'role' => \App\Http\Middleware\EnsureRole::class,

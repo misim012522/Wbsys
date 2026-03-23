@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
-@section('title', 'User accounts')
+@section('title', 'Office staff accounts')
 
 @section('content')
 <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">User accounts</h1>
+    <h1 class="text-2xl font-bold text-slate-800">Office staff accounts</h1>
     <div class="flex gap-2 flex-wrap">
         <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-        <a href="{{ route('admin.users.pending') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Pending accounts</a>
-        <a href="{{ route('admin.users.archived') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Archived</a>
+        <a href="{{ route('admin.users.pending') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Pending staff</a>
+        <a href="{{ route('admin.users.archived') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Archived staff</a>
     </div>
 </div>
 
-<p class="text-slate-600 mb-6">Approved tenant users can log in after confirmation. End users use the tenant app, while staff continue serving queues for their assigned office.</p>
+<p class="text-slate-600 mb-6">Approved office staff accounts can log in after confirmation and open their assigned office dashboard inside this tenant workspace.</p>
 
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <table class="w-full">
@@ -43,7 +43,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-slate-500 text-center">No approved user accounts yet. <a href="{{ route('admin.users.pending') }}" class="text-emerald-600 hover:underline">View pending accounts</a></td>
+                    <td colspan="6" class="px-4 py-8 text-slate-500 text-center">No approved office staff accounts yet. <a href="{{ route('admin.users.pending') }}" class="text-emerald-600 hover:underline">View pending staff accounts</a></td>
                 </tr>
             @endforelse
         </tbody>

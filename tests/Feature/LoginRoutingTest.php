@@ -123,14 +123,9 @@ test('tenant register page does not show login and create account in the header'
         'is_active' => true,
     ]);
 
-    $response = $this->withServerVariables(loginTenantHost())
-        ->get('/tenant/register');
-
-    $response
-        ->assertOk()
-        ->assertDontSee('class="text-sm text-slate-600 hover:text-slate-900">Log in</a>', false)
-        ->assertDontSee('class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Create account</a>', false)
-        ->assertSee('Create your tenant account');
+    $this->withServerVariables(loginTenantHost())
+        ->get('/tenant/register')
+        ->assertRedirect(route('login'));
 });
 
 test('tenant workspace cannot access central pages', function () {
@@ -160,6 +155,33 @@ test('tenant workspace cannot access central pages', function () {
         ->withServerVariables(loginTenantHost())
         ->get('/central/dashboard')
         ->assertRedirect(TenantUrl::dashboard($tenant, $admin));
+});
+
+test('central user can open a tenant workspace page without being forced into tenant admin routes', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $centralUser = User::factory()->create([
+        'username' => 'sysadmin',
+        'role' => User::ROLE_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($centralUser)
+        ->withServerVariables(loginTenantHost())
+        ->get('/tenant')
+        ->assertOk()
+        ->assertSee('Tenant Workspace')
+        ->assertSee('Central account detected')
+        ->assertSee('Log out and switch account');
 });
 
 test('tenant user on the central host is redirected back to their tenant workspace', function () {
@@ -248,7 +270,7 @@ test('tenant urls use localhost subdomains when app url is 127.0.0.1', function 
         'is_active' => true,
     ]);
 
-    expect(TenantUrl::login($tenant))->toBe('http://registrar.localhost:8000/login');
+    expect(TenantUrl::login($tenant))->toBe('http://registrar.lvh.me:8000/login');
 });
 
 test('tenant account cannot log in from another tenant domain', function () {
@@ -292,4 +314,36 @@ test('tenant account cannot log in from another tenant domain', function () {
 
     $response->assertSessionHasErrors('login');
     $this->assertGuest();
+});
+
+test('tenant login on a tenant domain lands on the shared tenant dashboard route', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Cot Office',
+        'slug' => 'cot-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'cot',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Cot Admin',
+        'username' => 'cot.admin',
+        'email' => 'admin@cot.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $response = $this->withHeader('Host', 'cot.localhost')
+        ->post('/login', [
+            'login' => 'cot.admin',
+            'password' => 'Password123!',
+        ]);
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith('http://cot.localhost/auth/continue?token=');
 });

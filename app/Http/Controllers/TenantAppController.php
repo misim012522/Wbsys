@@ -13,6 +13,12 @@ class TenantAppController extends Controller
     public function home(): View|RedirectResponse
     {
         if (auth()->check()) {
+            if (app()->bound('current_tenant') && auth()->user()->isCentralUser()) {
+                return view('tenant.home', [
+                    'tenant' => app('current_tenant'),
+                ]);
+            }
+
             return redirect()->away(TenantUrl::forUserDashboard(auth()->user()));
         }
 

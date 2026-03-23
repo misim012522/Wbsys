@@ -8,7 +8,6 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
-use App\Http\Requests\TenantUserRegisterRequest;
 use App\Services\LoginAccountResolver;
 use App\Services\RecaptchaService;
 use App\Services\TenantPlanEnforcer;
@@ -29,10 +28,15 @@ class AuthController extends Controller
         private TenantPlanEnforcer $tenantPlanEnforcer,
     ) {}
 
-    public function showLogin()
+    public function showLogin(Request $request)
     {
         if (auth()->check()) {
             $user = auth()->user();
+            $tenantWorkspace = $this->currentTenant() ?? $this->tenantForHost($request);
+
+            if ($tenantWorkspace && $user->isCentralUser()) {
+                return redirect()->route('tenant.home');
+            }
 
             if ($user->tenant && ! $this->currentTenant()) {
                 return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
@@ -156,13 +160,8 @@ class AuthController extends Controller
 
     public function showTenantRegister()
     {
-        $tenant = $this->currentTenant();
-
-        if (! $tenant) {
-            return redirect()->route('tenant.home')->with('error', 'Tenant signup is only available inside a tenant workspace.');
-        }
-
-        return view('tenant.register', compact('tenant'));
+        return redirect()->route('login')
+            ->with('info', 'Tenant workspaces use the admin credentials created during central registration. End users should continue using the public queue and appointment pages.');
     }
 
     public function showVerificationSent()
@@ -203,35 +202,10 @@ class AuthController extends Controller
         return redirect()->route('registration.pending');
     }
 
-    public function registerTenantUser(TenantUserRegisterRequest $request)
+    public function registerTenantUser(Request $request)
     {
-        $tenant = $this->currentTenant();
-
-        if (! $tenant) {
-            return redirect()->route('tenant.home')->with('error', 'Tenant signup is only available inside a tenant workspace.');
-        }
-
-        if ($this->tenantPlanEnforcer->userLimitReached($tenant)) {
-            return back()->withInput()->withErrors([
-                'email' => 'This tenant has reached the maximum number of users allowed by its current subscription plan.',
-            ]);
-        }
-
-        $validated = $request->validated();
-
-        User::create([
-            'name' => $validated['name'],
-            'username' => $validated['username'],
-            'email' => $validated['email'],
-            'phone' => $validated['phone'] ?? null,
-            'password' => Hash::make($validated['password']),
-            'role' => User::ROLE_STUDENT,
-            'tenant_id' => $tenant->id,
-            'office_id' => null,
-            'approved_at' => null,
-        ]);
-
-        return redirect()->route('registration.pending')->with('status', 'Your tenant account has been created and is waiting for admin approval.');
+        return redirect()->route('login')
+            ->with('info', 'Tenant self-registration is disabled. Use the public queue pages for end users, while tenant administrators sign in with their workspace account.');
     }
 
     public function logout(Request $request)
@@ -363,5 +337,22 @@ class AuthController extends Controller
                 $request->ip()
             );
         }
+    }
+
+    private function tenantForHost(Request $request): ?Tenant
+    {
+        $host = preg_replace('/:\d+$/', '', (string) ($request->server('HTTP_HOST') ?: $request->getHost()));
+
+        if (! is_string($host) || $host === '') {
+            return null;
+        }
+
+        $tenant = Tenant::active()->where('domain', $host)->first();
+
+        if ($tenant || count(explode('.', $host)) < 2) {
+            return $tenant;
+        }
+
+        return Tenant::active()->where('subdomain', explode('.', $host)[0])->first();
     }
 }

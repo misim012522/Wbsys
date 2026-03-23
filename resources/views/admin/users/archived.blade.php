@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Archived user accounts')
+@section('title', 'Archived office staff accounts')
 
 @section('content')
 <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">Archived accounts</h1>
+    <h1 class="text-2xl font-bold text-slate-800">Archived office staff accounts</h1>
     <div class="flex gap-2 flex-wrap">
         <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">User accounts</a>
+        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Office staff accounts</a>
     </div>
 </div>
 
@@ -21,7 +21,7 @@
     <p class="mb-4 px-4 py-2 rounded-lg bg-red-100 text-red-800 text-sm">{{ $message }}</p>
 @enderror
 
-<p class="text-slate-600 mb-6">Archived tenant users cannot log in. Recover an account to restore access, or delete permanently to remove it from the system.</p>
+<p class="text-slate-600 mb-6">Archived office staff accounts cannot log in. Recover an account to restore workspace access, or delete permanently to remove it from the system.</p>
 
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <table class="w-full">
@@ -59,7 +59,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No archived accounts. <a href="{{ route('admin.users.index') }}" class="text-emerald-600 hover:underline">Back to user accounts</a></td>
+                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No archived office staff accounts. <a href="{{ route('admin.users.index') }}" class="text-emerald-600 hover:underline">Back to office staff accounts</a></td>
                 </tr>
             @endforelse
         </tbody>

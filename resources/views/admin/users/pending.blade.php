@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Pending accounts')
+@section('title', 'Pending office staff accounts')
 
 @section('content')
 <div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">Pending accounts</h1>
+    <h1 class="text-2xl font-bold text-slate-800">Pending office staff accounts</h1>
     <div class="flex gap-2 flex-wrap">
         <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">All user accounts</a>
-        <a href="{{ route('admin.users.archived') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Archived</a>
+        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">All office staff</a>
+        <a href="{{ route('admin.users.archived') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Archived staff</a>
     </div>
 </div>
 
@@ -19,7 +19,7 @@
     <p class="mb-4 px-4 py-2 rounded-lg bg-red-100 text-red-800 text-sm">{{ $message }}</p>
 @enderror
 
-<p class="text-slate-600 mb-6">These tenant users have registered and are waiting for your approval. When you confirm an account, they will receive an email letting them know they can log in.</p>
+<p class="text-slate-600 mb-6">These office staff accounts are waiting for approval. When you confirm an account, the user will receive an email letting them know they can sign in to their office workspace.</p>
 
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
     <table class="w-full">
@@ -52,7 +52,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No pending accounts. New registrations will appear here.</td>
+                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No pending office staff accounts. New registrations will appear here.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -67,7 +67,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
         </div>
-        <h2 id="success-popup-title" class="text-xl font-bold text-slate-800 mb-2">Account confirmed</h2>
+        <h2 id="success-popup-title" class="text-xl font-bold text-slate-800 mb-2">Office staff account confirmed</h2>
         <p class="text-slate-600 mb-6">{{ session('success') }}</p>
         <button type="button" onclick="document.getElementById('success-popup').remove()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
             OK

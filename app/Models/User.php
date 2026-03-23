@@ -148,7 +148,7 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         if ($this->isStudent()) {
-            return 'student.dashboard';
+            return 'tenant.home';
         }
 
         return 'login';

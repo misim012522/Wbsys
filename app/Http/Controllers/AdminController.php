@@ -212,7 +212,7 @@ class AdminController extends Controller
         return view('admin.reports', compact('queueEntries', 'appointments', 'date'));
     }
 
-    /** List approved non-admin tenant user accounts, excluding archived. */
+    /** List approved non-admin office staff accounts, excluding archived. */
     public function usersIndex()
     {
         $users = User::where('role', '!=', User::ROLE_ADMIN)
@@ -226,7 +226,7 @@ class AdminController extends Controller
         return view('admin.users.index', compact('users'));
     }
 
-    /** List archived non-admin accounts. */
+    /** List archived non-admin office staff accounts. */
     public function archivedAccounts()
     {
         $users = User::where('role', '!=', User::ROLE_ADMIN)
@@ -239,50 +239,50 @@ class AdminController extends Controller
         return view('admin.users.archived', compact('users'));
     }
 
-    /** Archive a non-admin account (soft archive via archived_at). */
+    /** Archive a non-admin office staff account (soft archive via archived_at). */
     public function archiveUser($user)
     {
         $user = $this->findTenantUserOrFail($user);
 
         if ($user->role === User::ROLE_ADMIN) {
-            return back()->withErrors(['user' => 'Admin accounts cannot be archived.']);
+            return back()->withErrors(['user' => 'Administrator accounts cannot be archived from the office staff screens.']);
         }
         if ($user->archived_at !== null) {
-            return back()->with('info', 'That account is already archived.');
+            return back()->with('info', 'That office staff account is already archived.');
         }
         $user->update(['archived_at' => now()]);
-        return redirect()->route('admin.users.archived')->with('success', "Account for {$user->name} has been archived.");
+        return redirect()->route('admin.users.archived')->with('success', "Office staff account for {$user->name} has been archived.");
     }
 
-    /** Recover an archived non-admin account. */
+    /** Recover an archived non-admin office staff account. */
     public function recoverUser($user)
     {
         $user = $this->findTenantUserOrFail($user);
 
         if ($user->role === User::ROLE_ADMIN) {
-            return back()->withErrors(['user' => 'Admin accounts cannot be recovered here.']);
+            return back()->withErrors(['user' => 'Administrator accounts cannot be recovered from the office staff screens.']);
         }
         if ($user->archived_at === null) {
-            return back()->with('info', 'That account is not archived.');
+            return back()->with('info', 'That office staff account is not archived.');
         }
         $user->update(['archived_at' => null]);
-        return redirect()->route('admin.users.index')->with('success', "Account for {$user->name} has been recovered.");
+        return redirect()->route('admin.users.index')->with('success', "Office staff account for {$user->name} has been recovered.");
     }
 
-    /** Permanently delete a non-admin user. */
+    /** Permanently delete a non-admin office staff account. */
     public function destroyUser($user)
     {
         $user = $this->findTenantUserOrFail($user);
 
         if ($user->role === User::ROLE_ADMIN) {
-            return back()->withErrors(['user' => 'Admin accounts cannot be deleted.']);
+            return back()->withErrors(['user' => 'Administrator accounts cannot be deleted from the office staff screens.']);
         }
         $name = $user->name;
         $user->delete();
-        return redirect()->route('admin.users.archived')->with('success', "Account for {$name} has been permanently deleted.");
+        return redirect()->route('admin.users.archived')->with('success', "Office staff account for {$name} has been permanently deleted.");
     }
 
-    /** List pending non-admin accounts awaiting admin approval. */
+    /** List pending non-admin office staff accounts awaiting admin approval. */
     public function pendingAccounts()
     {
         $users = User::where('role', '!=', User::ROLE_ADMIN)
@@ -295,16 +295,16 @@ class AdminController extends Controller
         return view('admin.users.pending', compact('users'));
     }
 
-    /** Confirm a pending account: set approved_at, email_verified_at, and send confirmation email. */
+    /** Confirm a pending office staff account: set approved_at, email_verified_at, and send confirmation email. */
     public function approveUser($user)
     {
         $user = $this->findTenantUserOrFail($user);
 
         if ($user->approved_at !== null) {
-            return back()->with('info', 'That account is already approved.');
+            return back()->with('info', 'That office staff account is already approved.');
         }
         if ($user->role === User::ROLE_ADMIN) {
-            return back()->withErrors(['user' => 'Admin accounts cannot be approved through this screen.']);
+            return back()->withErrors(['user' => 'Administrator accounts cannot be approved through the office staff screen.']);
         }
 
         $user->approved_at = now();
@@ -312,6 +312,6 @@ class AdminController extends Controller
         $user->save();
         $user->notify(new AccountConfirmedNotification());
 
-        return back()->with('success', "Account for {$user->name} has been confirmed. A confirmation email has been sent to {$user->email}.");
+        return back()->with('success', "Office staff account for {$user->name} has been confirmed. A confirmation email has been sent to {$user->email}.");
     }
 }
