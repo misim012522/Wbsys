@@ -3,10 +3,12 @@
 @section('title', 'Customization')
 
 @section('content')
-<div class="max-w-2xl">
-    <h1 class="text-2xl font-bold text-slate-800 mb-2">Customization</h1>
-    <p class="text-slate-600 mb-6">Customize design and functions for your organization. Changes apply to the public queue page and branding.</p>
+@include('admin._workspace-nav', [
+    'title' => 'Customization',
+    'description' => 'Control branding, tenant dashboard profile, labels, and visible public features for this tenant workspace.',
+])
 
+<div class="max-w-2xl">
     <form method="POST" action="{{ route('admin.customization.update') }}" class="space-y-8">
         @csrf
         @method('PUT')

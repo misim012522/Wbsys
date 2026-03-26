@@ -104,19 +104,39 @@ class PublicController extends Controller
     /** Public queue tracker by reference code (no login). */
     public function track(string $referenceCode)
     {
-        $entry = QueueEntry::with('office')
+        $queueEntry = QueueEntry::with('office')
+            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
+            ->where('reference_code', $referenceCode)
+            ->first();
+
+        if ($queueEntry) {
+            $position = $queueEntry->office->queueEntries()
+                ->where('queue_date', $queueEntry->queue_date)
+                ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
+                ->where('queue_number', '<=', $queueEntry->queue_number)
+                ->count();
+
+            return view('public.track', [
+                'mode' => 'queue',
+                'queueEntry' => $queueEntry,
+                'appointment' => null,
+                'position' => $position,
+                'ahead' => $position - 1,
+            ]);
+        }
+
+        $appointment = Appointment::with('office')
+            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
             ->where('reference_code', $referenceCode)
             ->firstOrFail();
 
-        $position = $entry->office->queueEntries()
-            ->where('queue_date', $entry->queue_date)
-            ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
-            ->where('queue_number', '<=', $entry->queue_number)
-            ->count();
-
-        $ahead = $position - 1;
-
-        return view('public.track', compact('entry', 'position', 'ahead'));
+        return view('public.track', [
+            'mode' => 'appointment',
+            'queueEntry' => null,
+            'appointment' => $appointment,
+            'position' => null,
+            'ahead' => null,
+        ]);
     }
 
     /** Book an appointment (guest). */

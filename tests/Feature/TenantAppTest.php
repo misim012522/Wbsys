@@ -7,6 +7,7 @@ if (! extension_loaded('pdo_sqlite')) {
     return;
 }
 
+use App\Models\Appointment;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -99,10 +100,7 @@ test('tenant dashboard renders for approved office staff users on their tenant d
     $this->actingAs($staff)
         ->withServerVariables(tenantHost())
         ->get('/dashboard')
-        ->assertOk()
-        ->assertSee('Workspace dashboard')
-        ->assertSee('Open office dashboard')
-        ->assertSee('acme.lvh.me');
+        ->assertRedirect(route('office.dashboard'));
 });
 
 test('legacy student accounts can still open the tenant dashboard entry page', function () {
@@ -133,6 +131,66 @@ test('legacy student accounts can still open the tenant dashboard entry page', f
         ->assertSee('Workspace home');
 });
 
+test('public tracker can show appointment references for the current tenant', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    $appointment = Appointment::create([
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'guest_name' => 'Maria Santos',
+        'guest_email' => 'maria@example.test',
+        'appointment_type' => 'consultation',
+        'appointment_date' => today()->addDay()->toDateString(),
+        'appointment_time' => '09:00:00',
+        'status' => Appointment::STATUS_PENDING,
+        'reference_code' => 'APPT1234',
+    ]);
+
+    $this->withServerVariables(tenantHost())
+        ->get('/t/'.$appointment->reference_code)
+        ->assertOk()
+        ->assertSee('Your appointment status')
+        ->assertSee($appointment->reference_code)
+        ->assertSee('Maria Santos')
+        ->assertSee('pending');
+});
+
+test('public office page includes a tracker form for existing references', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    $this->withServerVariables(tenantHost())
+        ->get('/o/'.$office->slug)
+        ->assertOk()
+        ->assertSee('Track an existing reference')
+        ->assertSee('Track now');
+});
+
 test('tenant dashboard renders for tenant administrators on their tenant domain', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
@@ -155,10 +213,7 @@ test('tenant dashboard renders for tenant administrators on their tenant domain'
     $this->actingAs($admin)
         ->withServerVariables(['HTTP_HOST' => 'cot.localhost'])
         ->get('/dashboard')
-        ->assertOk()
-        ->assertSee('Workspace dashboard')
-        ->assertSee('Open admin dashboard')
-        ->assertSee('cot.lvh.me');
+        ->assertRedirect(route('admin.dashboard'));
 });
 
 test('tenant dashboards reflect tenant-specific labels and enabled modules', function () {
@@ -199,7 +254,7 @@ test('tenant dashboards reflect tenant-specific labels and enabled modules', fun
 
     $this->actingAs($admin)
         ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
-        ->get('/dashboard')
+        ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('Applications today')
         ->assertSee('Reservations today')
@@ -268,7 +323,7 @@ test('tenant admin can update the dashboard profile from customization', functio
 
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())
-        ->get('/dashboard')
+        ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('Cashier dashboard')
         ->assertSee('Counter throughput');
@@ -478,6 +533,149 @@ test('tenant admin can change password from account settings', function () {
     expect(Hash::check('NewPassword123!', $admin->password))->toBeTrue();
 });
 
+test('tenant admin can view registered workspace profile details', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'address' => 'Main Campus, Building A',
+        'email' => 'registrar@example.test',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Office Admin',
+        'username' => 'registrar.admin',
+        'email' => 'registrar@example.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
+        ->get(route('admin.profile'))
+        ->assertOk()
+        ->assertSee('Workspace info')
+        ->assertSee('Registrar Office')
+        ->assertSee('registrar.admin')
+        ->assertSee('registrar@example.test')
+        ->assertSee('09123456789')
+        ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
+        ->assertSee(\App\Support\TenantUrl::login($tenant), false)
+        ->assertDontSee('Password123!');
+});
+
+test('tenant workspace settings page renders on the dedicated tenant domain', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'admin@registrar.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
+        ->get(route('tenant.settings.edit'))
+        ->assertRedirect(route('admin.settings.edit'));
+});
+
+test('tenant user can update workspace settings on the dedicated tenant domain', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'admin@registrar.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::factory()->create([
+        'name' => 'Registrar Staff',
+        'username' => 'registrar.staff',
+        'email' => 'staff@registrar.test',
+        'phone' => '09123456780',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
+        ->put(route('tenant.settings.update'), [
+            'name' => 'Registrar Staff Updated',
+            'email' => 'workspace@registrar.test',
+            'phone' => '09998887777',
+            'current_password' => 'Password123!',
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
+        ])
+        ->assertRedirect(route('tenant.settings.edit'))
+        ->assertSessionHas('success', 'Your tenant workspace settings have been updated.');
+
+    $staff->refresh();
+
+    expect($staff->name)->toBe('Registrar Staff Updated');
+    expect($staff->email)->toBe('workspace@registrar.test');
+    expect($staff->phone)->toBe('09998887777');
+    expect(Hash::check('NewPassword123!', $staff->password))->toBeTrue();
+});
+
+test('tenant admin uses a separate admin workspace from the shared tenant dashboard', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'admin@registrar.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('Admin dashboard')
+        ->assertSee('Admin settings')
+        ->assertDontSee('Shared workspace dashboard');
+});
+
 test('tenant admin header hides central link and shows tenant administrator label', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
@@ -545,6 +743,181 @@ test('admin screens use office staff wording for managed accounts', function () 
         ->assertOk()
         ->assertSee('Archived office staff accounts')
         ->assertSee('workspace access');
+});
+
+test('tenant admin can search and filter office staff pages', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+    $otherOffice = \App\Models\Office::create([
+        'tenant_id' => $tenant->id,
+        'name' => 'Records Office',
+        'slug' => 'records-office',
+    ]);
+
+    User::factory()->create([
+        'name' => 'Alice Searchable',
+        'username' => 'alice.staff',
+        'email' => 'alice@acme.test',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'approved_at' => now(),
+    ]);
+
+    User::factory()->create([
+        'name' => 'Bob Hidden',
+        'username' => 'bob.staff',
+        'email' => 'bob@acme.test',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $otherOffice->id,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.users.index', ['search' => 'Alice', 'office_id' => $office->id]))
+        ->assertOk()
+        ->assertSee('Alice Searchable')
+        ->assertDontSee('Bob Hidden')
+        ->assertSee('Apply filters');
+});
+
+test('tenant admin office staff list paginates with summary details', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    foreach (range(1, 12) as $index) {
+        User::factory()->create([
+            'name' => 'Paged Staff '.$index,
+            'username' => 'paged.staff.'.$index,
+            'email' => 'paged'.$index.'@acme.test',
+            'role' => User::ROLE_OFFICE_STAFF,
+            'tenant_id' => $tenant->id,
+            'office_id' => $office->id,
+            'approved_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.users.index'))
+        ->assertOk()
+        ->assertSee('Showing 1-10 of 12 approved office staff accounts.')
+        ->assertSee('Paged Staff 1')
+        ->assertSee('?page=2');
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.users.index', ['page' => 2]))
+        ->assertOk()
+        ->assertSee('Showing 11-12 of 12 approved office staff accounts.')
+        ->assertSee('Paged Staff');
+});
+
+test('tenant admin can download tenant reports in csv and print formats', function () {
+    $plan = Plan::create([
+        'name' => 'Pro',
+        'slug' => 'pro',
+        'is_active' => true,
+        'features' => ['queue', 'appointments', 'reports'],
+    ]);
+
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    \App\Models\QueueEntry::create([
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'queue_number' => 1,
+        'display_name' => 'Queue Guest',
+        'service_type' => 'Enrollment',
+        'reference_code' => 'Q-1001',
+        'status' => 'completed',
+        'queue_date' => today()->toDateString(),
+    ]);
+
+    \App\Models\Appointment::create([
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'display_name' => 'Appointment Guest',
+        'appointment_type' => 'Advising',
+        'reference_code' => 'A-1001',
+        'status' => 'confirmed',
+        'appointment_date' => today()->toDateString(),
+        'appointment_time' => '10:00:00',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.reports.download', ['date' => today()->toDateString(), 'format' => 'csv']))
+        ->assertOk()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.reports.download', ['date' => today()->toDateString(), 'format' => 'print']))
+        ->assertOk()
+        ->assertHeader('content-type', 'text/html; charset=UTF-8')
+        ->assertSee('QueueLess')
+        ->assertSee('All workspace offices')
+        ->assertSee('Print / Save as PDF');
 });
 
 test('tenant self-registration post is disabled', function () {

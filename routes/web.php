@@ -5,6 +5,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OtaUpdateController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\TenantAccountSettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -69,6 +70,8 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['tenant.required', 'auth', 'tenant.context'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
+    Route::get('/settings', [TenantAccountSettingsController::class, 'edit'])->name('tenant.settings.edit');
+    Route::put('/settings', [TenantAccountSettingsController::class, 'update'])->name('tenant.settings.update');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';

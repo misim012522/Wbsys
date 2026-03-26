@@ -6,12 +6,20 @@ use App\Http\Requests\CentralTenantSignupRequest;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
+use App\Models\User;
+use App\Notifications\TenantActivationStatusNotification;
 use App\Notifications\TenantCredentialsNotification;
+use App\Notifications\TenantSubscriptionUpdatedNotification;
+use App\Notifications\TenantWorkspaceAccessNotification;
 use App\Services\TenantDatabaseManager;
 use App\Support\CentralPricing;
 use App\Support\TenantDashboardProfile;
+use App\Support\TenantWorkspaceUrlValidator;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -48,8 +56,182 @@ class CentralController extends Controller
             return back()->with('error', "Tenant {$tenant->name} could not be deleted. Please try again.");
         }
 
-        return redirect()->route('central.dashboard')
+        return redirect()->away(\App\Support\TenantUrl::centralDashboard())
             ->with('success', "Tenant {$tenant->name} was deleted successfully.");
+    }
+
+    public function update(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:500'],
+            'contact_number' => ['required', 'string', 'max:50'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:tenants,email,'.$tenant->id],
+            'subdomain' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:tenants,subdomain,'.$tenant->id],
+            'domain' => ['nullable', 'string', 'max:255', 'unique:tenants,domain,'.$tenant->id],
+        ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            $domain = $request->filled('domain') ? (string) $request->input('domain') : null;
+            $subdomain = $domain ? null : (string) $request->input('subdomain');
+
+            foreach (TenantWorkspaceUrlValidator::validate($domain, $subdomain) as $message) {
+                $validator->errors()->add($domain ? 'domain' : 'subdomain', $message);
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+                ->withErrors($validator, 'tenantUpdate_'.$tenant->id)
+                ->withInput()
+                ->with('open_modal', 'tenant-edit-modal-'.$tenant->id);
+        }
+
+        $validated = $validator->validated();
+
+        $tenant->update([
+            'name' => trim($validated['name']),
+            'address' => trim($validated['address']),
+            'contact_number' => trim($validated['contact_number']),
+            'email' => $validated['email'],
+            'subdomain' => $validated['domain'] ? null : ($validated['subdomain'] ?: null),
+            'domain' => $validated['domain'] ?: null,
+        ]);
+
+        return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+            ->with('success', "Tenant {$tenant->name} was updated successfully.");
+    }
+
+    public function toggleActivation(Tenant $tenant): RedirectResponse
+    {
+        $tenant->forceFill([
+            'is_active' => ! $tenant->is_active,
+        ])->save();
+
+        $statusLabel = $tenant->is_active ? 'activated' : 'deactivated';
+        $notificationSent = $this->notifyTenantAdmin(
+            $tenant,
+            fn (User $admin) => $admin->notify(new TenantActivationStatusNotification($tenant))
+        );
+
+        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard())
+            ->with('success', "Tenant {$tenant->name} was {$statusLabel} successfully.");
+
+        if (! $notificationSent) {
+            $response->with('info', 'The tenant status was updated, but no tenant admin email could be delivered from the central dashboard.');
+        }
+
+        return $response;
+    }
+
+    public function updateSubscription(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'plan_id' => ['required', 'exists:plans,id'],
+            'status' => ['required', 'string', 'in:'.implode(',', [
+                TenantSubscription::STATUS_ACTIVE,
+                TenantSubscription::STATUS_CANCELLED,
+                TenantSubscription::STATUS_EXPIRED,
+                TenantSubscription::STATUS_TRIALING,
+            ])],
+            'starts_at' => ['required', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+                ->withErrors($validator, 'tenantSubscription_'.$tenant->id)
+                ->withInput()
+                ->with('open_modal', 'tenant-subscription-modal-'.$tenant->id);
+        }
+
+        $validated = $validator->validated();
+
+        $plan = Plan::active()->findOrFail($validated['plan_id']);
+        $subscription = $tenant->subscriptions()->latest('id')->first() ?? new TenantSubscription(['tenant_id' => $tenant->id]);
+
+        $subscription->fill([
+            'plan_id' => $plan->id,
+            'status' => $validated['status'],
+            'starts_at' => $validated['starts_at'],
+            'ends_at' => $validated['ends_at'] ?: null,
+        ]);
+        $subscription->save();
+
+        $tenant->forceFill(['plan_id' => $plan->id])->save();
+
+        $notificationSent = $this->notifyTenantAdmin(
+            $tenant,
+            fn (User $admin) => $admin->notify(new TenantSubscriptionUpdatedNotification($tenant, $plan, $subscription))
+        );
+
+        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard())
+            ->with('success', "Subscription for {$tenant->name} was updated successfully.");
+
+        if (! $notificationSent) {
+            $response->with('info', 'Subscription was updated, but no tenant admin email could be delivered from the central dashboard.');
+        }
+
+        return $response;
+    }
+
+    public function sendWorkspaceAccess(Tenant $tenant): RedirectResponse
+    {
+        $notificationSent = $this->notifyTenantAdmin(
+            $tenant,
+            fn (User $admin) => $admin->notify(new TenantWorkspaceAccessNotification($tenant))
+        );
+
+        return redirect()->away(\App\Support\TenantUrl::centralDashboard())->with(
+            $notificationSent ? 'success' : 'error',
+            $notificationSent
+                ? "Workspace access details were emailed to {$tenant->name}."
+                : "Workspace access email could not be sent for {$tenant->name}."
+        );
+    }
+
+    public function resetTenantPassword(Tenant $tenant): RedirectResponse
+    {
+        $newPassword = $this->generateReadableTemporaryPassword();
+        $passwordReset = false;
+        $notificationSent = false;
+
+        try {
+            $this->tenantDatabaseManager->activate($tenant);
+
+            $admin = User::on('tenant')
+                ->where('tenant_id', $tenant->id)
+                ->where('role', User::ROLE_ADMIN)
+                ->orderBy('id')
+                ->first();
+
+            if (! $admin) {
+                return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+                    ->with('error', "No tenant admin account was found for {$tenant->name}.");
+            }
+
+            $admin->forceFill([
+                'password' => Hash::make($newPassword),
+            ])->save();
+            $passwordReset = true;
+
+            $admin->notify(new TenantCredentialsNotification($tenant, $newPassword));
+            $notificationSent = true;
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard());
+
+        if (! $passwordReset) {
+            return $response->with('error', "The temporary password could not be reset for {$tenant->name}.");
+        }
+
+        if (! $notificationSent) {
+            return $response->with('info', "A new temporary password was generated for {$tenant->name}, but the credentials email could not be sent.");
+        }
+
+        return $response->with('success', "A new temporary password was generated and emailed for {$tenant->name}.");
     }
 
     public function create(): View
@@ -67,7 +249,7 @@ class CentralController extends Controller
         $validated = $request->validated();
         $plan = Plan::findOrFail($validated['plan_id']);
         $tenant = null;
-        $generatedPassword = Str::password(14, true, true, false, false);
+        $generatedPassword = $this->generateReadableTemporaryPassword();
         $admin = null;
         $mailDeliveryFailed = false;
 
@@ -76,6 +258,7 @@ class CentralController extends Controller
                 $tenantName = trim($validated['tenant_name']);
                 $slug = $this->generateUniqueTenantValue('slug', $tenantName);
                 $subdomain = $this->generateUniqueTenantValue('subdomain', $tenantName);
+                $sharedTenantDatabase = $this->sharedTenantDatabaseName();
 
                 $tenant = new Tenant([
                     'name' => $tenantName,
@@ -83,11 +266,14 @@ class CentralController extends Controller
                     'plan_id' => $plan->id,
                     'domain' => null,
                     'subdomain' => $subdomain,
-                    'database_name' => $this->generateUniqueTenantDatabaseName($subdomain ?: $slug),
+                    'database_name' => $sharedTenantDatabase,
                     'address' => $validated['address'] ?? null,
                     'email' => $validated['email'],
                     'contact_number' => $validated['contact_number'],
                     'settings' => [
+                        'database' => [
+                            'mode' => 'shared',
+                        ],
                         'theme' => [
                             'primary_color' => '#2563eb',
                             'app_name' => $tenantName,
@@ -115,7 +301,7 @@ class CentralController extends Controller
 
             $admin = $this->tenantDatabaseManager->provision($tenant, [
                 'name' => $tenant->name.' Admin',
-                'username' => 'admin',
+                'username' => $validated['tenant_admin_username'],
                 'email' => $validated['email'],
                 'phone' => $validated['contact_number'],
                 'password' => $generatedPassword,
@@ -195,6 +381,36 @@ class CentralController extends Controller
         ];
     }
 
+    private function notifyTenantAdmin(Tenant $tenant, callable $callback): bool
+    {
+        try {
+            $admin = $this->resolveTenantAdmin($tenant);
+
+            if (! $admin) {
+                return false;
+            }
+
+            $callback($admin);
+
+            return true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return false;
+        }
+    }
+
+    private function resolveTenantAdmin(Tenant $tenant): ?User
+    {
+        $this->tenantDatabaseManager->activate($tenant);
+
+        return User::on('tenant')
+            ->where('tenant_id', $tenant->id)
+            ->where('role', User::ROLE_ADMIN)
+            ->orderBy('id')
+            ->first();
+    }
+
     private function generateUniqueTenantDatabaseName(string $source): string
     {
         $prefix = (string) config('database.tenant_database_prefix', 'tenant_');
@@ -214,5 +430,28 @@ class CentralController extends Controller
         }
 
         return $candidate;
+    }
+
+    public function generateReadableTemporaryPassword(int $length = 14): string
+    {
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+        $maxIndex = strlen($alphabet) - 1;
+        $password = '';
+
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $alphabet[random_int(0, $maxIndex)];
+        }
+
+        return $password;
+    }
+
+    private function sharedTenantDatabaseName(): string
+    {
+        $sharedConfig = config('database.connections.'.config('database.default'))
+            ?? config('database.connections.central', []);
+
+        return (string) ($sharedConfig['database']
+            ?? config('database.connections.mysql.database')
+            ?? 'final_app');
     }
 }

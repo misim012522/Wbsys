@@ -27,7 +27,7 @@ class TenantCredentialsNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $loginUrl = TenantUrl::login($this->tenant);
+        $loginUrl = TenantUrl::login($this->tenant, true);
         return (new MailMessage)
             ->subject('Your tenant account is ready')
             ->greeting('Hello ' . ($notifiable->name ?: 'there') . ',')
@@ -35,7 +35,7 @@ class TenantCredentialsNotification extends Notification
             ->line('Tenant: ' . $this->tenant->name)
             ->line('Login page: ' . $loginUrl)
             ->line('Login email: ' . $notifiable->email)
-            ->line('Username: admin')
+            ->line('Username: ' . $notifiable->username)
             ->line('Temporary password: ' . $this->generatedPassword)
             ->action('Log in to your workspace', $loginUrl)
             ->line('You may kindly change this password later from your account settings.');

@@ -3,7 +3,7 @@
 @section('title', 'Central Dashboard')
 
 @section('content')
-<div class="space-y-8" data-delete-tenant-root>
+<div class="space-y-8" data-central-dashboard-root data-open-modal="{{ session('open_modal', '') }}">
     <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
             Central App
@@ -34,7 +34,7 @@
 
     <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Tenant credentials are sent by email during registration. Use this table to verify the correct tenant domain only, not as a central-app login shortcut for tenant accounts.
+            Tenant credentials are sent by email during registration. Use this dashboard to manage activation, tenant details, subscription details, and central email notifications without logging in as the tenant.
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -53,17 +53,18 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($tenants as $tenant)
+                        @php
+                            $workspaceUrl = \App\Support\TenantUrl::workspace($tenant);
+                            $loginUrl = \App\Support\TenantUrl::login($tenant);
+                            $workspaceHost = parse_url($workspaceUrl, PHP_URL_HOST) ?: 'N/A';
+                            $latestSubscription = $tenant->subscriptions->sortByDesc('id')->first();
+                        @endphp
                         <tr class="align-top">
                             <td class="px-4 py-4">
                                 <div class="font-semibold text-slate-900">{{ $tenant->name }}</div>
                                 <div class="text-xs text-slate-500">Slug: {{ $tenant->slug }}</div>
                             </td>
                             <td class="px-4 py-4">
-                                @php
-                                    $workspaceUrl = \App\Support\TenantUrl::workspace($tenant);
-                                    $loginUrl = \App\Support\TenantUrl::login($tenant);
-                                    $workspaceHost = parse_url($workspaceUrl, PHP_URL_HOST) ?: 'N/A';
-                                @endphp
                                 <div class="space-y-2">
                                     <div>
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tenant domain</p>
@@ -83,31 +84,78 @@
                                             {{ $loginUrl }}
                                         </a>
                                     </div>
-                                    <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
-                                        Credentials sent by email. Central users can verify or open the tenant domain, but tenant accounts should sign in from their own workspace link.
-                                    </div>
                                 </div>
                             </td>
                             <td class="px-4 py-4 text-slate-600">{{ $tenant->address ?: 'N/A' }}</td>
                             <td class="px-4 py-4 text-slate-600">{{ $tenant->contact_number ?: 'N/A' }}</td>
                             <td class="px-4 py-4 text-slate-600">{{ $tenant->email ?: 'N/A' }}</td>
                             <td class="px-4 py-4 text-slate-600">{{ optional($tenant->created_at)->format('M d, Y h:i A') ?: 'N/A' }}</td>
-                            <td class="px-4 py-4 text-slate-600">{{ $tenant->plan?->name ?? 'N/A' }}</td>
+                            <td class="px-4 py-4 text-slate-600">
+                                <div class="font-medium text-slate-900">{{ $tenant->plan?->name ?? 'N/A' }}</div>
+                                @if($latestSubscription)
+                                    <div class="mt-1 text-xs text-slate-500">
+                                        {{ str($latestSubscription->status)->replace('_', ' ')->title() }}
+                                        @if($latestSubscription->ends_at)
+                                            until {{ $latestSubscription->ends_at->format('M d, Y') }}
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
                             <td class="px-4 py-4">
                                 <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
                                     {{ $tenant->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
                             <td class="px-4 py-4">
-                                <button
-                                    type="button"
-                                    data-delete-tenant-trigger
-                                    data-tenant-name="{{ $tenant->name }}"
-                                    data-tenant-action="{{ route('central.tenants.destroy', $tenant) }}"
-                                    class="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
-                                >
-                                    Delete tenant
-                                </button>
+                                <div class="space-y-3">
+                                    <button
+                                        type="button"
+                                        data-modal-target="tenant-edit-modal-{{ $tenant->id }}"
+                                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        Edit tenant
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        data-modal-target="tenant-subscription-modal-{{ $tenant->id }}"
+                                        class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                    >
+                                        Edit subscription
+                                    </button>
+
+                                    <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                            {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
+                                        </button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
+                                        @csrf
+                                        <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                            Send access email
+                                        </button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
+                                        @csrf
+                                        <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
+                                            Reset temp password
+                                        </button>
+                                    </form>
+
+                                    <button
+                                        type="button"
+                                        data-delete-tenant-trigger
+                                        data-tenant-name="{{ $tenant->name }}"
+                                        data-tenant-action="{{ route('central.tenants.destroy', $tenant) }}"
+                                        class="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                                    >
+                                        Delete tenant
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -120,6 +168,179 @@
         </div>
     </div>
 </div>
+
+@foreach($tenants as $tenant)
+    @php
+        $latestSubscription = $tenant->subscriptions->sortByDesc('id')->first();
+        $tenantUpdateErrorBag = 'tenantUpdate_'.$tenant->id;
+        $tenantSubscriptionErrorBag = 'tenantSubscription_'.$tenant->id;
+        $isTenantUpdateModalOpen = session('open_modal') === 'tenant-edit-modal-'.$tenant->id;
+        $isTenantSubscriptionModalOpen = session('open_modal') === 'tenant-subscription-modal-'.$tenant->id;
+    @endphp
+    <div id="tenant-edit-modal-{{ $tenant->id }}" data-dashboard-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
+        <div class="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Step 2</p>
+                    <h2 class="mt-2 text-2xl font-bold text-slate-900">Update tenant details</h2>
+                    <p class="mt-2 text-sm text-slate-500">Edit the tenant profile, contact details, and workspace host settings from the central app.</p>
+                </div>
+                <button type="button" data-modal-close class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Close dialog">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('central.tenants.update', $tenant) }}" class="mt-6" data-modal-submit-form>
+                @csrf
+                @method('PATCH')
+                @if($errors->{$tenantUpdateErrorBag}->any())
+                    <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        Please review the tenant details below and fix the highlighted fields.
+                    </div>
+                @endif
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Tenant name</label>
+                        <input type="text" name="name" value="{{ $isTenantUpdateModalOpen ? old('name', $tenant->name) : $tenant->name }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('name') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('name'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('name') }}</p>
+                        @endif
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Address</label>
+                        <textarea name="address" rows="3" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('address') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">{{ $isTenantUpdateModalOpen ? old('address', $tenant->address) : $tenant->address }}</textarea>
+                        @if($errors->{$tenantUpdateErrorBag}->has('address'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('address') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Contact number</label>
+                        <input type="text" name="contact_number" value="{{ $isTenantUpdateModalOpen ? old('contact_number', $tenant->contact_number) : $tenant->contact_number }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('contact_number') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('contact_number'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('contact_number') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Email</label>
+                        <input type="email" name="email" value="{{ $isTenantUpdateModalOpen ? old('email', $tenant->email) : $tenant->email }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('email') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('email'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('email') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Subdomain</label>
+                        <input type="text" name="subdomain" value="{{ $isTenantUpdateModalOpen ? old('subdomain', $tenant->subdomain) : $tenant->subdomain }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('subdomain') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('subdomain'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('subdomain') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Custom domain</label>
+                        <input type="text" name="domain" value="{{ $isTenantUpdateModalOpen ? old('domain', $tenant->domain) : $tenant->domain }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('domain') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('domain'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('domain') }}</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                    Use either a subdomain or a custom domain. If a custom domain is set, it overrides the generated subdomain host.
+                </div>
+
+                <div class="mt-6 flex items-center justify-between gap-3">
+                    <p data-submit-status class="hidden text-sm font-medium text-slate-500">Saving tenant details...</p>
+                    <div class="flex justify-end gap-3">
+                    <button type="button" data-modal-close class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        Cancel
+                    </button>
+                    <button type="submit" data-submit-button data-default-label="Save tenant" data-loading-label="Saving tenant..." class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
+                        Save tenant
+                    </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="tenant-subscription-modal-{{ $tenant->id }}" data-dashboard-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
+        <div class="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Step 3</p>
+                    <h2 class="mt-2 text-2xl font-bold text-slate-900">Update subscription</h2>
+                    <p class="mt-2 text-sm text-slate-500">Change the tenant plan, lifecycle status, and effective dates from the central dashboard.</p>
+                </div>
+                <button type="button" data-modal-close class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Close dialog">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('central.tenants.subscription', $tenant) }}" class="mt-6" data-modal-submit-form>
+                @csrf
+                @method('PATCH')
+                @if($errors->{$tenantSubscriptionErrorBag}->any())
+                    <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        Please review the subscription details below and fix the highlighted fields.
+                    </div>
+                @endif
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Plan</label>
+                        <select name="plan_id" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantSubscriptionErrorBag}->has('plan_id') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                            @foreach($plans as $plan)
+                                <option value="{{ $plan->id }}" @selected((string) ($isTenantSubscriptionModalOpen ? old('plan_id', $tenant->plan_id) : $tenant->plan_id) === (string) $plan->id)>{{ $plan->name }}</option>
+                            @endforeach
+                        </select>
+                        @if($errors->{$tenantSubscriptionErrorBag}->has('plan_id'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('plan_id') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Status</label>
+                        <select name="status" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantSubscriptionErrorBag}->has('status') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                            @foreach([\App\Models\TenantSubscription::STATUS_ACTIVE, \App\Models\TenantSubscription::STATUS_TRIALING, \App\Models\TenantSubscription::STATUS_CANCELLED, \App\Models\TenantSubscription::STATUS_EXPIRED] as $status)
+                                <option value="{{ $status }}" @selected(($isTenantSubscriptionModalOpen ? old('status', $latestSubscription?->status ?? \App\Models\TenantSubscription::STATUS_ACTIVE) : ($latestSubscription?->status ?? \App\Models\TenantSubscription::STATUS_ACTIVE)) === $status)>{{ str($status)->replace('_', ' ')->title() }}</option>
+                            @endforeach
+                        </select>
+                        @if($errors->{$tenantSubscriptionErrorBag}->has('status'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('status') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Starts at</label>
+                        <input type="datetime-local" name="starts_at" value="{{ $isTenantSubscriptionModalOpen ? old('starts_at', optional($latestSubscription?->starts_at)->format('Y-m-d\\TH:i') ?? optional($tenant->created_at)->format('Y-m-d\\TH:i')) : (optional($latestSubscription?->starts_at)->format('Y-m-d\\TH:i') ?? optional($tenant->created_at)->format('Y-m-d\\TH:i')) }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantSubscriptionErrorBag}->has('starts_at') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantSubscriptionErrorBag}->has('starts_at'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('starts_at') }}</p>
+                        @endif
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Ends at</label>
+                        <input type="datetime-local" name="ends_at" value="{{ $isTenantSubscriptionModalOpen ? old('ends_at', optional($latestSubscription?->ends_at)->format('Y-m-d\\TH:i')) : optional($latestSubscription?->ends_at)->format('Y-m-d\\TH:i') }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantSubscriptionErrorBag}->has('ends_at') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantSubscriptionErrorBag}->has('ends_at'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('ends_at') }}</p>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
+                    Saving this also syncs the tenant's current assigned plan and sends a tenant admin notification when email delivery is available.
+                </div>
+
+                <div class="mt-6 flex items-center justify-between gap-3">
+                    <p data-submit-status class="hidden text-sm font-medium text-emerald-700">Updating subscription...</p>
+                    <div class="flex justify-end gap-3">
+                    <button type="button" data-modal-close class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        Cancel
+                    </button>
+                    <button type="submit" data-submit-button data-default-label="Update subscription" data-loading-label="Updating subscription..." class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                        Update subscription
+                    </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+@endforeach
 
 <div id="delete-tenant-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
     <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
@@ -157,60 +378,103 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const root = document.querySelector('[data-delete-tenant-root]');
-        const modal = document.getElementById('delete-tenant-modal');
+        const root = document.querySelector('[data-central-dashboard-root]');
+        const deleteModal = document.getElementById('delete-tenant-modal');
 
-        if (!root || !modal) {
+        if (!root || !deleteModal) {
             return;
         }
 
-        const tenantNameTarget = modal.querySelector('[data-delete-tenant-name]');
-        const modalForm = modal.querySelector('[data-delete-tenant-modal-form]');
-        const confirmButton = modal.querySelector('[data-delete-tenant-confirm]');
-        const closeButtons = modal.querySelectorAll('[data-delete-tenant-close], [data-delete-tenant-cancel]');
+        const managedModals = Array.from(document.querySelectorAll('[data-dashboard-modal]'));
+        const initialModalId = root.dataset.openModal || '';
+        const tenantNameTarget = deleteModal.querySelector('[data-delete-tenant-name]');
+        const modalForm = deleteModal.querySelector('[data-delete-tenant-modal-form]');
+        const confirmButton = deleteModal.querySelector('[data-delete-tenant-confirm]');
+        const closeButtons = deleteModal.querySelectorAll('[data-delete-tenant-close], [data-delete-tenant-cancel]');
         const confirmButtonLabel = confirmButton ? confirmButton.textContent : 'Confirm delete';
         let activeAction = null;
 
-        const openModal = (action, tenantName) => {
+        const showModal = (modalElement) => {
+            modalElement.classList.remove('hidden');
+            modalElement.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        const hideModal = (modalElement) => {
+            modalElement.classList.add('hidden');
+            modalElement.classList.remove('flex');
+
+            if (!document.querySelector('[data-dashboard-modal].flex, #delete-tenant-modal.flex')) {
+                document.body.classList.remove('overflow-hidden');
+            }
+        };
+
+        const openDeleteModal = (action, tenantName) => {
             activeAction = action;
             tenantNameTarget.textContent = tenantName;
+
             if (modalForm) {
                 modalForm.setAttribute('action', action || '');
             }
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.body.classList.add('overflow-hidden');
+
             if (confirmButton) {
                 confirmButton.disabled = false;
                 confirmButton.textContent = confirmButtonLabel;
                 confirmButton.classList.remove('cursor-not-allowed', 'opacity-70');
             }
-            confirmButton.focus();
+
+            showModal(deleteModal);
+
+            if (confirmButton) {
+                confirmButton.focus();
+            }
         };
 
-        const closeModal = () => {
+        const closeDeleteModal = () => {
             activeAction = null;
+
             if (modalForm) {
                 modalForm.setAttribute('action', '');
             }
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.classList.remove('overflow-hidden');
+
+            hideModal(deleteModal);
         };
+
+        root.querySelectorAll('[data-modal-target]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetModal = document.getElementById(button.dataset.modalTarget || '');
+
+                if (targetModal) {
+                    showModal(targetModal);
+                }
+            });
+        });
 
         root.querySelectorAll('[data-delete-tenant-trigger]').forEach((button) => {
             button.addEventListener('click', () => {
-                openModal(button.dataset.tenantAction || '', button.dataset.tenantName || 'this tenant');
+                openDeleteModal(button.dataset.tenantAction || '', button.dataset.tenantName || 'this tenant');
+            });
+        });
+
+        managedModals.forEach((modalElement) => {
+            modalElement.querySelectorAll('[data-modal-close]').forEach((button) => {
+                button.addEventListener('click', () => hideModal(modalElement));
+            });
+
+            modalElement.addEventListener('click', (event) => {
+                if (event.target === modalElement) {
+                    hideModal(modalElement);
+                }
             });
         });
 
         closeButtons.forEach((button) => {
-            button.addEventListener('click', closeModal);
+            button.addEventListener('click', closeDeleteModal);
         });
 
         if (modalForm) {
             modalForm.addEventListener('submit', (event) => {
-                if (! activeAction) {
+                if (!activeAction) {
                     event.preventDefault();
                     return;
                 }
@@ -223,17 +487,72 @@
             });
         }
 
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal();
+        root.querySelectorAll('[data-modal-submit-form]').forEach((formElement) => {
+            formElement.addEventListener('submit', () => {
+                const submitButton = formElement.querySelector('[data-submit-button]');
+                const statusLabel = formElement.querySelector('[data-submit-status]');
+                const closeButton = formElement.querySelector('[data-modal-close]');
+
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.textContent = submitButton.dataset.loadingLabel || 'Saving...';
+                    submitButton.classList.add('cursor-not-allowed', 'opacity-80');
+                }
+
+                if (closeButton) {
+                    closeButton.disabled = true;
+                    closeButton.classList.add('cursor-not-allowed', 'opacity-60');
+                }
+
+                if (statusLabel) {
+                    statusLabel.classList.remove('hidden');
+                }
+            });
+        });
+
+        root.querySelectorAll('[data-row-action-form]').forEach((formElement) => {
+            formElement.addEventListener('submit', () => {
+                const actionButton = formElement.querySelector('[data-row-action-button]');
+
+                if (!actionButton) {
+                    return;
+                }
+
+                actionButton.disabled = true;
+                actionButton.textContent = actionButton.dataset.loadingLabel || 'Processing...';
+                actionButton.classList.add('cursor-not-allowed', 'opacity-80');
+            });
+        });
+
+        deleteModal.addEventListener('click', (event) => {
+            if (event.target === deleteModal) {
+                closeDeleteModal();
             }
         });
 
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
-                closeModal();
+            if (event.key !== 'Escape') {
+                return;
             }
+
+            if (!deleteModal.classList.contains('hidden')) {
+                closeDeleteModal();
+            }
+
+            managedModals.forEach((modalElement) => {
+                if (!modalElement.classList.contains('hidden')) {
+                    hideModal(modalElement);
+                }
+            });
         });
+
+        if (initialModalId) {
+            const initialModal = document.getElementById(initialModalId);
+
+            if (initialModal) {
+                showModal(initialModal);
+            }
+        }
     });
 </script>
 @endsection

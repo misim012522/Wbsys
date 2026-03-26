@@ -25,9 +25,13 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
             
-            // Skip view composer for exception renderer views to prevent infinite loops
+            // Skip framework-owned views that do not need tenant theme data.
             $currentView = $view->getName();
-            if (str_contains($currentView, 'laravel-exceptions-renderer::')) {
+            if (
+                str_contains($currentView, 'laravel-exceptions-renderer::')
+                || str_starts_with($currentView, 'mail::')
+                || str_starts_with($currentView, 'notifications::')
+            ) {
                 return;
             }
             

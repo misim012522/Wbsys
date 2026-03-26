@@ -11,6 +11,10 @@ class RecaptchaService
      */
     public function verify(string $response, ?string $remoteIp = null): bool
     {
+        if (! config('recaptcha.enabled') || app()->environment(['local', 'testing'])) {
+            return true;
+        }
+
         $secret = config('recaptcha.secret_key');
         if (! $secret) {
             return true;

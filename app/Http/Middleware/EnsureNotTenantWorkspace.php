@@ -19,7 +19,7 @@ class EnsureNotTenantWorkspace
                     ->with('error', 'Tenant accounts cannot access the central app.');
             }
 
-            return redirect()->away(TenantUrl::forPath(app('current_tenant')))
+            return redirect()->away(TenantUrl::login(app('current_tenant'), true))
                 ->with('error', 'The central app is not available inside a tenant workspace.');
         }
 

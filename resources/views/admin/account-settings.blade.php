@@ -3,13 +3,18 @@
 @section('title', 'Account Settings')
 
 @section('content')
-<div class="mx-auto max-w-2xl">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800">Account settings</h1>
-        <p class="mt-2 text-sm text-slate-600">Update your admin password for this workspace.</p>
-    </div>
+@include('admin._workspace-nav', [
+    'title' => 'Admin settings',
+    'description' => 'Update the password used by the tenant administrator for this workspace.',
+])
 
+<div class="mx-auto max-w-2xl">
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">Account settings</h2>
+            <p class="mt-2 text-sm text-slate-600">Update password and keep the tenant administrator account secure.</p>
+        </div>
+
         <form method="POST" action="{{ route('admin.settings.update') }}" class="space-y-5">
             @csrf
             @method('PUT')
@@ -50,7 +55,7 @@
             </div>
 
             <div class="flex items-center justify-end gap-3">
-                <a href="{{ route('admin.dashboard') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Back</a>
+                <a href="{{ route('admin.dashboard') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Back to admin dashboard</a>
                 <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Update password</button>
             </div>
         </form>

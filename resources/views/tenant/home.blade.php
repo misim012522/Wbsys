@@ -12,9 +12,9 @@
             </h1>
             <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
                 @if($tenant)
-                    This tenant domain is the shared admin workspace for {{ $tenant->name }}. The administrator and tenant staff use the same pages, UI, and backend on every tenant domain.
+                    This tenant domain is the dedicated workspace for {{ $tenant->name }}. Tenant admins handle oversight and settings here, while office staff handle live queue and appointment operations from their own workspace pages.
                 @else
-                    Open this page from a tenant domain to access that tenant's shared admin workspace and public service links.
+                    Open this page from a tenant domain to access that tenant's admin oversight pages, office staff workspace, and public service links.
                 @endif
             </p>
 
@@ -39,6 +39,32 @@
                         Open workspace login
                     </a>
                 @endguest
+                @auth
+                    @if(! auth()->user()->isCentralUser())
+                        @if(auth()->user()->isAdmin())
+                            <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+                                Open tenant admin workspace
+                            </a>
+                            <a href="{{ route('admin.settings.edit') }}" class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
+                                Open admin settings
+                            </a>
+                        @elseif(auth()->user()->isOfficeStaff())
+                            <a href="{{ route('office.dashboard') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+                                Open office staff workspace
+                            </a>
+                            <a href="{{ route('tenant.settings.edit') }}" class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
+                                Open workspace settings
+                            </a>
+                        @else
+                            <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100">
+                                Open tenant dashboard
+                            </a>
+                            <a href="{{ route('tenant.settings.edit') }}" class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
+                                Open workspace settings
+                            </a>
+                        @endif
+                    @endif
+                @endauth
                 <span class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
                     End users continue through QR/public links
                 </span>
@@ -50,12 +76,21 @@
             <div class="mt-6 space-y-4 text-sm leading-7 text-slate-600">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p class="font-semibold text-slate-900">Tenant admin pages</p>
-                    <p class="mt-1">Admin login, dashboard, reports, user management, QR tools, and settings all live inside the tenant workspace.</p>
+                    <p class="mt-1">Admin login, dashboard, reports, user management, public access setup, and settings all live inside the tenant workspace domain.</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p class="font-semibold text-slate-900">Office staff dashboard</p>
-                    <p class="mt-1">Logged-in office staff use the office dashboard inside the same tenant workspace to manage queue calls, appointments, QR codes, reports, and activity.</p>
+                    <p class="mt-1">Logged-in office staff use the office dashboard inside the same tenant workspace to manage queue calls, appointments, office QR access, reports, and activity.</p>
                 </div>
+                @if($tenant)
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p class="font-semibold text-emerald-900">Dedicated tenant URLs</p>
+                        <p class="mt-1 text-emerald-800">
+                            Dashboard: {{ \App\Support\TenantUrl::dashboard($tenant) }}<br>
+                            Settings: {{ \App\Support\TenantUrl::forPath($tenant, '/settings') }}
+                        </p>
+                    </div>
+                @endif
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <p class="font-semibold text-slate-900">Public external users</p>
                     <p class="mt-1">Visitors continue using the public QR, queue, and appointment pages without creating or signing in to a tenant workspace account.</p>

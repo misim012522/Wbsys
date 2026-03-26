@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::prefix('tenant')->name('tenant.')->group(function () {
+Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(function () {
     Route::get('/', [TenantAppController::class, 'home'])->name('home');
     Route::get('/track', [TenantAppController::class, 'lookupTrack'])->name('track.lookup');
     Route::middleware('guest')->group(function () {

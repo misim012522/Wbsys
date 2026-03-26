@@ -37,7 +37,7 @@ class AccountConfirmedNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $tenant = $notifiable->tenant;
-        $loginUrl = TenantUrl::login($tenant);
+        $loginUrl = TenantUrl::login($tenant, true);
         $roleLabel = match ($notifiable->role) {
             User::ROLE_OFFICE_STAFF => 'office staff account',
             default => 'account',

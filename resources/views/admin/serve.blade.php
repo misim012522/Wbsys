@@ -1,23 +1,29 @@
 @extends('layouts.app')
 
-@section('title', 'Serve — ' . $office->name)
+@section('title', 'Serve - ' . $office->name)
 
 @section('content')
-<div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">{{ $office->name }} — Serve queue</h1>
-    <div class="flex gap-2">
-        <a href="{{ route('admin.qr') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">QR codes</a>
-        <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-    </div>
+@include('admin._workspace-nav', [
+    'title' => $office->name . ' live queue monitor',
+    'description' => 'This view is available for tenant admin monitoring and backup assistance, but day-to-day live serving should be handled by office staff from their own workspace.',
+    'actions' => [
+        ['label' => 'Public access', 'href' => route('admin.qr')],
+        ['label' => 'Office staff accounts', 'href' => route('admin.users.index')],
+    ],
+])
+
+<div class="mb-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+    <p class="text-sm font-semibold text-amber-900">Office staff first</p>
+    <p class="mt-2 text-sm text-amber-800">Use the office staff workspace as the primary live serving screen for QR, queue calls, and appointment handling. This admin page is best kept for monitoring, supervision, or backup intervention.</p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div>
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-slate-800">Queue — Today</h2>
+            <h2 class="text-lg font-semibold text-slate-800">Queue - Today</h2>
             <form method="POST" action="{{ route('admin.call-next', $office) }}" class="inline">
                 @csrf
-                <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700">Call Next</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700">Call next</button>
             </form>
         </div>
 
@@ -31,7 +37,7 @@
                     @if($currentServing->guest_email)<a href="mailto:{{ $currentServing->guest_email }}" class="text-blue-600 hover:underline">{{ $currentServing->guest_email }}</a>@endif
                     @if($currentServing->guest_email && $currentServing->guest_phone) · @endif
                     @if($currentServing->guest_phone)<a href="tel:{{ $currentServing->guest_phone }}" class="text-blue-600 hover:underline">{{ $currentServing->guest_phone }}</a>@endif
-                    @if(!$currentServing->guest_email && !$currentServing->guest_phone)<span class="text-slate-500">—</span>@endif
+                    @if(!$currentServing->guest_email && !$currentServing->guest_phone)<span class="text-slate-500">-</span>@endif
                 </p>
                 <form method="POST" action="{{ route('admin.queue.update', $currentServing) }}" class="mt-2 flex gap-2">
                     @csrf
@@ -57,7 +63,12 @@
                             <span class="text-slate-600 ml-2">{{ $q->display_name }}</span>
                             @if($q->service_type)<span class="ml-2 text-xs text-slate-500">({{ $q->service_type }})</span>@endif
                             <span class="ml-2 text-xs text-slate-500">{{ $q->reference_code }}</span>
-                            <p class="text-xs text-slate-500 mt-0.5 truncate">Contact: @if($q->guest_email)<a href="mailto:{{ $q->guest_email }}" class="text-blue-600 hover:underline">{{ $q->guest_email }}</a>@endif @if($q->guest_email && $q->guest_phone) · @endif @if($q->guest_phone)<a href="tel:{{ $q->guest_phone }}" class="text-blue-600 hover:underline">{{ $q->guest_phone }}</a>@endif @if(!$q->guest_email && !$q->guest_phone)—@endif</p>
+                            <p class="text-xs text-slate-500 mt-0.5 truncate">Contact:
+                                @if($q->guest_email)<a href="mailto:{{ $q->guest_email }}" class="text-blue-600 hover:underline">{{ $q->guest_email }}</a>@endif
+                                @if($q->guest_email && $q->guest_phone) · @endif
+                                @if($q->guest_phone)<a href="tel:{{ $q->guest_phone }}" class="text-blue-600 hover:underline">{{ $q->guest_phone }}</a>@endif
+                                @if(!$q->guest_email && !$q->guest_phone)-@endif
+                            </p>
                         </div>
                         <div class="flex gap-2">
                             @if($q->status === 'waiting')
@@ -100,7 +111,7 @@
     </div>
 
     <div>
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">Appointments — Today</h2>
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Appointments - Today</h2>
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <ul class="divide-y divide-slate-100">
                 @forelse($todayAppointments as $a)
@@ -110,7 +121,12 @@
                             <span class="text-slate-600 ml-2">{{ $a->display_name }}</span>
                             @if($a->appointment_type)<span class="ml-2 text-xs text-slate-500">({{ $a->appointment_type }})</span>@endif
                             @if($a->purpose)<p class="text-xs text-slate-500 mt-0.5">{{ $a->purpose }}</p>@endif
-                            <p class="text-xs text-slate-500 mt-0.5">Contact to remind: @if($a->guest_email)<a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>@endif @if($a->guest_email && $a->guest_phone) · @endif @if($a->guest_phone)<a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>@endif @if(!$a->guest_email && !$a->guest_phone)—@endif</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Contact to remind:
+                                @if($a->guest_email)<a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>@endif
+                                @if($a->guest_email && $a->guest_phone) · @endif
+                                @if($a->guest_phone)<a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>@endif
+                                @if(!$a->guest_email && !$a->guest_phone)-@endif
+                            </p>
                         </div>
                         <div class="flex gap-2">
                             @if($a->status === 'pending')

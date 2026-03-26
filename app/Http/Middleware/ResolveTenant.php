@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Tenancy (domain): resolve tenant from domain/subdomain and set as current tenant. */
@@ -17,6 +18,12 @@ class ResolveTenant
 
     public function handle(Request $request, Closure $next): Response
     {
+        $tenantConnection = (new Tenant())->getConnectionName() ?? config('database.default');
+
+        if (! Schema::connection($tenantConnection)->hasTable('tenants')) {
+            return $next($request);
+        }
+
         $host = (string) ($request->server('HTTP_HOST') ?: $request->getHost());
         $host = preg_replace('/:\d+$/', '', $host) ?: $request->getHost();
         $tenant = Tenant::active()->where('domain', $host)->first();

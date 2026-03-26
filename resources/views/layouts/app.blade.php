@@ -63,11 +63,9 @@
                     </span>
 
                     @if(! auth()->user()->isCentralUser())
-                        @if(auth()->user()->isAdmin())
-                            <a href="{{ route('admin.settings.edit') }}" class="text-sm text-slate-500 hover:text-slate-700">Account settings</a>
-                        @else
-                            <a href="{{ route('password.request') }}" class="text-sm text-slate-500 hover:text-slate-700">Reset password</a>
-                        @endif
+                        <a href="{{ auth()->user()->isAdmin() ? route('admin.settings.edit') : route('tenant.settings.edit') }}" class="text-sm text-slate-500 hover:text-slate-700">
+                            {{ auth()->user()->isAdmin() ? 'Admin settings' : 'Workspace settings' }}
+                        </a>
                     @endif
                     <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
                         @csrf

@@ -3,23 +3,67 @@
 @section('title', 'Daily Reports')
 
 @section('content')
-<div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">Daily Reports</h1>
-    <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-</div>
+@php
+    $queueTotal = $queueEntries->count();
+    $appointmentTotal = $appointments->count();
+    $completedTotal = $queueEntries->where('status', 'completed')->count() + $appointments->where('status', 'completed')->count();
+@endphp
 
-<form method="GET" action="{{ route('admin.reports') }}" class="flex flex-wrap gap-4 mb-8">
-    <div>
+@include('admin._workspace-nav', [
+    'title' => 'Daily reports',
+    'description' => 'Review tenant-wide queue and appointment activity for a selected date.',
+])
+
+<form method="GET" action="{{ route('admin.reports') }}" class="mb-8 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="flex flex-wrap gap-4">
+        <div>
         <label for="date" class="block text-sm font-medium text-slate-700 mb-1">Date</label>
         <input type="date" name="date" id="date" value="{{ $date }}" class="rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500">
-    </div>
-    <div class="flex items-end">
-        <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">Apply</button>
+        </div>
+        <div>
+            <label for="office_id" class="block text-sm font-medium text-slate-700 mb-1">Office</label>
+            <select name="office_id" id="office_id" class="rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500">
+                <option value="0">All offices</option>
+                @foreach($offices as $office)
+                    <option value="{{ $office->id }}" @selected($officeId === $office->id)>{{ $office->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flex items-end gap-2">
+            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
+            @if($officeId > 0)
+                <a href="{{ route('admin.reports', ['date' => $date]) }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear office</a>
+            @endif
+        </div>
     </div>
 </form>
 
+<div class="mb-8 flex flex-wrap gap-3">
+    <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'csv']) }}" class="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+        Download CSV
+    </a>
+    <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'print']) }}" class="inline-flex items-center rounded-2xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-900">
+        Open print view
+    </a>
+</div>
+
+<div class="grid gap-4 md:grid-cols-3 mb-8">
+    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 shadow-sm">
+        <p class="text-sm text-slate-500">Queue records</p>
+        <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $queueTotal }}</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-sky-50/60 p-5 shadow-sm">
+        <p class="text-sm text-slate-500">Appointment records</p>
+        <p class="mt-2 text-3xl font-bold text-blue-600">{{ $appointmentTotal }}</p>
+    </div>
+    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
+        <p class="text-sm text-slate-500">Completed</p>
+        <p class="mt-2 text-3xl font-bold text-slate-800">{{ $completedTotal }}</p>
+    </div>
+</div>
+
 <h2 class="text-lg font-semibold text-slate-800 mb-2">Queue entries ({{ $date }})</h2>
-<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+<div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -51,7 +95,7 @@
 </div>
 
 <h2 class="text-lg font-semibold text-slate-800 mb-2">Appointments ({{ $date }})</h2>
-<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+<div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>

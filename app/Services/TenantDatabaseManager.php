@@ -11,19 +11,33 @@ use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class TenantDatabaseManager
 {
     public function activate(Tenant $tenant): void
     {
-        $config = config('database.connections.tenant');
-        $driver = $config['driver'] ?? 'mysql';
+        $preserveInMemoryConnection = false;
 
-        $config['database'] = $driver === 'sqlite'
-            ? $this->sqlitePath($tenant)
-            : $tenant->database_name;
+        if ($this->usesSharedDatabase($tenant)) {
+            $config = config('database.connections.'.config('database.default'))
+                ?? config('database.connections.central')
+                ?? config('database.connections.tenant');
+            $preserveInMemoryConnection = ($config['driver'] ?? null) === 'sqlite'
+                && ($config['database'] ?? null) === ':memory:';
+        } else {
+            $config = config('database.connections.tenant');
+            $driver = $config['driver'] ?? 'mysql';
+            $config['database'] = $driver === 'sqlite'
+                ? $this->sqlitePath($tenant)
+                : $tenant->database_name;
+        }
 
         config(['database.connections.tenant' => $config]);
+
+        if ($preserveInMemoryConnection && array_key_exists('tenant', DB::getConnections())) {
+            return;
+        }
 
         DB::purge('tenant');
         DB::reconnect('tenant');
@@ -53,15 +67,27 @@ class TenantDatabaseManager
 
     public function initializeSchema(Tenant $tenant): void
     {
-        $this->createDatabase($tenant);
         $this->activate($tenant);
-        $this->prepareMigrationFolder($tenant);
-        $this->runTenantMigrations($tenant);
+
+        if ($this->usesSharedDatabase($tenant)) {
+            $this->ensureSharedSchema();
+        } else {
+            $this->createDatabase($tenant);
+            $this->activate($tenant);
+            $this->prepareMigrationFolder($tenant);
+            $this->runTenantMigrations($tenant);
+        }
+
         $this->seedReferenceData();
     }
 
     public function deleteDatabase(Tenant $tenant): void
     {
+        if ($this->usesSharedDatabase($tenant)) {
+            DB::purge('tenant');
+            return;
+        }
+
         $config = config('database.connections.tenant');
         $driver = $config['driver'] ?? 'mysql';
 
@@ -87,6 +113,10 @@ class TenantDatabaseManager
     {
         $this->deleteDatabase($tenant);
 
+        if ($this->usesSharedDatabase($tenant)) {
+            return;
+        }
+
         $migrationPath = $this->tenantMigrationPath($tenant);
 
         if (File::isDirectory($migrationPath)) {
@@ -96,6 +126,10 @@ class TenantDatabaseManager
 
     private function createDatabase(Tenant $tenant): void
     {
+        if ($this->usesSharedDatabase($tenant)) {
+            return;
+        }
+
         $config = config('database.connections.tenant');
         $driver = $config['driver'] ?? 'mysql';
 
@@ -143,6 +177,20 @@ class TenantDatabaseManager
                 File::copy($file->getPathname(), $destination);
             }
         }
+    }
+
+    private function ensureSharedSchema(): void
+    {
+        if ($this->tenantRuntimeTablesExist()) {
+            return;
+        }
+
+        Artisan::call('migrate', [
+            '--database' => 'tenant',
+            '--path' => database_path('migrations/tenants/_template'),
+            '--realpath' => true,
+            '--force' => true,
+        ]);
     }
 
     private function seedReferenceData(): void
@@ -227,4 +275,21 @@ class TenantDatabaseManager
     {
         return database_path('migrations/tenants/'.$tenant->slug);
     }
+
+    private function tenantRuntimeTablesExist(): bool
+    {
+        $schema = Schema::connection('tenant');
+
+        return $schema->hasTable('users')
+            && $schema->hasTable('offices')
+            && $schema->hasTable('permissions')
+            && $schema->hasTable('roles')
+            && $schema->hasTable('role_permission');
+    }
+
+    public function usesSharedDatabase(Tenant $tenant): bool
+    {
+        return ($tenant->getSetting('database.mode') ?? null) === 'shared';
+    }
+
 }

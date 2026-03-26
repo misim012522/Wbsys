@@ -17,6 +17,11 @@ class TenantUrl
         return self::forPath(null, '/central/dashboard');
     }
 
+    public static function centralRegister(): string
+    {
+        return self::forPath(null, '/central/register');
+    }
+
     public static function authContinue(?Tenant $tenant): string
     {
         return self::forPath($tenant, '/auth/continue');
@@ -33,12 +38,26 @@ class TenantUrl
             return self::centralDashboard();
         }
 
-        return self::forPath($tenant, '/dashboard');
+        if ($user?->isOfficeStaff()) {
+            return self::forPath($tenant, '/office');
+        }
+
+        if ($user?->isStudent()) {
+            return self::forPath($tenant, '/dashboard');
+        }
+
+        return self::forPath($tenant, '/admin');
     }
 
-    public static function login(?Tenant $tenant): string
+    public static function login(?Tenant $tenant, bool $forceLogin = false): string
     {
-        return self::forPath($tenant, '/login');
+        $url = self::forPath($tenant, '/login');
+
+        if (! $forceLogin) {
+            return $url;
+        }
+
+        return $url.(str_contains($url, '?') ? '&' : '?').'force_login=1';
     }
 
     public static function workspace(?Tenant $tenant): string
@@ -53,16 +72,36 @@ class TenantUrl
 
     public static function forPath(?Tenant $tenant, string $path = '/'): string
     {
+        $baseUrl = self::baseUrl();
+
         if (! $tenant) {
-            return rtrim((string) config('app.url'), '/').'/'.ltrim($path, '/');
+            return rtrim($baseUrl, '/').'/'.ltrim($path, '/');
         }
 
-        $parts = parse_url((string) config('app.url'));
+        $parts = parse_url($baseUrl);
         $scheme = $parts['scheme'] ?? 'http';
         $host = self::tenantHost($tenant, $parts['host'] ?? 'localhost');
         $port = isset($parts['port']) ? ':' . $parts['port'] : '';
 
         return $scheme.'://'.$host.$port.'/'.ltrim($path, '/');
+    }
+
+    private static function baseUrl(): string
+    {
+        if (app()->runningInConsole()) {
+            return (string) config('app.url');
+        }
+
+        if (app()->bound('request')) {
+            $request = request();
+            $root = $request->getSchemeAndHttpHost();
+
+            if (is_string($root) && $root !== '') {
+                return $root;
+            }
+        }
+
+        return (string) config('app.url');
     }
 
     private static function tenantHost(Tenant $tenant, string $baseHost): string

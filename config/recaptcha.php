@@ -4,6 +4,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | reCAPTCHA Enabled
+    |--------------------------------------------------------------------------
+    | Disable this for local development so workspace login links can be tested
+    | without completing the browser challenge on every sign-in attempt.
+    |
+    */
+
+    'enabled' => env('RECAPTCHA_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | reCAPTCHA Site Key
     |--------------------------------------------------------------------------
     | The site key (public key) for Google reCAPTCHA v2. Used in the frontend.

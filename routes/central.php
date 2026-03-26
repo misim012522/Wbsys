@@ -23,6 +23,11 @@ Route::prefix('central')->name('central.')->middleware('central.public')->group(
 
     Route::middleware(['auth', 'central.user'])->group(function () {
         Route::get('/dashboard', [CentralController::class, 'dashboard'])->name('dashboard');
+        Route::patch('/tenants/{tenant}', [CentralController::class, 'update'])->name('tenants.update');
+        Route::patch('/tenants/{tenant}/activation', [CentralController::class, 'toggleActivation'])->name('tenants.activation');
+        Route::patch('/tenants/{tenant}/subscription', [CentralController::class, 'updateSubscription'])->name('tenants.subscription');
+        Route::post('/tenants/{tenant}/reset-password', [CentralController::class, 'resetTenantPassword'])->name('tenants.reset-password');
+        Route::post('/tenants/{tenant}/workspace-access', [CentralController::class, 'sendWorkspaceAccess'])->name('tenants.workspace-access');
         Route::delete('/tenants/{tenant}', [CentralController::class, 'destroy'])->name('tenants.destroy');
     });
 });

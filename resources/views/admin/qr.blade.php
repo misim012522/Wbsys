@@ -3,22 +3,29 @@
 @section('title', 'QR Code')
 
 @section('content')
-<div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">QR code for scanning</h1>
-    <a href="{{ route('admin.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Dashboard</a>
-</div>
+@include('admin._workspace-nav', [
+    'title' => 'QR codes',
+    'description' => 'Display or print the tenant QR entry point so end users can join the queue or book an appointment without signing in.',
+    'actions' => [],
+])
 
-<p class="text-slate-600 mb-6">Display or print this QR code for your workspace. End users can scan it to get a queue number or book an appointment without logging in.</p>
+<div class="mb-6 rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 shadow-sm">
+    <p class="text-slate-600">Display or print this QR code for your workspace. End users can scan it to get a queue number or book an appointment without logging in.</p>
+    <p class="mt-2 text-sm text-slate-500">Office staff should use this QR together with their office dashboard for live queue handling.</p>
+</div>
 
 @if($office)
     <div class="grid grid-cols-1 gap-8">
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 text-center">
-            <h2 class="text-lg font-semibold text-slate-800 mb-2">{{ $office->name }}</h2>
-            <div class="inline-block p-4 bg-white rounded-lg border-2 border-slate-200">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <h2 class="mb-2 text-xl font-semibold text-slate-800">{{ $office->name }}</h2>
+            <div class="inline-block rounded-[1.5rem] border-2 border-slate-200 bg-white p-4 shadow-inner">
                 <img src="{{ route('admin.qr.image', $office) }}" alt="QR code for {{ $office->name }}" class="w-64 h-64" width="256" height="256">
             </div>
-            <p class="mt-3 text-sm text-slate-500 font-mono break-all">{{ route('queue.office', ['slug' => $office->slug]) }}</p>
-            <a href="{{ route('admin.serve', $office) }}" class="inline-block mt-4 text-sm text-emerald-600 hover:underline">Open serving screen</a>
+            <p class="mt-4 text-sm font-mono text-slate-500 break-all">{{ route('queue.office', ['slug' => $office->slug]) }}</p>
+            <div class="mt-4 flex justify-center gap-3">
+                <a href="{{ route('queue.office', ['slug' => $office->slug]) }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Open public page</a>
+                <a href="{{ route('admin.qr.image', $office) }}" target="_blank" rel="noreferrer" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Open QR image</a>
+            </div>
         </div>
     </div>
 @else

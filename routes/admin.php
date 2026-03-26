@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::get('/qr', [AdminController::class, 'qrCodes'])->name('qr');
     Route::get('/qr/{office}/image', [AdminController::class, 'qrCodeImage'])->name('qr.image')->middleware('tenant.resource:office');
     Route::get('/serve/{office}', [AdminController::class, 'serveOffice'])->name('serve')->middleware('tenant.resource:office');
@@ -27,6 +28,7 @@ Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function
     Route::get('/offices/{office}/edit', [AdminController::class, 'editOffice'])->name('offices.edit')->middleware('tenant.resource:office');
     Route::put('/offices/{office}', [AdminController::class, 'updateOffice'])->name('offices.update')->middleware('tenant.resource:office');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
+    Route::get('/reports/download', [AdminController::class, 'downloadReport'])->name('reports.download');
     Route::get('/settings', [AdminAccountSettingsController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [AdminAccountSettingsController::class, 'update'])->name('settings.update');
     Route::get('/customization', [CustomizationController::class, 'index'])->name('customization.index');

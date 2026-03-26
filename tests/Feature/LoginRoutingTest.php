@@ -112,6 +112,34 @@ test('tenant login page does not show create account in the header', function ()
         ->assertDontSee('Create account');
 });
 
+test('tenant app entry routes only open on dedicated tenant domains', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+    Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->withHeader('Host', 'central.localhost')
+        ->get('/tenant')
+        ->assertRedirect(TenantUrl::centralHome());
+
+    $this->withHeader('Host', 'central.localhost')
+        ->get('/tenant/track')
+        ->assertRedirect(TenantUrl::centralHome());
+});
+
 test('tenant register page does not show login and create account in the header', function () {
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
     $tenant = Tenant::create([

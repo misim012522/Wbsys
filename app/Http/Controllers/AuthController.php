@@ -30,6 +30,14 @@ class AuthController extends Controller
 
     public function showLogin(Request $request)
     {
+        if ($request->boolean('force_login') && auth()->check()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return view('auth.login');
+        }
+
         if (auth()->check()) {
             $user = auth()->user();
             $tenantWorkspace = $this->currentTenant() ?? $this->tenantForHost($request);
@@ -42,7 +50,7 @@ class AuthController extends Controller
                 return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
             }
 
-            return redirect()->away(TenantUrl::forUserDashboard($user));
+            return $this->dashboardRedirect($user);
         }
 
         return view('auth.login');
@@ -52,7 +60,7 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        if (config('recaptcha.secret_key')) {
+        if (config('recaptcha.enabled') && ! app()->environment(['local', 'testing']) && config('recaptcha.secret_key')) {
             if (! $this->recaptchaService->verify($request->input('g-recaptcha-response'), $request->ip())) {
                 return back()->withErrors([
                     'g-recaptcha-response' => 'reCAPTCHA verification failed. Please try again.',
@@ -116,7 +124,7 @@ class AuthController extends Controller
 
         $this->signIn($request, $user, $request->boolean('remember'), $tenant);
 
-        return redirect()->away(TenantUrl::forUserDashboard($user));
+        return $this->dashboardRedirect($user);
     }
 
     public function continueLogin(Request $request): RedirectResponse
@@ -138,7 +146,7 @@ class AuthController extends Controller
 
             $this->signIn($request, $user, $remember, $tenant);
 
-            return redirect()->away(TenantUrl::forUserDashboard($user));
+            return $this->dashboardRedirect($user);
         }
 
         abort_unless($target === 'central', 403);
@@ -149,7 +157,7 @@ class AuthController extends Controller
 
         $this->signIn($request, $user, $remember);
 
-        return redirect()->away(TenantUrl::forUserDashboard($user));
+        return $this->dashboardRedirect($user);
     }
 
     public function showRegister()
@@ -161,7 +169,7 @@ class AuthController extends Controller
     public function showTenantRegister()
     {
         return redirect()->route('login')
-            ->with('info', 'Tenant workspaces use the admin credentials created during central registration. End users should continue using the public queue and appointment pages.');
+            ->with('info', 'Tenant end users should continue using the QR, queue, and appointment pages. Workspace accounts are only for tenant admins and office staff.');
     }
 
     public function showVerificationSent()
@@ -205,7 +213,7 @@ class AuthController extends Controller
     public function registerTenantUser(Request $request)
     {
         return redirect()->route('login')
-            ->with('info', 'Tenant self-registration is disabled. Use the public queue pages for end users, while tenant administrators sign in with their workspace account.');
+            ->with('info', 'Tenant end users should continue using the QR, queue, and appointment pages. Workspace accounts are only for tenant admins and office staff.');
     }
 
     public function logout(Request $request)
@@ -224,6 +232,7 @@ class AuthController extends Controller
             );
         }
         Auth::logout();
+        $request->session()->forget('tenant_auth');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('login');
@@ -318,8 +327,13 @@ class AuthController extends Controller
             app()->instance('current_tenant', $tenant);
             app()->instance('current_tenant_id', $tenant->id);
             $user->setConnection('tenant');
+            $request->session()->put('tenant_auth', [
+                'tenant_id' => $tenant->id,
+                'user_id' => $user->id,
+            ]);
         } else {
             $user->setConnection('central');
+            $request->session()->forget('tenant_auth');
         }
 
         Auth::login($user, $remember);
@@ -354,5 +368,26 @@ class AuthController extends Controller
         }
 
         return Tenant::active()->where('subdomain', explode('.', $host)[0])->first();
+    }
+
+    private function dashboardRedirect(User $user): RedirectResponse
+    {
+        $routeName = $user->dashboardRouteName();
+
+        if ($routeName === 'login') {
+            return redirect()->route('login');
+        }
+
+        $intendedUrl = session()->pull('url.intended');
+
+        if (is_string($intendedUrl) && $intendedUrl !== '') {
+            $path = trim((string) parse_url($intendedUrl, PHP_URL_PATH), '/');
+
+            if (! in_array($path, ['login', 'auth/continue', 'logout'], true)) {
+                return redirect()->to($intendedUrl);
+            }
+        }
+
+        return redirect()->route($routeName);
     }
 }

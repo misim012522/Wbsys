@@ -39,6 +39,14 @@ class HomeController extends Controller
             return redirect()->away(TenantUrl::forUserDashboard($user));
         }
 
+        if ($user->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->isOfficeStaff()) {
+            return redirect()->route('office.dashboard');
+        }
+
         $tenant = app()->bound('current_tenant') ? app('current_tenant') : $user->tenant;
         $office = $user->office ?: Office::query()
             ->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id))

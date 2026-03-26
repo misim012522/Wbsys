@@ -10,10 +10,15 @@ use App\Notifications\AccountConfirmedNotification;
 use App\Services\TenantPlanEnforcer;
 use App\Services\QrCodeService;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 class AdminController extends Controller
 {
+    private const OFFICE_STAFF_PAGE_SIZE = 10;
+
     public function __construct(
         private QrCodeService $qrCodeService,
         private TenantPlanEnforcer $tenantPlanEnforcer,
@@ -56,6 +61,53 @@ class AdminController extends Controller
         return app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
     }
 
+    private function applyOfficeStaffSearch($query, string $search)
+    {
+        return $query->when($search !== '', function ($builder) use ($search) {
+            $builder->where(function ($inner) use ($search) {
+                $inner->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%')
+                    ->orWhere('username', 'like', '%'.$search.'%');
+            });
+        });
+    }
+
+    private function applyOfficeStaffFilters($query, string $search, int $officeId)
+    {
+        return $this->applyOfficeStaffSearch($query, $search)
+            ->when($officeId > 0, fn ($builder) => $builder->where('office_id', $officeId));
+    }
+
+    private function officeStaffFilterData(Request $request): array
+    {
+        return [
+            'search' => trim((string) $request->string('search')),
+            'officeId' => $request->integer('office_id'),
+            'offices' => $this->officesQuery()->orderedByName()->get(),
+        ];
+    }
+
+    private function reportData(string $date, int $officeId = 0): array
+    {
+        $queueQuery = QueueEntry::with(['office'])->where('queue_date', $date);
+        $appointmentQuery = Appointment::with(['office'])->where('appointment_date', $date);
+
+        if ($tid = $this->tenantId()) {
+            $queueQuery->forTenant($tid);
+            $appointmentQuery->forTenant($tid);
+        }
+
+        if ($officeId > 0) {
+            $queueQuery->where('office_id', $officeId);
+            $appointmentQuery->where('office_id', $officeId);
+        }
+
+        $queueEntries = $queueQuery->orderBy('office_id')->orderBy('queue_number')->get();
+        $appointments = $appointmentQuery->orderBy('office_id')->orderBy('appointment_time')->get();
+
+        return compact('queueEntries', 'appointments');
+    }
+
     public function dashboard()
     {
         $office = $this->defaultOffice();
@@ -72,6 +124,17 @@ class AdminController extends Controller
             + (clone $baseAppt)->where('appointment_date', today())->where('status', 'completed')->count();
 
         return view('admin.dashboard', compact('office', 'todayQueues', 'todayAppointments', 'completedToday'));
+    }
+
+    public function profile()
+    {
+        $tenant = $this->currentTenant();
+        $admin = auth()->user();
+        $subscription = $tenant?->subscriptions()->latest('id')->first();
+        $workspaceUrl = $tenant ? \App\Support\TenantUrl::workspace($tenant) : null;
+        $loginUrl = $tenant ? \App\Support\TenantUrl::login($tenant) : null;
+
+        return view('admin.profile', compact('tenant', 'admin', 'subscription', 'workspaceUrl', 'loginUrl'));
     }
 
     /** QR code for the tenant's built-in workspace office. */
@@ -197,46 +260,125 @@ class AdminController extends Controller
         }
 
         $date = $request->get('date', today()->toDateString());
-        $query = QueueEntry::with(['office'])->where('queue_date', $date);
-        if ($tid = $this->tenantId()) {
-            $query->forTenant($tid);
-        }
-        $queueEntries = $query->orderBy('office_id')->orderBy('queue_number')->get();
+        $officeId = $request->integer('office_id');
+        ['queueEntries' => $queueEntries, 'appointments' => $appointments] = $this->reportData($date, $officeId);
+        $offices = $this->officesQuery()->orderedByName()->get();
 
-        $appQuery = Appointment::with(['office'])->where('appointment_date', $date);
-        if ($tid = $this->tenantId()) {
-            $appQuery->forTenant($tid);
-        }
-        $appointments = $appQuery->orderBy('office_id')->orderBy('appointment_time')->get();
+        return view('admin.reports', compact('queueEntries', 'appointments', 'date', 'offices', 'officeId'));
+    }
 
-        return view('admin.reports', compact('queueEntries', 'appointments', 'date'));
+    public function downloadReport(Request $request): StreamedResponse|RedirectResponse|Response
+    {
+        if (! $this->tenantPlanEnforcer->hasFeature($this->currentTenant(), 'reports')) {
+            return redirect()->route('admin.dashboard')->with('error', 'Reports are not available on your current subscription plan.');
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'office_id' => ['nullable', 'integer'],
+            'format' => ['required', 'in:csv,print'],
+        ]);
+
+        $officeId = (int) ($validated['office_id'] ?? 0);
+        ['queueEntries' => $queueEntries, 'appointments' => $appointments] = $this->reportData($validated['date'], $officeId);
+
+        if ($validated['format'] === 'print') {
+            $office = $officeId > 0 ? $this->officesQuery()->find($officeId) : null;
+            $queueByStatus = $queueEntries->groupBy('status')->map->count();
+            $appointmentsByStatus = $appointments->groupBy('status')->map->count();
+            $html = view('office.report-print', [
+                'office' => $office ?? (object) ['name' => 'All workspace offices'],
+                'date' => $validated['date'],
+                'queueEntries' => $queueEntries,
+                'appointments' => $appointments,
+                'queueByStatus' => $queueByStatus,
+                'appointmentsByStatus' => $appointmentsByStatus,
+            ])->render();
+
+            $filename = 'tenant-report-'.$validated['date'].($officeId > 0 ? '-office-'.Str::slug($office?->name ?? (string) $officeId) : '-all-offices').'.html';
+
+            return response($html, 200, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            ]);
+        }
+
+        $filename = 'tenant-report-'.$validated['date'].($officeId > 0 ? '-office-'.$officeId : '').'.csv';
+
+        $callback = function () use ($validated, $queueEntries, $appointments): void {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Tenant Admin Report']);
+            fputcsv($out, ['Date', $validated['date']]);
+            fputcsv($out, ['Generated', now()->format('Y-m-d H:i:s')]);
+            fputcsv($out, []);
+
+            fputcsv($out, ['Queue Entries']);
+            fputcsv($out, ['Office', 'Queue #', 'Name', 'Type', 'Reference', 'Status']);
+            foreach ($queueEntries as $entry) {
+                fputcsv($out, [
+                    $entry->office?->name,
+                    $entry->queue_number,
+                    $entry->display_name,
+                    $entry->service_type,
+                    $entry->reference_code,
+                    $entry->status,
+                ]);
+            }
+
+            fputcsv($out, []);
+            fputcsv($out, ['Appointments']);
+            fputcsv($out, ['Office', 'Time', 'Name', 'Type', 'Reference', 'Status']);
+            foreach ($appointments as $appointment) {
+                fputcsv($out, [
+                    $appointment->office?->name,
+                    optional($appointment->appointment_time)->format('H:i'),
+                    $appointment->display_name,
+                    $appointment->appointment_type,
+                    $appointment->reference_code,
+                    $appointment->status,
+                ]);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     /** List approved non-admin office staff accounts, excluding archived. */
-    public function usersIndex()
+    public function usersIndex(Request $request)
     {
+        ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
         $users = User::where('role', '!=', User::ROLE_ADMIN)
             ->whereNotNull('approved_at')
             ->notArchived()
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
+            ->tap(fn ($query) => $this->applyOfficeStaffFilters($query, $search, $officeId))
             ->with('office')
             ->orderBy('role')
             ->orderBy('name')
-            ->get();
-        return view('admin.users.index', compact('users'));
+            ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
+            ->withQueryString();
+        return view('admin.users.index', compact('users', 'search', 'officeId', 'offices'));
     }
 
     /** List archived non-admin office staff accounts. */
-    public function archivedAccounts()
+    public function archivedAccounts(Request $request)
     {
+        ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
         $users = User::where('role', '!=', User::ROLE_ADMIN)
             ->archived()
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
+            ->tap(fn ($query) => $this->applyOfficeStaffFilters($query, $search, $officeId))
             ->with('office')
             ->orderBy('role')
             ->orderByDesc('archived_at')
-            ->get();
-        return view('admin.users.archived', compact('users'));
+            ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
+            ->withQueryString();
+        return view('admin.users.archived', compact('users', 'search', 'officeId', 'offices'));
     }
 
     /** Archive a non-admin office staff account (soft archive via archived_at). */
@@ -283,16 +425,19 @@ class AdminController extends Controller
     }
 
     /** List pending non-admin office staff accounts awaiting admin approval. */
-    public function pendingAccounts()
+    public function pendingAccounts(Request $request)
     {
+        ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
         $users = User::where('role', '!=', User::ROLE_ADMIN)
             ->whereNull('approved_at')
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
+            ->tap(fn ($query) => $this->applyOfficeStaffFilters($query, $search, $officeId))
             ->with('office')
             ->orderBy('role')
             ->orderBy('created_at')
-            ->get();
-        return view('admin.users.pending', compact('users'));
+            ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
+            ->withQueryString();
+        return view('admin.users.pending', compact('users', 'search', 'officeId', 'offices'));
     }
 
     /** Confirm a pending office staff account: set approved_at, email_verified_at, and send confirmation email. */
