@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ReservedUsernames;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -19,7 +20,18 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'username' => ['required', 'string', 'max:64', 'unique:tenant.users,username', 'regex:/^[a-zA-Z0-9_.-]+$/'],
+            'username' => [
+                'required',
+                'string',
+                'max:64',
+                'unique:tenant.users,username',
+                'regex:/^[a-zA-Z0-9_.-]+$/',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (ReservedUsernames::isReservedForTenant(is_string($value) ? $value : null)) {
+                        $fail(ReservedUsernames::tenantMessage());
+                    }
+                },
+            ],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:tenant.users,email'],
             'phone' => ['nullable', 'string', 'max:50'],
             'password' => ['required', 'confirmed', Password::defaults()],

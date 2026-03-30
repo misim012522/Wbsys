@@ -30,6 +30,14 @@ class LoginAccountResolver
         if ($centralUser && Hash::check($password, $centralUser->password)) {
             $centralUser->setConnection('central');
 
+            if (! $currentTenant instanceof Tenant) {
+                return [
+                    'status' => 'matched',
+                    'user' => $centralUser,
+                    'tenant' => null,
+                ];
+            }
+
             $matches->push([
                 'user' => $centralUser,
                 'tenant' => null,

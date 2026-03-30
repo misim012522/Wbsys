@@ -12,6 +12,7 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantDatabaseManager;
+use App\Support\ReservedUsernames;
 use App\Support\TenantDashboardProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -944,4 +945,28 @@ test('tenant self-registration post is disabled', function () {
             'password_confirmation' => 'Password123!',
         ])
         ->assertRedirect(route('login'));
+});
+
+test('tenant provisioning rejects sysadmin because it is reserved for the central account', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage(ReservedUsernames::tenantMessage());
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Sysadmin',
+        'username' => 'sysadmin',
+        'email' => 'sysadmin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
 });

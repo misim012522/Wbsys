@@ -8,6 +8,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\ReservedUsernames;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -48,9 +49,15 @@ class TenantDatabaseManager
         $this->initializeSchema($tenant);
         $this->ensureDefaultOffice($tenant);
 
+        $username = $adminAttributes['username'] ?? 'admin';
+
+        if (ReservedUsernames::isReservedForTenant($username)) {
+            throw new \InvalidArgumentException(ReservedUsernames::tenantMessage());
+        }
+
         $user = new User([
             'name' => $adminAttributes['name'],
-            'username' => $adminAttributes['username'] ?? 'admin',
+            'username' => $username,
             'email' => $adminAttributes['email'],
             'phone' => $adminAttributes['phone'] ?? null,
             'password' => $adminAttributes['password'],

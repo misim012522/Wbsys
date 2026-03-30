@@ -187,6 +187,24 @@ test('tenant registration requires an admin username', function () {
         ->assertSessionHasErrors('tenant_admin_username');
 });
 
+test('tenant registration rejects sysadmin as the tenant admin username', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+
+    $this->from(route('central.register'))
+        ->post(route('central.register.store'), [
+            'tenant_name' => 'Registrar Office',
+            'tenant_admin_username' => 'sysadmin',
+            'plan_id' => $plan->id,
+            'address' => 'Main Campus, Building A',
+            'email' => 'registrar@example.test',
+            'contact_number' => '09123456789',
+        ])
+        ->assertRedirect(route('central.register'))
+        ->assertSessionHasErrors([
+            'tenant_admin_username' => 'The username sysadmin is reserved for the central account only.',
+        ]);
+});
+
 test('tenant credential and access emails include the real tenant admin username', function () {
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));

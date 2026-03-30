@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\ReservedUsernames;
 use App\Support\TenantWorkspaceUrlValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,17 @@ class CentralTenantSignupRequest extends FormRequest
     {
         return [
             'tenant_name' => ['required', 'string', 'max:255'],
-            'tenant_admin_username' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'tenant_admin_username' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[A-Za-z0-9._-]+$/',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (ReservedUsernames::isReservedForTenant(is_string($value) ? $value : null)) {
+                        $fail(ReservedUsernames::tenantMessage());
+                    }
+                },
+            ],
             'plan_id' => [
                 'required',
                 Rule::exists($this->centralTable('plans'), 'id')->where(fn ($query) => $query->where('is_active', true)),

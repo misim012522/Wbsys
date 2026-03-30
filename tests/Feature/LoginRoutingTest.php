@@ -48,6 +48,60 @@ test('central handler account logs into the central dashboard', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+test('central login wins on the root host even when a tenant account shares the same credentials', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $centralUser = User::factory()->create([
+        'username' => 'central.handler',
+        'email' => 'central.handler@central.test',
+        'password' => 'Password123!',
+        'role' => User::ROLE_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'tenant.admin@tenant.test',
+        'phone' => '09123456789',
+        'password' => 'TempPassword123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    User::on('tenant')->create([
+        'name' => 'Tenant Collision User',
+        'username' => 'central.handler',
+        'email' => 'central.handler@tenant.test',
+        'phone' => '09123456788',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $this->post('/login', [
+        'login' => 'central.handler',
+        'password' => 'Password123!',
+    ])->assertRedirect(route('central.dashboard'));
+
+    $this->assertAuthenticatedAs($centralUser);
+});
+
 test('central logout redirects back to login', function () {
     $user = User::factory()->create([
         'username' => 'sysadmin',
