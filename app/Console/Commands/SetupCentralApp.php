@@ -62,6 +62,10 @@ class SetupCentralApp extends Command
         $config = config('database.connections.central');
         $driver = $config['driver'] ?? 'mysql';
         $centralDatabase = (string) ($config['database'] ?? '');
+        $defaultConfig = config('database.connections.'.config('database.default'))
+            ?? config('database.connections.mysql')
+            ?? [];
+        $defaultDatabase = (string) ($defaultConfig['database'] ?? '');
 
         if ($centralDatabase === '') {
             throw new \RuntimeException('CENTRAL_DB_DATABASE must be configured before running central:setup.');
