@@ -352,7 +352,7 @@ class AdminController extends Controller
     public function usersIndex(Request $request)
     {
         ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
-        $users = User::where('role', '!=', User::ROLE_ADMIN)
+        $users = User::where('role', '!=', User::ROLE_TENANT_ADMIN)
             ->whereNotNull('approved_at')
             ->notArchived()
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
@@ -369,7 +369,7 @@ class AdminController extends Controller
     public function archivedAccounts(Request $request)
     {
         ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
-        $users = User::where('role', '!=', User::ROLE_ADMIN)
+        $users = User::where('role', '!=', User::ROLE_TENANT_ADMIN)
             ->archived()
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
             ->tap(fn ($query) => $this->applyOfficeStaffFilters($query, $search, $officeId))
@@ -386,7 +386,7 @@ class AdminController extends Controller
     {
         $user = $this->findTenantUserOrFail($user);
 
-        if ($user->role === User::ROLE_ADMIN) {
+        if ($user->role === User::ROLE_TENANT_ADMIN) {
             return back()->withErrors(['user' => 'Administrator accounts cannot be archived from the office staff screens.']);
         }
         if ($user->archived_at !== null) {
@@ -401,7 +401,7 @@ class AdminController extends Controller
     {
         $user = $this->findTenantUserOrFail($user);
 
-        if ($user->role === User::ROLE_ADMIN) {
+        if ($user->role === User::ROLE_TENANT_ADMIN) {
             return back()->withErrors(['user' => 'Administrator accounts cannot be recovered from the office staff screens.']);
         }
         if ($user->archived_at === null) {
@@ -416,7 +416,7 @@ class AdminController extends Controller
     {
         $user = $this->findTenantUserOrFail($user);
 
-        if ($user->role === User::ROLE_ADMIN) {
+        if ($user->role === User::ROLE_TENANT_ADMIN) {
             return back()->withErrors(['user' => 'Administrator accounts cannot be deleted from the office staff screens.']);
         }
         $name = $user->name;
@@ -428,7 +428,7 @@ class AdminController extends Controller
     public function pendingAccounts(Request $request)
     {
         ['search' => $search, 'officeId' => $officeId, 'offices' => $offices] = $this->officeStaffFilterData($request);
-        $users = User::where('role', '!=', User::ROLE_ADMIN)
+        $users = User::where('role', '!=', User::ROLE_TENANT_ADMIN)
             ->whereNull('approved_at')
             ->when($this->tenantId(), fn ($q) => $q->forTenant($this->tenantId()))
             ->tap(fn ($query) => $this->applyOfficeStaffFilters($query, $search, $officeId))
@@ -448,7 +448,7 @@ class AdminController extends Controller
         if ($user->approved_at !== null) {
             return back()->with('info', 'That office staff account is already approved.');
         }
-        if ($user->role === User::ROLE_ADMIN) {
+        if ($user->role === User::ROLE_TENANT_ADMIN) {
             return back()->withErrors(['user' => 'Administrator accounts cannot be approved through the office staff screen.']);
         }
 

@@ -61,7 +61,6 @@ class SetupCentralApp extends Command
     {
         $config = config('database.connections.central');
         $driver = $config['driver'] ?? 'mysql';
-        $defaultDatabase = (string) config('database.connections.'.config('database.default').'.database');
         $centralDatabase = (string) ($config['database'] ?? '');
 
         if ($centralDatabase === '') {
@@ -124,7 +123,7 @@ class SetupCentralApp extends Command
                 'name' => (string) $this->option('name'),
                 'email' => (string) $this->option('email'),
                 'password' => Hash::make((string) $this->argument('password')),
-                'role' => User::ROLE_ADMIN,
+                'role' => User::ROLE_SYSTEM_ADMIN,
                 'tenant_id' => null,
                 'approved_at' => $now,
                 'email_verified_at' => $now,

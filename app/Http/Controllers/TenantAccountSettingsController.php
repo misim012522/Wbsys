@@ -13,7 +13,7 @@ class TenantAccountSettingsController extends Controller
 {
     public function edit(Request $request): View|RedirectResponse
     {
-        if ($request->user()?->isAdmin()) {
+        if ($request->user()?->isTenantAdmin()) {
             return redirect()->route('admin.settings.edit');
         }
 
@@ -27,7 +27,7 @@ class TenantAccountSettingsController extends Controller
     {
         $user = $request->user();
 
-        if ($user?->isAdmin()) {
+        if ($user?->isTenantAdmin()) {
             return redirect()->route('admin.settings.edit');
         }
 

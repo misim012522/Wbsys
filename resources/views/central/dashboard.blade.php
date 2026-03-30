@@ -47,6 +47,8 @@
                         <th class="px-4 py-3 font-medium">Email</th>
                         <th class="px-4 py-3 font-medium">Created At</th>
                         <th class="px-4 py-3 font-medium">Subscription Plan</th>
+                        <th class="px-4 py-3 font-medium">Usage Summary</th>
+                        <th class="px-4 py-3 font-medium">Last Activity</th>
                         <th class="px-4 py-3 font-medium">Status</th>
                         <th class="px-4 py-3 font-medium">Actions</th>
                     </tr>
@@ -58,11 +60,29 @@
                             $loginUrl = \App\Support\TenantUrl::login($tenant);
                             $workspaceHost = parse_url($workspaceUrl, PHP_URL_HOST) ?: 'N/A';
                             $latestSubscription = $tenant->subscriptions->sortByDesc('id')->first();
+                            $tenantAdmin = $tenantAdmins[$tenant->id] ?? null;
+                            $tenantInsight = $tenantInsights[$tenant->id] ?? [
+                                'office_count' => 0,
+                                'office_staff_count' => 0,
+                                'today_queue_count' => 0,
+                                'today_appointment_count' => 0,
+                                'last_activity_label' => 'Unavailable',
+                            ];
                         @endphp
                         <tr class="align-top">
                             <td class="px-4 py-4">
                                 <div class="font-semibold text-slate-900">{{ $tenant->name }}</div>
                                 <div class="text-xs text-slate-500">Slug: {{ $tenant->slug }}</div>
+                                <div class="mt-3 space-y-1">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Main tenant account</p>
+                                    @if($tenantAdmin)
+                                        <div class="text-sm font-medium text-slate-800">{{ $tenantAdmin->name }}</div>
+                                        <div class="text-xs text-slate-500">{{ $tenantAdmin->username }}</div>
+                                        <div class="text-xs text-slate-500">{{ $tenantAdmin->email }}</div>
+                                    @else
+                                        <div class="text-xs text-slate-500">No tenant admin account found.</div>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-4 py-4">
                                 <div class="space-y-2">
@@ -88,7 +108,10 @@
                             </td>
                             <td class="px-4 py-4 text-slate-600">{{ $tenant->address ?: 'N/A' }}</td>
                             <td class="px-4 py-4 text-slate-600">{{ $tenant->contact_number ?: 'N/A' }}</td>
-                            <td class="px-4 py-4 text-slate-600">{{ $tenant->email ?: 'N/A' }}</td>
+                            <td class="px-4 py-4 text-slate-600">
+                                <div>{{ $tenant->email ?: 'N/A' }}</div>
+                                <div class="mt-1 text-xs text-slate-400">Registration contact</div>
+                            </td>
                             <td class="px-4 py-4 text-slate-600">{{ optional($tenant->created_at)->format('M d, Y h:i A') ?: 'N/A' }}</td>
                             <td class="px-4 py-4 text-slate-600">
                                 <div class="font-medium text-slate-900">{{ $tenant->plan?->name ?? 'N/A' }}</div>
@@ -100,6 +123,17 @@
                                         @endif
                                     </div>
                                 @endif
+                            </td>
+                            <td class="px-4 py-4 text-slate-600">
+                                <div class="space-y-1 text-xs">
+                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> office staff</div>
+                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
+                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues today</div>
+                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['today_appointment_count'] }}</span> appointments today</div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 text-slate-600">
+                                <div class="max-w-[14rem] text-sm text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
                             </td>
                             <td class="px-4 py-4">
                                 <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
@@ -160,7 +194,28 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-6 text-center text-slate-500">No tenants have been registered yet.</td>
+                            <td colspan="11" class="px-4 py-10">
+                                <div class="mx-auto max-w-2xl rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9ZM8 9h8M8 12h8M8 15h5" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="mt-4 text-xl font-bold text-slate-900">No tenants registered yet</h3>
+                                    <p class="mt-2 text-sm leading-6 text-slate-600">
+                                        The central workspace is ready. Once a tenant completes registration, their workspace domain, subscription plan,
+                                        tenant admin account, and activity summary will appear here for monitoring.
+                                    </p>
+                                    <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+                                        <a href="{{ route('central.register') }}" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                                            Register first tenant
+                                        </a>
+                                        <span class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-500">
+                                            Usage summaries and recent activity will appear after onboarding
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

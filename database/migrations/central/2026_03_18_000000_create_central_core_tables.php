@@ -18,7 +18,7 @@ return new class extends Migration
                 $table->string('phone')->nullable();
                 $table->timestamp('email_verified_at')->nullable();
                 $table->string('password');
-                $table->string('role')->default('admin');
+                $table->string('role')->default('system_admin');
                 $table->unsignedBigInteger('office_id')->nullable();
                 $table->string('student_id')->nullable();
                 $table->timestamp('approved_at')->nullable();

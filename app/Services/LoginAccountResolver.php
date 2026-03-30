@@ -56,6 +56,7 @@ class LoginAccountResolver
                     ->where(function ($query) use ($login) {
                         $query->where('email', $login)->orWhere('username', $login);
                     })
+                    ->where('tenant_id', $tenant->id)
                     ->first();
             } catch (\Throwable) {
                 continue;

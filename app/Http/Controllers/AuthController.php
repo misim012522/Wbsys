@@ -94,7 +94,7 @@ class AuthController extends Controller
             ])->onlyInput('login');
         }
 
-        if (! $user->isAdmin() && $user->isPending()) {
+        if (! $user->isTenantAdmin() && $user->isPending()) {
             return back()->withErrors([
                 'login' => 'Your account is pending approval. You will receive an email when an administrator confirms your account.',
             ])->onlyInput('login');

@@ -7,6 +7,10 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\User;
+use App\Models\ActivityLog;
+use App\Models\Appointment;
+use App\Models\Office;
+use App\Models\QueueEntry;
 use App\Notifications\TenantActivationStatusNotification;
 use App\Notifications\TenantCredentialsNotification;
 use App\Notifications\TenantSubscriptionUpdatedNotification;
@@ -201,7 +205,7 @@ class CentralController extends Controller
 
             $admin = User::on('tenant')
                 ->where('tenant_id', $tenant->id)
-                ->where('role', User::ROLE_ADMIN)
+                ->where('role', User::ROLE_TENANT_ADMIN)
                 ->orderBy('id')
                 ->first();
 
@@ -368,6 +372,14 @@ class CentralController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $tenantAdmins = $tenants->mapWithKeys(function (Tenant $tenant) {
+            return [$tenant->id => $this->resolveTenantAdmin($tenant)];
+        });
+
+        $tenantInsights = $tenants->mapWithKeys(function (Tenant $tenant) {
+            return [$tenant->id => $this->tenantInsightData($tenant)];
+        });
+
         return [
             'tenantCount' => $tenants->count(),
             'activeTenantCount' => $tenants->where('is_active', true)->count(),
@@ -378,6 +390,8 @@ class CentralController extends Controller
                 ->sortBy(fn (Plan $plan) => array_search($plan->slug, array_column(CentralPricing::plans(), 'slug'), true))
                 ->values(),
             'tenants' => $tenants,
+            'tenantAdmins' => $tenantAdmins,
+            'tenantInsights' => $tenantInsights,
         ];
     }
 
@@ -406,9 +420,63 @@ class CentralController extends Controller
 
         return User::on('tenant')
             ->where('tenant_id', $tenant->id)
-            ->where('role', User::ROLE_ADMIN)
+            ->where('role', User::ROLE_TENANT_ADMIN)
             ->orderBy('id')
             ->first();
+    }
+
+    /**
+     * @return array{office_count:int, office_staff_count:int, today_queue_count:int, today_appointment_count:int, last_activity_label:string}
+     */
+    private function tenantInsightData(Tenant $tenant): array
+    {
+        try {
+            $this->tenantDatabaseManager->activate($tenant);
+
+            $officeCount = Office::query()
+                ->where('tenant_id', $tenant->id)
+                ->count();
+
+            $officeStaffCount = User::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('role', User::ROLE_OFFICE_STAFF)
+                ->count();
+
+            $todayQueueCount = QueueEntry::query()
+                ->where('tenant_id', $tenant->id)
+                ->whereDate('queue_date', today())
+                ->count();
+
+            $todayAppointmentCount = Appointment::query()
+                ->where('tenant_id', $tenant->id)
+                ->whereDate('appointment_date', today())
+                ->count();
+
+            $lastActivity = ActivityLog::query()
+                ->where('tenant_id', $tenant->id)
+                ->latest('created_at')
+                ->first();
+
+            $lastActivityLabel = $lastActivity
+                ? sprintf('%s, %s', str($lastActivity->action)->replace('_', ' ')->title(), $lastActivity->created_at?->diffForHumans() ?? 'recently')
+                : 'No recent workspace activity';
+
+            return [
+                'office_count' => $officeCount,
+                'office_staff_count' => $officeStaffCount,
+                'today_queue_count' => $todayQueueCount,
+                'today_appointment_count' => $todayAppointmentCount,
+                'last_activity_label' => $lastActivityLabel,
+            ];
+        } catch (\Throwable) {
+            return [
+                'office_count' => 0,
+                'office_staff_count' => 0,
+                'today_queue_count' => 0,
+                'today_appointment_count' => 0,
+                'last_activity_label' => 'Unavailable',
+            ];
+        }
     }
 
     private function generateUniqueTenantDatabaseName(string $source): string

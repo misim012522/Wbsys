@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes (RBAC: role:admin, prefix: admin)
+| Admin Routes (RBAC: role:tenant_admin, prefix: admin)
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
+Route::middleware('role:tenant_admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::get('/qr', [AdminController::class, 'qrCodes'])->name('qr');

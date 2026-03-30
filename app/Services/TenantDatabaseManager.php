@@ -61,7 +61,7 @@ class TenantDatabaseManager
             'email' => $adminAttributes['email'],
             'phone' => $adminAttributes['phone'] ?? null,
             'password' => $adminAttributes['password'],
-            'role' => User::ROLE_ADMIN,
+            'role' => User::ROLE_TENANT_ADMIN,
             'tenant_id' => $tenant->id,
             'approved_at' => now(),
         ]);
@@ -216,8 +216,8 @@ class TenantDatabaseManager
         }
 
         $admin = Role::firstOrCreate(
-            ['tenant_id' => null, 'slug' => User::ROLE_ADMIN],
-            ['name' => 'Admin', 'description' => 'Full access']
+            ['tenant_id' => null, 'slug' => User::ROLE_TENANT_ADMIN],
+            ['name' => 'Tenant Admin', 'description' => 'Full access']
         );
 
         $officeStaff = Role::firstOrCreate(
@@ -296,7 +296,21 @@ class TenantDatabaseManager
 
     public function usesSharedDatabase(Tenant $tenant): bool
     {
-        return ($tenant->getSetting('database.mode') ?? null) === 'shared';
+        $mode = $tenant->getSetting('database.mode');
+
+        if ($mode === 'shared') {
+            return true;
+        }
+
+        $sharedConfig = config('database.connections.'.config('database.default'))
+            ?? config('database.connections.central')
+            ?? config('database.connections.tenant');
+
+        $sharedDatabaseName = (string) ($sharedConfig['database'] ?? '');
+
+        return $mode === null
+            && $sharedDatabaseName !== ''
+            && (string) $tenant->database_name === $sharedDatabaseName;
     }
 
 }

@@ -39,7 +39,7 @@ class HomeController extends Controller
             return redirect()->away(TenantUrl::forUserDashboard($user));
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isTenantAdmin()) {
             return redirect()->route('admin.dashboard');
         }
 
@@ -61,7 +61,7 @@ class HomeController extends Controller
             'current_serving' => null,
         ];
 
-        if ($user->isAdmin()) {
+        if ($user->isTenantAdmin()) {
             $queueQuery = QueueEntry::query()->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id));
             $appointmentQuery = Appointment::query()->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id));
 
@@ -82,7 +82,7 @@ class HomeController extends Controller
                     ->where('status', 'completed')
                     ->count();
             $summary['pending_staff'] = User::query()
-                ->where('role', '!=', User::ROLE_ADMIN)
+                ->where('role', '!=', User::ROLE_TENANT_ADMIN)
                 ->whereNull('approved_at')
                 ->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id))
                 ->count();

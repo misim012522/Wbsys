@@ -55,7 +55,7 @@ test('central dashboard shows the tenant table', function () {
 
     $developer = User::factory()->create([
         'username' => 'developer',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);
@@ -72,6 +72,14 @@ test('central dashboard shows the tenant table', function () {
         'is_active' => true,
     ]);
 
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'registrar-admin@example.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
     $this->actingAs($developer)
         ->get(route('central.dashboard'))
         ->assertOk()
@@ -81,14 +89,75 @@ test('central dashboard shows the tenant table', function () {
         ->assertSee('Subscriptions')
         ->assertSee('Tenant Name')
         ->assertSee('Tenant Domain')
+        ->assertSee('Usage Summary')
+        ->assertSee('Last Activity')
         ->assertSee('Tenant credentials are sent by email during registration.')
         ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
         ->assertSee(\App\Support\TenantUrl::login($tenant), false)
         ->assertSee('registrar.lvh.me')
+        ->assertSee('Main tenant account')
+        ->assertSee('Registrar Admin')
+        ->assertSee('registrar.admin')
+        ->assertSee('Usage Summary')
+        ->assertSee('Last Activity')
         ->assertSee('Deactivate tenant')
         ->assertSee('Send access email')
         ->assertSee('Edit subscription')
         ->assertDontSee('Register tenant');
+});
+
+test('central dashboard only shows the main tenant account and hides office staff data', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $suffix = Str::lower(Str::random(6));
+
+    $developer = User::factory()->create([
+        'username' => 'developer',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office '.$suffix,
+        'slug' => 'registrar-office-'.$suffix,
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar-'.$suffix,
+        'database_name' => 'tenant_registrar_office_'.$suffix,
+        'email' => 'registrar-'.$suffix.'@example.test',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
+    $tenantAdmin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'registrar-admin-'.$suffix.'@example.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    User::on('tenant')->create([
+        'name' => 'Hidden Office Staff',
+        'username' => 'registrar.staff',
+        'email' => 'staff-'.$suffix.'@example.test',
+        'phone' => '09998887777',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $this->actingAs($developer)
+        ->get(route('central.dashboard'))
+        ->assertOk()
+        ->assertSee($tenantAdmin->name)
+        ->assertSee($tenantAdmin->username)
+        ->assertDontSee('Hidden Office Staff')
+        ->assertDontSee('registrar.staff');
 });
 
 test('tenant registration creates tenant database, tenant admin, and emails credentials', function () {
@@ -161,7 +230,7 @@ test('registered tenant email becomes the tenant admin identity in the tenant wo
 
     $admin = User::on('tenant')
         ->where('tenant_id', $tenant->id)
-        ->where('role', User::ROLE_ADMIN)
+        ->where('role', User::ROLE_TENANT_ADMIN)
         ->first();
 
     expect($admin)->not->toBeNull();
@@ -325,7 +394,7 @@ test('central admin can delete a tenant from the dashboard route', function () {
 
     $developer = User::factory()->create([
         'username' => 'developer',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);
@@ -450,7 +519,7 @@ test('central admin can reset the tenant admin temporary password and resend cre
 
     $admin = User::on('tenant')
         ->where('tenant_id', $context['tenant']->id)
-        ->where('role', User::ROLE_ADMIN)
+        ->where('role', User::ROLE_TENANT_ADMIN)
         ->firstOrFail();
 
     expect($admin->password)->not->toBe($oldHash);
@@ -507,7 +576,7 @@ function createManagedTenantForCentralTests(): array
 
     $developer = User::factory()->create([
         'username' => 'developer',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);

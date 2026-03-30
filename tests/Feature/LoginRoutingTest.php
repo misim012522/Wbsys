@@ -35,7 +35,7 @@ test('guest landing page redirects to login', function () {
 test('central handler account logs into the central dashboard', function () {
     $user = User::factory()->create([
         'username' => 'central.handler',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);
@@ -55,7 +55,7 @@ test('central login wins on the root host even when a tenant account shares the 
         'username' => 'central.handler',
         'email' => 'central.handler@central.test',
         'password' => 'Password123!',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
         'email_verified_at' => now(),
@@ -105,7 +105,7 @@ test('central login wins on the root host even when a tenant account shares the 
 test('central logout redirects back to login', function () {
     $user = User::factory()->create([
         'username' => 'sysadmin',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);
@@ -252,7 +252,7 @@ test('central user can open a tenant workspace page without being forced into te
 
     $centralUser = User::factory()->create([
         'username' => 'sysadmin',
-        'role' => User::ROLE_ADMIN,
+        'role' => User::ROLE_SYSTEM_ADMIN,
         'tenant_id' => null,
         'approved_at' => now(),
     ]);

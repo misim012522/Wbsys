@@ -17,7 +17,8 @@ class User extends Authenticatable implements MustVerifyEmail
 {
     use BelongsToTenant, HasFactory, MustVerifyEmailTrait, Notifiable, UsesTenantConnection;
 
-    public const ROLE_ADMIN = 'admin';
+    public const ROLE_SYSTEM_ADMIN = 'system_admin';
+    public const ROLE_TENANT_ADMIN = 'tenant_admin';
     public const ROLE_OFFICE_STAFF = 'office_staff';
     public const ROLE_STUDENT = 'student';
 
@@ -82,9 +83,19 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Appointment::class);
     }
 
+    public function isSystemAdmin(): bool
+    {
+        return $this->role === self::ROLE_SYSTEM_ADMIN;
+    }
+
+    public function isTenantAdmin(): bool
+    {
+        return $this->role === self::ROLE_TENANT_ADMIN;
+    }
+
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->isTenantAdmin();
     }
 
     public function isOfficeStaff(): bool
@@ -139,7 +150,7 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'central.dashboard';
         }
 
-        if ($this->isAdmin()) {
+        if ($this->isTenantAdmin()) {
             return 'admin.dashboard';
         }
 
