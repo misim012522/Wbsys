@@ -46,8 +46,8 @@ class TenantDatabaseManager
 
     public function provision(Tenant $tenant, array $adminAttributes): User
     {
-        $this->initializeSchema($tenant);
-        $this->ensureDefaultOffice($tenant);
+        // Only register the tenant in the central DB during registration
+        // Do NOT create tenant record or default office in the tenant DB here
 
         $username = $adminAttributes['username'] ?? 'admin';
 
@@ -55,6 +55,7 @@ class TenantDatabaseManager
             throw new \InvalidArgumentException(ReservedUsernames::tenantMessage());
         }
 
+        // Create the admin user in the central DB (if needed)
         $user = new User([
             'name' => $adminAttributes['name'],
             'username' => $username,
@@ -65,11 +66,47 @@ class TenantDatabaseManager
             'tenant_id' => $tenant->id,
             'approved_at' => now(),
         ]);
-        $user->setConnection('tenant');
+        $user->setConnection('central');
         $user->email_verified_at = now();
         $user->save();
 
         return $user;
+    }
+
+    /**
+     * Ensure the tenant record exists in the tenant database.
+     */
+    private function syncTenantToTenantDatabase(Tenant $tenant): void
+    {
+        // Map only the fields that exist in the tenant DB's tenants table
+        $tenantData = [
+            'id' => $tenant->id,
+            'name' => $tenant->name,
+            'slug' => $tenant->slug,
+            'plan_id' => $tenant->plan_id,
+            'domain' => $tenant->domain,
+            'subdomain' => $tenant->subdomain,
+            'settings' => $tenant->settings,
+            'support_url' => $tenant->support_url ?? null,
+            'app_version' => $tenant->app_version ?? null,
+            'is_active' => $tenant->is_active ?? true,
+            'created_at' => $tenant->created_at ?? now(),
+            'updated_at' => $tenant->updated_at ?? now(),
+        ];
+        try {
+            // Avoid duplicate insert if already exists
+            $exists = \DB::connection('tenant')->table('tenants')->where('id', $tenant->id)->exists();
+            if (!$exists) {
+                \DB::connection('tenant')->table('tenants')->insert($tenantData);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Failed to sync tenant to tenant DB', [
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+                'data' => $tenantData,
+            ]);
+            throw $e;
+        }
     }
 
     public function initializeSchema(Tenant $tenant): void
@@ -133,31 +170,8 @@ class TenantDatabaseManager
 
     private function createDatabase(Tenant $tenant): void
     {
-        if ($this->usesSharedDatabase($tenant)) {
-            return;
-        }
-
-        $config = config('database.connections.tenant');
-        $driver = $config['driver'] ?? 'mysql';
-
-        if ($driver === 'sqlite') {
-            $path = $this->sqlitePath($tenant);
-            File::ensureDirectoryExists(dirname($path));
-
-            if (! File::exists($path)) {
-                File::put($path, '');
-            }
-
-            return;
-        }
-
-        if (! preg_match('/^[A-Za-z0-9_]+$/', (string) $tenant->database_name)) {
-            throw new \RuntimeException('The generated tenant database name is invalid.');
-        }
-
-        DB::connection('central')->statement(
-            'CREATE DATABASE IF NOT EXISTS `'.$tenant->database_name.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
-        );
+        // Using shared DB: do not create per-tenant databases.
+        return;
     }
 
     private function runTenantMigrations(Tenant $tenant): void
@@ -240,8 +254,29 @@ class TenantDatabaseManager
         $officeStaff->permissions()->syncWithoutDetaching($officePerms);
     }
 
-    public function ensureDefaultOffice(Tenant $tenant): Office
+    public function ensureDefaultOffice(Tenant $tenant): ?Office
     {
+        // Skip creating default offices when explicitly disabled (e.g., during central registration)
+        if (config('tenant.skip_default_office_creation', false)) {
+            return null;
+        }
+        // Ensure tenant record exists in tenant DB before creating office to avoid FK errors
+        try {
+            $schema = Schema::connection('tenant');
+            if ($schema->hasTable('tenants')) {
+                $exists = \DB::connection('tenant')->table('tenants')->where('id', $tenant->id)->exists();
+                if (! $exists) {
+                    $this->syncTenantToTenantDatabase($tenant);
+                }
+            } else {
+                // tenant tables not prepared in tenant DB: skip office creation
+                throw new \RuntimeException('Tenant runtime tables not present in tenant DB');
+            }
+        } catch (\Throwable $e) {
+            // If tenant DB isn't ready, do not attempt to create offices here.
+            throw $e;
+        }
+
         $office = Office::firstOrCreate(
             ['tenant_id' => $tenant->id, 'slug' => $tenant->slug],
             [
@@ -296,21 +331,36 @@ class TenantDatabaseManager
 
     public function usesSharedDatabase(Tenant $tenant): bool
     {
-        $mode = $tenant->getSetting('database.mode');
-
-        if ($mode === 'shared') {
-            return true;
-        }
-
-        $sharedConfig = config('database.connections.'.config('database.default'))
-            ?? config('database.connections.central')
-            ?? config('database.connections.tenant');
-
-        $sharedDatabaseName = (string) ($sharedConfig['database'] ?? '');
-
-        return $mode === null
-            && $sharedDatabaseName !== ''
-            && (string) $tenant->database_name === $sharedDatabaseName;
+        // Force shared DB mode: tenant data uses the shared tenant database (final_app)
+        return true;
     }
 
+    /**
+     * Ensure the tenant admin user exists in the tenant database.
+     * If not, copy from central DB.
+     */
+    public function syncTenantAdminToTenantDatabase(Tenant $tenant): void
+    {
+        // Find admin user in central DB
+        $centralAdmin = \App\Models\User::on('central')
+            ->where('tenant_id', $tenant->id)
+            ->where('role', \App\Models\User::ROLE_TENANT_ADMIN)
+            ->first();
+        if (! $centralAdmin) return;
+
+        // Check if already exists in tenant DB
+        $tenantAdmin = \App\Models\User::on('tenant')
+            ->where('tenant_id', $tenant->id)
+            ->where('role', \App\Models\User::ROLE_TENANT_ADMIN)
+            ->first();
+        if ($tenantAdmin) return;
+
+        // Insert into tenant DB
+        $userData = $centralAdmin->only([
+            'name', 'username', 'email', 'phone', 'password', 'role', 'tenant_id', 'approved_at', 'email_verified_at', 'archived_at', 'student_id', 'office_id', 'remember_token',
+        ]);
+        $userData['created_at'] = now();
+        $userData['updated_at'] = now();
+        \App\Models\User::on('tenant')->create($userData);
+    }
 }

@@ -303,28 +303,94 @@ class CentralController extends Controller
                 throw new \RuntimeException('Tenant signup could not be completed.');
             }
 
-            $admin = $this->tenantDatabaseManager->provision($tenant, [
+
+            // NOTE: do NOT create tenant admin in the central DB per request.
+            // Instead prepare admin data from the request to insert into the tenant DB only.
+            $adminData = [
                 'name' => $tenant->name.' Admin',
                 'username' => $validated['tenant_admin_username'],
                 'email' => $validated['email'],
                 'phone' => $validated['contact_number'],
                 'password' => $generatedPassword,
-            ]);
-
+                'role' => User::ROLE_TENANT_ADMIN,
+                'tenant_id' => $tenant->id,
+                'approved_at' => now(),
+                'email_verified_at' => now(),
+            ];
+            // Send credentials email directly to the tenant admin email address.
             try {
-                $admin->notify(new TenantCredentialsNotification($tenant, $generatedPassword));
+                \Illuminate\Support\Facades\Notification::route('mail', $adminData['email'])
+                    ->notify(new TenantCredentialsNotification($tenant, $generatedPassword));
             } catch (\Throwable $e) {
                 $mailDeliveryFailed = true;
                 report($e);
             }
+
+            // During central registration we must NOT create tenant runtime offices.
+            config(['tenant.skip_default_office_creation' => true]);
+
+            // --- DUAL WRITE: Insert tenant and admin into tenant DB for workspace login ---
+            // 1. Insert tenant record into tenant DB (if not exists)
+            try {
+                $tenantData = [
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'slug' => $tenant->slug,
+                    'plan_id' => $tenant->plan_id,
+                    'domain' => $tenant->domain,
+                    'subdomain' => $tenant->subdomain,
+                    'settings' => $tenant->settings,
+                    'support_url' => $tenant->support_url ?? null,
+                    'app_version' => $tenant->app_version ?? null,
+                    'is_active' => $tenant->is_active ?? true,
+                    'created_at' => $tenant->created_at ?? now(),
+                    'updated_at' => $tenant->updated_at ?? now(),
+                ];
+                $exists = \DB::connection('tenant')->table('tenants')->where('id', $tenant->id)->exists();
+                if (!$exists) {
+                    \DB::connection('tenant')->table('tenants')->insert($tenantData);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            // 2. Insert admin user into tenant DB (if not exists)
+            try {
+                $adminExists = \App\Models\User::on('tenant')
+                    ->where('tenant_id', $tenant->id)
+                    ->where('role', \App\Models\User::ROLE_TENANT_ADMIN)
+                    ->exists();
+                if (! $adminExists) {
+                    $adminUserData = [
+                        'name' => $adminData['name'],
+                        'username' => $adminData['username'],
+                        'email' => $adminData['email'],
+                        'phone' => $adminData['phone'],
+                        'password' => bcrypt($adminData['password']),
+                        'role' => $adminData['role'],
+                        'tenant_id' => $adminData['tenant_id'],
+                        'approved_at' => $adminData['approved_at'],
+                        'email_verified_at' => $adminData['email_verified_at'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                    \App\Models\User::on('tenant')->create($adminUserData);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } catch (\Throwable $e) {
             if ($tenant) {
-                rescue(fn () => $this->tenantDatabaseManager->deleteDatabase($tenant), report: false);
                 rescue(fn () => $tenant->delete(), report: false);
             }
 
             report($e);
+        } finally {
+            // Ensure the flag is cleared after registration attempt
+            config(['tenant.skip_default_office_creation' => false]);
+        }
 
+        if (! isset($tenant) || ! $tenant) {
             return back()
                 ->withInput()
                 ->withErrors(['tenant_name' => 'Tenant registration failed while preparing the tenant database. Please try again.']);
