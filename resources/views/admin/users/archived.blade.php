@@ -7,7 +7,7 @@
     'title' => 'Archived office staff accounts',
     'description' => 'Recover archived office staff accounts or permanently remove them from this tenant workspace.',
     'actions' => [
-        ['label' => 'Office staff accounts', 'href' => route('admin.users.index'), 'variant' => 'primary'],
+        ['label' => 'Office staff', 'href' => route('admin.users.index'), 'variant' => 'primary'],
     ],
 ])
 
@@ -75,7 +75,18 @@
             @forelse($users as $user)
                 <tr class="border-b border-slate-100">
                     <td class="px-4 py-3 text-slate-800 font-medium">{{ $user->name }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ str_replace('_', ' ', $user->role) }}</td>
+                    <td class="px-4 py-3 text-slate-600">
+                        <form action="{{ route('admin.users.role', $user) }}" method="POST" class="flex items-center justify-end gap-2">
+                            @csrf
+                            @method('PATCH')
+                            <select name="role" class="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500">
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->slug }}" @selected($user->role === $role->slug)>{{ $role->name }}</option>
+                                @endforeach
+                            </select>
+                            <button type="submit" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Save</button>
+                        </form>
+                    </td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->username }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->office?->name ?? '-' }}</td>

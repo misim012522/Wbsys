@@ -3,9 +3,11 @@
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\Support\TenantDisabledResponse;
 use App\Support\TenantUrl;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTenantResolved
@@ -22,6 +24,14 @@ class EnsureTenantResolved
             $tenant = Tenant::find($user->tenant_id);
 
             if ($tenant) {
+                if (! $tenant->is_active) {
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return TenantDisabledResponse::make($tenant, $request);
+                }
+
                 return redirect()->away(TenantUrl::dashboard($tenant, $user))
                     ->with('error', 'Please open your assigned tenant workspace to continue.');
             }

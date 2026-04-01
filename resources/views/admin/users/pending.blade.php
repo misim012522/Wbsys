@@ -73,7 +73,7 @@
             @forelse($users as $user)
                 <tr class="border-b border-slate-100">
                     <td class="px-4 py-3 text-slate-800 font-medium">{{ $user->name }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ str_replace('_', ' ', $user->role) }}</td>
+                    <td class="px-4 py-3 text-slate-600">{{ $user->roleLabel() }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->username }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->office?->name ?? '-' }}</td>

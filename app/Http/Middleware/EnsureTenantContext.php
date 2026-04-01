@@ -4,9 +4,11 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
+use App\Support\TenantDisabledResponse;
 use App\Support\TenantUrl;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Set current tenant from authenticated user (data isolation). */
@@ -38,6 +40,14 @@ class EnsureTenantContext
         if (! $tenant) {
             return redirect()->route('login')
                 ->with('error', 'Your tenant workspace could not be found. Please contact support.');
+        }
+
+        if (! $tenant->is_active) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return TenantDisabledResponse::make($tenant, $request);
         }
 
         $currentTenant = app()->bound('current_tenant') ? app('current_tenant') : null;

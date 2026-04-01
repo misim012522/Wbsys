@@ -160,15 +160,13 @@ test('central dashboard only shows the main tenant account and hides office staf
         ->assertDontSee('registrar.staff');
 });
 
-test('tenant registration creates tenant database, tenant admin, and emails credentials', function () {
+test('tenant registration creates a dedicated tenant database, tenant admin, and emails credentials', function () {
     Carbon::setTestNow('2026-03-19 10:15:00');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
     Notification::fake();
 
     $tenantName = 'Registrar Office '.Str::upper(Str::random(4));
-    $expectedDatabaseName = (string) config('database.connections.tenant.database');
-
     $this->post(route('central.register.store'), [
             'tenant_name' => $tenantName,
             'tenant_admin_username' => 'registrar.admin',
@@ -183,8 +181,9 @@ test('tenant registration creates tenant database, tenant admin, and emails cred
     expect($tenant)->not->toBeNull();
     expect($tenant->email)->toBe('registrar@example.test');
     expect($tenant->contact_number)->toBe('09123456789');
-    expect($tenant->database_name)->toBe($expectedDatabaseName);
-    expect($tenant->getSetting('database.mode'))->toBe('shared');
+    expect($tenant->database_name)->toStartWith('tenant_');
+    expect($tenant->database_name)->not->toBe(':memory:');
+    expect($tenant->getSetting('database.mode'))->toBe('dedicated');
     expect($tenant->created_at?->format('Y-m-d H:i:s'))->toBe('2026-03-19 10:15:00');
 
     $subscription = TenantSubscription::where('tenant_id', $tenant->id)->first();
@@ -462,6 +461,62 @@ test('central admin can deactivate and reactivate a tenant and notify the tenant
 
     expect($context['tenant']->fresh()->is_active)->toBeTrue();
     Notification::assertSentTo($context['admin'], TenantActivationStatusNotification::class);
+});
+
+test('deactivated tenant workspace shows a disabled page and blocks tenant dashboard access', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Disabled Registrar',
+        'slug' => 'disabled-registrar',
+        'plan_id' => $plan->id,
+        'subdomain' => 'disabled-registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'email' => 'disabled@test.local',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Disabled Admin',
+        'username' => 'disabled.admin',
+        'email' => 'disabled@test.local',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $developer = User::factory()->create([
+        'username' => 'developer',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $this->actingAs($developer)
+        ->patch(route('central.tenants.activation', $tenant))
+        ->assertRedirect(\App\Support\TenantUrl::centralDashboard());
+
+    $tenant->refresh();
+    expect($tenant->is_active)->toBeFalse();
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+    $tenantAdmin = User::on('tenant')
+        ->where('tenant_id', $tenant->id)
+        ->where('role', User::ROLE_TENANT_ADMIN)
+        ->firstOrFail();
+
+    auth()->logout();
+
+    $this->get(\App\Support\TenantUrl::login($tenant))
+        ->assertSee('Workspace status: Disabled')
+        ->assertSee('Disabled Registrar');
+
+    $this->actingAs($tenantAdmin)
+        ->get(\App\Support\TenantUrl::dashboard($tenant, $tenantAdmin))
+        ->assertStatus(423)
+        ->assertSee('Workspace status: Disabled');
 });
 
 test('central admin can update a tenant subscription and notify the tenant admin', function () {

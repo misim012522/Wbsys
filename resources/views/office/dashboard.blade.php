@@ -5,7 +5,6 @@
 @section('content')
 @php
     $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
-    $workspaceHost = $tenant ? parse_url(\App\Support\TenantUrl::workspace($tenant), PHP_URL_HOST) : null;
     $dashboardProfile = \App\Support\TenantDashboardProfile::for($tenant);
     $queueLabel = $tenantTheme['queue_label'] ?? 'Queue';
     $appointmentLabel = $tenantTheme['appointment_label'] ?? 'Appointment';
@@ -20,12 +19,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600">Office staff workspace</p>
                 <h1 class="mt-3 text-3xl font-bold tracking-tight text-slate-900">{{ $office->name }}</h1>
-                <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-                    {{ $officeLabel }} operations stay inside this tenant workspace.
-                    @if($workspaceHost)
-                        Active domain: <span class="font-semibold text-slate-800">{{ $workspaceHost }}</span>.
-                    @endif
-                </p>
+                <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">{{ $officeLabel }} operations stay inside this tenant workspace.</p>
                 <p class="mt-3 text-sm text-slate-500">{{ $dashboardProfile['office_focus'] }}</p>
             </div>
 

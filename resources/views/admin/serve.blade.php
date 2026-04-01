@@ -7,8 +7,8 @@
     'title' => $office->name . ' live queue monitor',
     'description' => 'This view is available for tenant admin monitoring and backup assistance, but day-to-day live serving should be handled by office staff from their own workspace.',
     'actions' => [
-        ['label' => 'Public access', 'href' => route('admin.qr')],
-        ['label' => 'Office staff accounts', 'href' => route('admin.users.index')],
+        ['label' => 'QR codes', 'href' => route('admin.qr')],
+        ['label' => 'Office staff', 'href' => route('admin.users.index')],
     ],
 ])
 

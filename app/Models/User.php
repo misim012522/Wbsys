@@ -73,6 +73,15 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Office::class);
     }
 
+    public function roleRecord(): ?Role
+    {
+        if ($this->isCentralUser()) {
+            return null;
+        }
+
+        return Role::bySlug($this->role)->forTenant($this->tenant_id)->active()->first();
+    }
+
     public function queueEntries(): HasMany
     {
         return $this->hasMany(QueueEntry::class);
@@ -140,8 +149,27 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasPermission(string $permissionSlug): bool
     {
+        if ($this->isCentralUser()) {
+            return true;
+        }
+
+        if ($this->isTenantAdmin()) {
+            return true;
+        }
+
         $role = Role::bySlug($this->role)->forTenant($this->tenant_id)->first();
         return $role ? $role->hasPermission($permissionSlug) : false;
+    }
+
+    public function hasAnyPermission(string ...$permissionSlugs): bool
+    {
+        foreach ($permissionSlugs as $permissionSlug) {
+            if ($this->hasPermission($permissionSlug)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function dashboardRouteName(): string
@@ -150,11 +178,11 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'central.dashboard';
         }
 
-        if ($this->isTenantAdmin()) {
+        if ($this->isTenantAdmin() || $this->hasAnyPermission('users.manage', 'offices.manage', 'queue.manage', 'appointments.manage', 'reports.view')) {
             return 'admin.dashboard';
         }
 
-        if ($this->isOfficeStaff()) {
+        if ($this->hasPermission('office.serve')) {
             return 'office.dashboard';
         }
 
@@ -163,6 +191,15 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return 'login';
+    }
+
+    public function roleLabel(): string
+    {
+        if ($this->isCentralUser()) {
+            return 'System Admin';
+        }
+
+        return $this->roleRecord()?->name ?? str($this->role)->replace('_', ' ')->title()->toString();
     }
 
     public function sendPasswordResetNotification($token): void

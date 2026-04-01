@@ -88,20 +88,34 @@ class TenantUrl
 
     private static function baseUrl(): string
     {
+        $configuredUrl = (string) config('app.url');
+
         if (app()->runningInConsole()) {
-            return (string) config('app.url');
+            return $configuredUrl;
         }
 
-        if (app()->bound('request')) {
-            $request = request();
-            $root = $request->getSchemeAndHttpHost();
-
-            if (is_string($root) && $root !== '') {
-                return $root;
-            }
+        if (! app()->bound('request')) {
+            return $configuredUrl;
         }
 
-        return (string) config('app.url');
+        $request = request();
+        $root = $request->getSchemeAndHttpHost();
+        $host = $request->getHost();
+        $configuredHost = parse_url($configuredUrl, PHP_URL_HOST);
+
+        if (! is_string($root) || $root === '') {
+            return $configuredUrl;
+        }
+
+        if (in_array($host, ['127.0.0.1', 'localhost'], true) && is_string($configuredHost) && $configuredHost !== '') {
+            $configuredParts = parse_url($configuredUrl);
+            $scheme = $configuredParts['scheme'] ?? $request->getScheme();
+            $port = isset($configuredParts['port']) ? ':'.$configuredParts['port'] : '';
+
+            return $scheme.'://'.$configuredHost.$port;
+        }
+
+        return $root;
     }
 
     private static function tenantHost(Tenant $tenant, string $baseHost): string

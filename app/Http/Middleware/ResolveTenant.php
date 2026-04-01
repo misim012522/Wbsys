@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
+use App\Support\TenantDisabledResponse;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -24,12 +25,12 @@ class ResolveTenant
             return $next($request);
         }
 
-        $host = (string) ($request->server('HTTP_HOST') ?: $request->getHost());
+        $host = (string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost());
         $host = preg_replace('/:\d+$/', '', $host) ?: $request->getHost();
-        $tenant = Tenant::active()->where('domain', $host)->first();
+        $tenant = Tenant::query()->where('domain', $host)->first();
         if (! $tenant && count(explode('.', $host)) >= 2) {
             $subdomain = explode('.', $host)[0];
-            $tenant = Tenant::active()->where('subdomain', $subdomain)->first();
+            $tenant = Tenant::query()->where('subdomain', $subdomain)->first();
         }
 
         if (
@@ -46,6 +47,10 @@ class ResolveTenant
         }
 
         if ($tenant) {
+            if (! $tenant->is_active) {
+                return TenantDisabledResponse::make($tenant, $request);
+            }
+
             app()->instance('current_tenant', $tenant);
             app()->instance('current_tenant_id', $tenant->id);
             $this->tenantDatabaseManager->activate($tenant);

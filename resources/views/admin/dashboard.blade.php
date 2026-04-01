@@ -14,38 +14,10 @@
     $appointmentsEnabled = (bool) ($tenantTheme['appointments_enabled'] ?? true);
 @endphp
 
-<div class="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace dashboard</p>
-            <h1 class="mt-2 text-3xl font-bold text-slate-900">Admin dashboard</h1>
-            <p class="mt-2 text-lg font-semibold tenant-primary">{{ $dashboardProfile['name'] }}</p>
-            <p class="mt-2 max-w-2xl text-sm text-slate-600">
-                Manage approvals, workspace activity, and account controls for this tenant.
-                @if($workspaceHost)
-                    Active domain: <span class="font-semibold text-slate-800">{{ $workspaceHost }}</span>.
-                @endif
-            </p>
-            <p class="mt-2 text-sm text-slate-500">{{ $dashboardProfile['admin_focus'] }}</p>
-        </div>
-
-    </div>
-
-    <div class="mt-6 flex flex-wrap gap-2">
-        <a href="{{ route('admin.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Admin settings</a>
-        <a href="{{ route('admin.users.pending') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800">Pending office staff</a>
-        <a href="{{ route('admin.users.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Office staff accounts</a>
-        <a href="{{ route('admin.users.archived') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Archived staff</a>
-        @if($queueEnabled)
-            <a href="{{ route('admin.qr') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Public access</a>
-        @endif
-        @if($appointmentsEnabled || $queueEnabled)
-            <a href="{{ route('admin.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Reports</a>
-        @endif
-        <a href="{{ route('admin.customization.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Customization</a>
-        <a href="{{ route('admin.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:bg-slate-50">Account settings</a>
-    </div>
-</div>
+@include('admin._workspace-nav', [
+    'title' => 'Admin dashboard',
+    'description' => 'Manage approvals, workspace activity, and account controls for this tenant. '.$dashboardProfile['admin_focus'],
+])
 
 <div class="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
     <div>

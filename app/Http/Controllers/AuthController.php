@@ -12,6 +12,7 @@ use App\Services\LoginAccountResolver;
 use App\Services\RecaptchaService;
 use App\Services\TenantPlanEnforcer;
 use App\Services\TenantDatabaseManager;
+use App\Support\TenantDisabledResponse;
 use App\Support\TenantUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,12 @@ class AuthController extends Controller
 
     public function showLogin(Request $request)
     {
+        $hostTenant = $this->tenantForHost($request, includeInactive: true);
+
+        if ($hostTenant && ! $hostTenant->is_active) {
+            return TenantDisabledResponse::make($hostTenant, $request);
+        }
+
         if ($request->boolean('force_login') && auth()->check()) {
             Auth::logout();
             $request->session()->invalidate();
@@ -88,6 +95,10 @@ class AuthController extends Controller
         $tenant = $account['tenant'] ?? null;
         $requestedTenant = $this->requestedTenant($request);
 
+        if ($tenant && ! $tenant->is_active) {
+            return TenantDisabledResponse::make($tenant, $request);
+        }
+
         if ($requestedTenant && (! $tenant || (int) $tenant->id !== (int) $requestedTenant->id)) {
             return back()->withErrors([
                 'login' => 'Please use the login credentials assigned to this tenant workspace.',
@@ -137,6 +148,7 @@ class AuthController extends Controller
             $tenant = $this->currentTenant();
 
             abort_unless($tenant && (int) $tenant->id === (int) ($payload['tenant_id'] ?? 0), 403);
+            abort_if(! $tenant->is_active, 423);
 
             $this->tenantDatabaseManager->activate($tenant);
 
@@ -353,21 +365,24 @@ class AuthController extends Controller
         }
     }
 
-    private function tenantForHost(Request $request): ?Tenant
+    private function tenantForHost(Request $request, bool $includeInactive = false): ?Tenant
     {
-        $host = preg_replace('/:\d+$/', '', (string) ($request->server('HTTP_HOST') ?: $request->getHost()));
+        $host = preg_replace('/:\d+$/', '', (string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost()));
 
         if (! is_string($host) || $host === '') {
             return null;
         }
 
-        $tenant = Tenant::active()->where('domain', $host)->first();
+        $query = $includeInactive ? Tenant::query() : Tenant::active();
+        $tenant = $query->where('domain', $host)->first();
 
         if ($tenant || count(explode('.', $host)) < 2) {
             return $tenant;
         }
 
-        return Tenant::active()->where('subdomain', explode('.', $host)[0])->first();
+        $query = $includeInactive ? Tenant::query() : Tenant::active();
+
+        return $query->where('subdomain', explode('.', $host)[0])->first();
     }
 
     private function dashboardRedirect(User $user): RedirectResponse

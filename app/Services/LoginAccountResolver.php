@@ -50,10 +50,7 @@ class LoginAccountResolver
 
         foreach ($tenants as $tenant) {
             try {
-
                 $this->tenantDatabaseManager->activate($tenant);
-                // Ensure admin user is present in tenant DB before login
-                $this->tenantDatabaseManager->syncTenantAdminToTenantDatabase($tenant);
 
                 $tenantUser = User::on('tenant')
                     ->where(function ($query) use ($login) {

@@ -11,7 +11,14 @@ class Role extends Model
 {
     use UsesTenantConnection;
 
-    protected $fillable = ['tenant_id', 'name', 'slug', 'description'];
+    protected $fillable = ['tenant_id', 'name', 'slug', 'description', 'is_active'];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function tenant(): BelongsTo
     {
@@ -25,7 +32,25 @@ class Role extends Model
 
     public function hasPermission(string $permissionSlug): bool
     {
+        if (! $this->is_active) {
+            return false;
+        }
+
         return $this->permissions()->where('slug', $permissionSlug)->exists();
+    }
+
+    public function isProtected(): bool
+    {
+        return $this->tenant_id === null || in_array($this->slug, [
+            User::ROLE_TENANT_ADMIN,
+            User::ROLE_OFFICE_STAFF,
+            User::ROLE_STUDENT,
+        ], true);
+    }
+
+    public function assignedUsersCount(): int
+    {
+        return User::query()->where('role', $this->slug)->count();
     }
 
     public function scopeForTenant($query, ?int $tenantId)
@@ -36,5 +61,10 @@ class Role extends Model
     public function scopeBySlug($query, string $slug)
     {
         return $query->where('slug', $slug);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

@@ -9,16 +9,16 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('role:office_staff')->prefix('office')->name('office.')->group(function () {
-    Route::get('/', [OfficeController::class, 'dashboard'])->name('dashboard');
-    Route::get('/qr', [OfficeController::class, 'qr'])->name('qr');
-    Route::get('/qr/image', [OfficeController::class, 'qrCodeImage'])->name('qr.image');
-    Route::post('/call-next', [OfficeController::class, 'callNext'])->name('call-next');
-    Route::patch('/queue/{queueEntry}', [OfficeController::class, 'updateQueueStatus'])->name('queue.update');
-    Route::post('/appointments/{appointment}/accept', [OfficeController::class, 'acceptAppointment'])->name('appointments.accept');
-    Route::post('/appointments/{appointment}/complete', [OfficeController::class, 'completeAppointment'])->name('appointments.complete');
-    Route::post('/appointments/{appointment}/cancel', [OfficeController::class, 'cancelAppointment'])->name('appointments.cancel');
-    Route::get('/reports', [OfficeController::class, 'reports'])->name('reports');
-    Route::get('/reports/download', [OfficeController::class, 'downloadReport'])->name('reports.download');
-    Route::get('/activity', [OfficeController::class, 'activity'])->name('activity');
+Route::prefix('office')->name('office.')->group(function () {
+    Route::get('/', [OfficeController::class, 'dashboard'])->name('dashboard')->middleware('permission:office.serve');
+    Route::get('/qr', [OfficeController::class, 'qr'])->name('qr')->middleware('permission:office.serve');
+    Route::get('/qr/image', [OfficeController::class, 'qrCodeImage'])->name('qr.image')->middleware('permission:office.serve');
+    Route::post('/call-next', [OfficeController::class, 'callNext'])->name('call-next')->middleware('permission:office.serve');
+    Route::patch('/queue/{queueEntry}', [OfficeController::class, 'updateQueueStatus'])->name('queue.update')->middleware('permission:office.serve');
+    Route::post('/appointments/{appointment}/accept', [OfficeController::class, 'acceptAppointment'])->name('appointments.accept')->middleware('permission:office.serve');
+    Route::post('/appointments/{appointment}/complete', [OfficeController::class, 'completeAppointment'])->name('appointments.complete')->middleware('permission:office.serve');
+    Route::post('/appointments/{appointment}/cancel', [OfficeController::class, 'cancelAppointment'])->name('appointments.cancel')->middleware('permission:office.serve');
+    Route::get('/reports', [OfficeController::class, 'reports'])->name('reports')->middleware('permission:reports.view');
+    Route::get('/reports/download', [OfficeController::class, 'downloadReport'])->name('reports.download')->middleware('permission:reports.view');
+    Route::get('/activity', [OfficeController::class, 'activity'])->name('activity')->middleware('permission:office.serve');
 });
