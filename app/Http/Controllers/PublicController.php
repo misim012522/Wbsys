@@ -34,6 +34,7 @@ class PublicController extends Controller
             'show_service_type' => $tenant ? $tenant->getSetting('customization.show_service_type', true) : true,
             'show_purpose_field' => $tenant ? $tenant->getSetting('customization.show_purpose_field', true) : true,
         ];
+
         return view('public.office', compact('office', 'custom'));
     }
 
@@ -90,7 +91,7 @@ class PublicController extends Controller
         ActivityLog::log(
             $office->id,
             'queue_joined',
-            $validated['guest_name'] . ' joined the queue as #' . $nextNumber,
+            $validated['guest_name'].' joined the queue as #'.$nextNumber,
             null,
             QueueEntry::class,
             $entry->id,
@@ -209,7 +210,7 @@ class PublicController extends Controller
         ActivityLog::log(
             $office->id,
             'appointment_booked',
-            $validated['guest_name'] . ' booked an appointment for ' . $date . ' at ' . $time,
+            $validated['guest_name'].' booked an appointment for '.$date.' at '.$time,
             null,
             Appointment::class,
             $appointment->id,
@@ -217,6 +218,6 @@ class PublicController extends Controller
         );
 
         return redirect()->route('queue.office', ['slug' => $office->slug])
-            ->with('success', 'Appointment requested. Reference: ' . $appointment->reference_code . ' — we will confirm soon.');
+            ->with('success', 'Appointment requested. Reference: '.$appointment->reference_code.' — we will confirm soon.');
     }
 }

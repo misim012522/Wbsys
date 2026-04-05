@@ -15,12 +15,13 @@
 @endphp
 
 @include('admin._workspace-nav', [
-    'title' => 'Admin dashboard',
+    'title' => $dashboardProfile['name'] ?? 'Admin dashboard',
     'description' => 'Manage approvals, workspace activity, and account controls for this tenant. '.$dashboardProfile['admin_focus'],
 ])
 
 <div class="mb-8 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
     <div>
+        <p class="text-sm font-medium uppercase tracking-[0.22em] text-slate-400">Admin dashboard</p>
         <h2 class="text-2xl font-bold text-slate-800">Admin tools</h2>
         <p class="mt-2 text-sm text-slate-500">This admin area reflects the enabled features and labels configured for this tenant.</p>
     </div>
@@ -34,7 +35,7 @@
                 </div>
             </div>
             <div class="grid gap-3 sm:grid-cols-3">
-                @if($office)
+                @if($office && $queueEnabled)
                     <a href="{{ route('admin.qr') }}" class="group rounded-2xl border border-emerald-200 bg-white p-4 text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/70">
                         <div class="flex items-start justify-between gap-3">
                             <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">

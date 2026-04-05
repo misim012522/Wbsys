@@ -9,13 +9,13 @@ use App\Models\QueueEntry;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\AccountConfirmedNotification;
-use App\Services\TenantPlanEnforcer;
 use App\Services\QrCodeService;
-use Illuminate\Http\Request;
+use App\Services\TenantPlanEnforcer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
 {
@@ -37,6 +37,7 @@ class AdminController extends Controller
         if ($tid = $this->tenantId()) {
             $q->forTenant($tid);
         }
+
         return $q;
     }
 
@@ -96,7 +97,7 @@ class AdminController extends Controller
             ->forTenant($this->tenantId())
             ->active()
             ->where('slug', '!=', User::ROLE_TENANT_ADMIN)
-            ->orderByRaw("CASE WHEN slug = ? THEN 0 ELSE 1 END", [User::ROLE_OFFICE_STAFF])
+            ->orderByRaw('CASE WHEN slug = ? THEN 0 ELSE 1 END', [User::ROLE_OFFICE_STAFF])
             ->orderBy('name')
             ->get();
     }
@@ -173,15 +174,23 @@ class AdminController extends Controller
     /** QR code for the tenant's built-in workspace office. */
     public function qrCodes()
     {
+        if (! ($this->currentTenant()?->getSetting('customization.guest_queue', true) ?? true)) {
+            return redirect()->route('admin.dashboard')->with('info', 'Public QR access is disabled for this tenant workspace.');
+        }
+
         $office = $this->defaultOffice();
+
         return view('admin.qr', compact('office'));
     }
 
     /** Generate QR code image for an office (URL that end users scan). Uses APP_URL so QR works from any device. */
     public function qrCodeImage(Office $office): Response
     {
+        abort_unless($this->currentTenant()?->getSetting('customization.guest_queue', true) ?? true, 404);
+
         $url = $this->qrCodeService->queueOfficeUrl($office->slug);
         $result = $this->qrCodeService->build($url, true);
+
         return response($result->getString())
             ->header('Content-Type', $result->getMimeType());
     }
@@ -235,24 +244,28 @@ class AdminController extends Controller
         }
 
         $queueEntry->update($data);
+
         return back()->with('success', 'Queue status updated.');
     }
 
     public function acceptAppointment(Appointment $appointment)
     {
         $appointment->update(['status' => Appointment::STATUS_CONFIRMED]);
+
         return back()->with('success', 'Appointment confirmed.');
     }
 
     public function completeAppointment(Appointment $appointment)
     {
         $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
+
         return back()->with('success', 'Appointment completed.');
     }
 
     public function cancelAppointment(Appointment $appointment)
     {
         $appointment->update(['status' => Appointment::STATUS_CANCELLED]);
+
         return back()->with('success', 'Appointment cancelled.');
     }
 
@@ -395,6 +408,7 @@ class AdminController extends Controller
             ->orderBy('name')
             ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
             ->withQueryString();
+
         return view('admin.users.index', compact('users', 'search', 'officeId', 'offices', 'roles'));
     }
 
@@ -411,6 +425,7 @@ class AdminController extends Controller
             ->orderByDesc('archived_at')
             ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
             ->withQueryString();
+
         return view('admin.users.archived', compact('users', 'search', 'officeId', 'offices', 'roles'));
     }
 
@@ -426,6 +441,7 @@ class AdminController extends Controller
             return back()->with('info', 'That office staff account is already archived.');
         }
         $user->update(['archived_at' => now()]);
+
         return redirect()->route('admin.users.archived')->with('success', "Office staff account for {$user->name} has been archived.");
     }
 
@@ -441,6 +457,7 @@ class AdminController extends Controller
             return back()->with('info', 'That office staff account is not archived.');
         }
         $user->update(['archived_at' => null]);
+
         return redirect()->route('admin.users.index')->with('success', "Office staff account for {$user->name} has been recovered.");
     }
 
@@ -454,6 +471,7 @@ class AdminController extends Controller
         }
         $name = $user->name;
         $user->delete();
+
         return redirect()->route('admin.users.archived')->with('success', "Office staff account for {$name} has been permanently deleted.");
     }
 
@@ -470,6 +488,7 @@ class AdminController extends Controller
             ->orderBy('created_at')
             ->paginate(self::OFFICE_STAFF_PAGE_SIZE)
             ->withQueryString();
+
         return view('admin.users.pending', compact('users', 'search', 'officeId', 'offices'));
     }
 
@@ -501,7 +520,7 @@ class AdminController extends Controller
         $roles = Role::query()
             ->forTenant($this->tenantId())
             ->with('permissions')
-            ->orderByRaw("CASE WHEN tenant_id IS NULL THEN 0 ELSE 1 END")
+            ->orderByRaw('CASE WHEN tenant_id IS NULL THEN 0 ELSE 1 END')
             ->orderBy('name')
             ->get();
 
@@ -621,7 +640,7 @@ class AdminController extends Controller
         $user->approved_at = now();
         $user->email_verified_at = $user->email_verified_at ?? now();
         $user->save();
-        $user->notify(new AccountConfirmedNotification());
+        $user->notify(new AccountConfirmedNotification);
 
         return back()->with('success', "Office staff account for {$user->name} has been confirmed. A confirmation email has been sent to {$user->email}.");
     }

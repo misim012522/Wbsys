@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ReservedUsernames;
+use App\Support\TenantDatabaseName;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -31,7 +32,7 @@ class TenantDatabaseManager
             $driver = $config['driver'] ?? 'mysql';
             $config['database'] = $driver === 'sqlite'
                 ? $this->sqlitePath($tenant)
-                : $tenant->database_name;
+                : TenantDatabaseName::mysqlSchemaName($tenant);
         }
 
         config(['database.connections.tenant' => $config]);
@@ -92,6 +93,7 @@ class TenantDatabaseManager
     {
         if ($this->usesSharedDatabase($tenant)) {
             DB::purge('tenant');
+
             return;
         }
 
@@ -112,7 +114,7 @@ class TenantDatabaseManager
             return;
         }
 
-        DB::connection('central')->statement('DROP DATABASE IF EXISTS `'.$tenant->database_name.'`');
+        DB::connection('central')->statement('DROP DATABASE IF EXISTS `'.TenantDatabaseName::mysqlSchemaName($tenant).'`');
         DB::purge('tenant');
     }
 
@@ -151,12 +153,14 @@ class TenantDatabaseManager
             return;
         }
 
-        if (! preg_match('/^[A-Za-z0-9_]+$/', (string) $tenant->database_name)) {
+        $databaseName = TenantDatabaseName::mysqlSchemaName($tenant);
+
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $databaseName)) {
             throw new \RuntimeException('The generated tenant database name is invalid.');
         }
 
         DB::connection('central')->statement(
-            'CREATE DATABASE IF NOT EXISTS `'.$tenant->database_name.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+            'CREATE DATABASE IF NOT EXISTS `'.$databaseName.'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
         );
     }
 
@@ -275,7 +279,7 @@ class TenantDatabaseManager
 
     private function sqlitePath(Tenant $tenant): string
     {
-        return database_path('tenants/'.$tenant->database_name.'.sqlite');
+        return database_path('tenants/'.TenantDatabaseName::sqliteFilename($tenant));
     }
 
     private function tenantMigrationPath(Tenant $tenant): string

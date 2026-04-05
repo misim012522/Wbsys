@@ -31,7 +31,7 @@ class TenantResetPasswordNotification extends Notification
 
         return (new MailMessage)
             ->subject('Reset your password')
-            ->greeting('Hello ' . ($notifiable->name ?: 'there') . ',')
+            ->greeting('Hello '.($notifiable->name ?: 'there').',')
             ->line('You are receiving this email because we received a password reset request for your account.')
             ->action('Reset password', $url)
             ->line("This password reset link will expire in {$expire} minutes.")

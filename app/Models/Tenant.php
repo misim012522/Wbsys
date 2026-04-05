@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\UsesCentralConnection;
+use App\Support\TenantDatabaseName;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -22,6 +23,18 @@ class Tenant extends Model
     protected function casts(): array
     {
         return ['settings' => 'array', 'is_active' => 'boolean'];
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (Tenant $tenant): void {
+            if ($tenant->database_name || $tenant->name) {
+                $tenant->database_name = TenantDatabaseName::normalize(
+                    (string) $tenant->database_name,
+                    $tenant->name
+                );
+            }
+        });
     }
 
     public function plan(): BelongsTo
@@ -76,6 +89,7 @@ class Tenant extends Model
         if ($this->plan && $this->plan->hasFeature($feature)) {
             return true;
         }
+
         return in_array($feature, $this->getSetting('feature_flags', []));
     }
 

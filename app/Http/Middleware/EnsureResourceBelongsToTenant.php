@@ -21,6 +21,7 @@ class EnsureResourceBelongsToTenant
                 abort(403, 'This resource does not belong to your organization.');
             }
         }
+
         return $next($request);
     }
 }

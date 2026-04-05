@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegisterRequest;
 use App\Services\LoginAccountResolver;
 use App\Services\RecaptchaService;
-use App\Services\TenantPlanEnforcer;
 use App\Services\TenantDatabaseManager;
+use App\Services\TenantPlanEnforcer;
 use App\Support\TenantDisabledResponse;
 use App\Support\TenantUrl;
 use Illuminate\Http\RedirectResponse;
@@ -175,6 +175,7 @@ class AuthController extends Controller
     public function showRegister()
     {
         $offices = Office::active()->orderedByName()->get();
+
         return view('auth.register', compact('offices'));
     }
 
@@ -235,7 +236,7 @@ class AuthController extends Controller
             ActivityLog::log(
                 $user->office_id,
                 'logout',
-                $user->name . ' logged out',
+                $user->name.' logged out',
                 $user->id,
                 null,
                 null,
@@ -247,6 +248,7 @@ class AuthController extends Controller
         $request->session()->forget('tenant_auth');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 
@@ -355,7 +357,7 @@ class AuthController extends Controller
             ActivityLog::log(
                 $user->office_id,
                 'login',
-                $user->name . ' logged in',
+                $user->name.' logged in',
                 $user->id,
                 null,
                 null,

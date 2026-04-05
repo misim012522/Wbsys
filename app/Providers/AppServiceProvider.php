@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
             if (array_key_exists('tenantTheme', $view->getData())) {
                 return;
             }
-            
+
             // Skip framework-owned views that do not need tenant theme data.
             $currentView = $view->getName();
             if (
@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
             ) {
                 return;
             }
-            
+
             try {
                 $tenant = null;
                 if (auth()->check() && auth()->user()->tenant_id) {

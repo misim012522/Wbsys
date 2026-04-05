@@ -4,6 +4,7 @@ if (! extension_loaded('pdo_sqlite')) {
     test('skip-database-driver', function () {
         $this->assertTrue(true);
     })->skip('No pdo_sqlite driver available; tests require sqlite in-memory.');
+
     return;
 }
 
@@ -19,11 +20,11 @@ use App\Services\TenantDatabaseManager;
 use App\Support\TenantUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
 
 uses(RefreshDatabase::class);
 
@@ -168,20 +169,20 @@ test('tenant registration creates a dedicated tenant database, tenant admin, and
 
     $tenantName = 'Registrar Office '.Str::upper(Str::random(4));
     $this->post(route('central.register.store'), [
-            'tenant_name' => $tenantName,
-            'tenant_admin_username' => 'registrar.admin',
-            'plan_id' => $plan->id,
-            'address' => 'Main Campus, Building A',
-            'email' => 'registrar@example.test',
-            'contact_number' => '09123456789',
-        ])->assertRedirect(route('login'));
+        'tenant_name' => $tenantName,
+        'tenant_admin_username' => 'registrar.admin',
+        'plan_id' => $plan->id,
+        'address' => 'Main Campus, Building A',
+        'email' => 'registrar@example.test',
+        'contact_number' => '09123456789',
+    ])->assertRedirect(route('login'));
 
     $tenant = Tenant::where('name', $tenantName)->first();
 
     expect($tenant)->not->toBeNull();
     expect($tenant->email)->toBe('registrar@example.test');
     expect($tenant->contact_number)->toBe('09123456789');
-    expect($tenant->database_name)->toStartWith('tenant_');
+    expect($tenant->database_name)->toEndWith('_buksu_queueless.db');
     expect($tenant->database_name)->not->toBe(':memory:');
     expect($tenant->getSetting('database.mode'))->toBe('dedicated');
     expect($tenant->created_at?->format('Y-m-d H:i:s'))->toBe('2026-03-19 10:15:00');
@@ -336,9 +337,9 @@ test('tenant admin can open workspace url then log in to the designated admin da
         ->assertRedirect($loginUrl);
 
     $response = $this->post($loginUrl, [
-            'login' => 'registrar.admin',
-            'password' => 'Password123!',
-        ]);
+        'login' => 'registrar.admin',
+        'password' => 'Password123!',
+    ]);
 
     $location = $response->headers->get('Location');
 
@@ -626,7 +627,7 @@ function createManagedTenantForCentralTests(): array
     $tenantName = 'Registrar Office '.$suffix;
     $tenantSlug = 'registrar-office-'.$suffix;
     $tenantSubdomain = 'registrar-'.$suffix;
-    $tenantDatabase = 'tenant_registrar_office_'.$suffix;
+    $tenantDatabase = tenantDatabaseName('Registrar Office '.$suffix);
     $tenantEmail = 'registrar-'.$suffix.'@example.test';
 
     $developer = User::factory()->create([
@@ -655,7 +656,7 @@ function createManagedTenantForCentralTests(): array
         'status' => TenantSubscription::STATUS_ACTIVE,
     ]);
 
-    $databasePath = database_path('tenants/'.$tenantDatabase.'.sqlite');
+    $databasePath = database_path('tenants/'.$tenantDatabase);
     DB::purge('tenant');
     if (File::exists($databasePath)) {
         File::delete($databasePath);

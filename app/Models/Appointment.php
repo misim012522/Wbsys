@@ -50,6 +50,7 @@ class Appointment extends Model
         if ($this->guest_phone) {
             return $this->guest_phone;
         }
+
         return $this->guest_contact ?? '—';
     }
 
@@ -62,9 +63,13 @@ class Appointment extends Model
     }
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_CANCELLED = 'cancelled';
+
     public const STATUS_NO_SHOW = 'no_show';
 
     public function scopeToday($query)

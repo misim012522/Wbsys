@@ -41,11 +41,13 @@ class EmailVerificationController extends Controller
 
             if (! hash_equals((string) $hash, $expectedHash)) {
                 \Log::error('Hash mismatch - verification failed');
+
                 return redirect()->route('login')->with('error', 'Invalid verification link. Please request a new verification email.');
             }
 
             if ($user->hasVerifiedEmail()) {
                 \Log::info('User already verified', ['user_id' => $user->id]);
+
                 return redirect()->route('login')->with('success', 'Your email is already verified. You can log in.');
             }
 
@@ -64,7 +66,8 @@ class EmailVerificationController extends Controller
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->route('login')->with('error', 'Verification failed: ' . $e->getMessage());
+
+            return redirect()->route('login')->with('error', 'Verification failed: '.$e->getMessage());
         }
     }
 }

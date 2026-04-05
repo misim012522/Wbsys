@@ -45,3 +45,8 @@ function something()
 {
     // ..
 }
+
+function tenantDatabaseName(string $source): string
+{
+    return \App\Support\TenantDatabaseName::generate($source);
+}

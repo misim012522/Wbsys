@@ -19,7 +19,7 @@ class ResolveTenant
 
     public function handle(Request $request, Closure $next): Response
     {
-        $tenantConnection = (new Tenant())->getConnectionName() ?? config('database.default');
+        $tenantConnection = (new Tenant)->getConnectionName() ?? config('database.default');
 
         if (! Schema::connection($tenantConnection)->hasTable('tenants')) {
             return $next($request);
@@ -55,6 +55,7 @@ class ResolveTenant
             app()->instance('current_tenant_id', $tenant->id);
             $this->tenantDatabaseManager->activate($tenant);
         }
+
         return $next($request);
     }
 }

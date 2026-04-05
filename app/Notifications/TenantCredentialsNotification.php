@@ -28,19 +28,19 @@ class TenantCredentialsNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $loginUrl = TenantUrl::login($this->tenant, true);
-        $displayName = isset($notifiable->name) && $notifiable->name ? $notifiable->name : ($this->tenant->name . ' Admin');
+        $displayName = isset($notifiable->name) && $notifiable->name ? $notifiable->name : ($this->tenant->name.' Admin');
         $loginEmail = isset($notifiable->email) && $notifiable->email ? $notifiable->email : ($this->tenant->email ?? null);
         $username = isset($notifiable->username) && $notifiable->username ? $notifiable->username : ($loginEmail ?? '');
 
         return (new MailMessage)
             ->subject('Your tenant account is ready')
-            ->greeting('Hello ' . $displayName . ',')
+            ->greeting('Hello '.$displayName.',')
             ->line('Your account has been created successfully.')
-            ->line('Tenant: ' . $this->tenant->name)
-            ->line('Login page: ' . $loginUrl)
-            ->when($loginEmail, fn (MailMessage $m) => $m->line('Login email: ' . $loginEmail))
-            ->line('Username: ' . $username)
-            ->line('Temporary password: ' . $this->generatedPassword)
+            ->line('Tenant: '.$this->tenant->name)
+            ->line('Login page: '.$loginUrl)
+            ->when($loginEmail, fn (MailMessage $m) => $m->line('Login email: '.$loginEmail))
+            ->line('Username: '.$username)
+            ->line('Temporary password: '.$this->generatedPassword)
             ->action('Log in to your workspace', $loginUrl)
             ->line('You may kindly change this password later from your account settings.');
     }

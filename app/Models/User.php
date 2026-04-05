@@ -5,11 +5,11 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Concerns\UsesTenantConnection;
 use App\Notifications\TenantResetPasswordNotification;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -18,8 +18,11 @@ class User extends Authenticatable implements MustVerifyEmail
     use BelongsToTenant, HasFactory, MustVerifyEmailTrait, Notifiable, UsesTenantConnection;
 
     public const ROLE_SYSTEM_ADMIN = 'system_admin';
+
     public const ROLE_TENANT_ADMIN = 'tenant_admin';
+
     public const ROLE_OFFICE_STAFF = 'office_staff';
+
     public const ROLE_STUDENT = 'student';
 
     protected $fillable = [
@@ -158,6 +161,7 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         $role = Role::bySlug($this->role)->forTenant($this->tenant_id)->first();
+
         return $role ? $role->hasPermission($permissionSlug) : false;
     }
 

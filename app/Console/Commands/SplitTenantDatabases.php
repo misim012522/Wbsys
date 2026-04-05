@@ -33,6 +33,7 @@ class SplitTenantDatabases extends Command
 
         if ($tenants->isEmpty()) {
             $this->error('No tenants found to migrate.');
+
             return self::FAILURE;
         }
 
@@ -41,6 +42,7 @@ class SplitTenantDatabases extends Command
 
             if (! $tenant->database_name) {
                 $this->warn('  Skipped: tenant has no database_name.');
+
                 continue;
             }
 
@@ -53,6 +55,7 @@ class SplitTenantDatabases extends Command
 
             if ($existingTenantData > 0) {
                 $this->warn('  Skipped import: tenant database already has data.');
+
                 continue;
             }
 
@@ -68,6 +71,7 @@ class SplitTenantDatabases extends Command
     {
         if (! Schema::connection('central')->hasTable('offices')) {
             $this->warn('  Shared tenant tables were not found in the central database. Nothing to copy.');
+
             return;
         }
 
@@ -113,7 +117,7 @@ class SplitTenantDatabases extends Command
             ->map(fn ($row) => (array) $row)
             ->all();
 
-        DB::connection('tenant')->transaction(function () use ($tenant, $offices, $users, $schedules, $queueEntries, $appointments, $activityLogs): void {
+        DB::connection('tenant')->transaction(function () use ($offices, $users, $schedules, $queueEntries, $appointments, $activityLogs): void {
             if (! empty($offices)) {
                 DB::connection('tenant')->table('offices')->insert($offices);
             }

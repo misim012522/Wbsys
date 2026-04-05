@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CentralTenantSignupRequest;
-use App\Models\Plan;
-use App\Models\Tenant;
-use App\Models\TenantSubscription;
-use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\Appointment;
 use App\Models\Office;
+use App\Models\Plan;
 use App\Models\QueueEntry;
+use App\Models\Tenant;
+use App\Models\TenantSubscription;
+use App\Models\User;
 use App\Notifications\TenantActivationStatusNotification;
 use App\Notifications\TenantCredentialsNotification;
 use App\Notifications\TenantSubscriptionUpdatedNotification;
@@ -18,6 +18,7 @@ use App\Notifications\TenantWorkspaceAccessNotification;
 use App\Services\TenantDatabaseManager;
 use App\Support\CentralPricing;
 use App\Support\TenantDashboardProfile;
+use App\Support\TenantDatabaseName;
 use App\Support\TenantWorkspaceUrlValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -359,7 +360,7 @@ class CentralController extends Controller
         $counter = 2;
 
         while (Tenant::where($column, $candidate)->exists()) {
-            $candidate = $base . '-' . $counter;
+            $candidate = $base.'-'.$counter;
             $counter++;
         }
 
@@ -491,23 +492,10 @@ class CentralController extends Controller
 
     private function generateUniqueTenantDatabaseName(string $source): string
     {
-        $prefix = (string) config('database.tenant_database_prefix', 'tenant_');
-        $base = Str::snake(Str::slug($source, '_'));
-        $base = trim($base, '_') !== '' ? trim($base, '_') : 'tenant';
-
-        $maxBaseLength = max(1, 64 - strlen($prefix));
-        $base = substr($base, 0, $maxBaseLength);
-        $candidate = $prefix.$base;
-        $counter = 2;
-
-        while (Tenant::where('database_name', $candidate)->exists()) {
-            $suffix = '_'.$counter;
-            $trimmedBase = substr($base, 0, max(1, 64 - strlen($prefix) - strlen($suffix)));
-            $candidate = $prefix.$trimmedBase.$suffix;
-            $counter++;
-        }
-
-        return $candidate;
+        return TenantDatabaseName::generate(
+            $source,
+            fn (string $candidate): bool => Tenant::where('database_name', $candidate)->exists()
+        );
     }
 
     public function generateReadableTemporaryPassword(int $length = 14): string

@@ -6,8 +6,8 @@ use App\Models\ActivityLog;
 use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
-use App\Services\TenantPlanEnforcer;
 use App\Services\QrCodeService;
+use App\Services\TenantPlanEnforcer;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -66,7 +66,7 @@ class OfficeController extends Controller
         ActivityLog::log(
             $office->id,
             'queue_called',
-            auth()->user()->name . ' called queue #' . $next->queue_number . ' (' . $next->display_name . ')',
+            auth()->user()->name.' called queue #'.$next->queue_number.' ('.$next->display_name.')',
             auth()->id(),
             QueueEntry::class,
             $next->id,
@@ -97,7 +97,7 @@ class OfficeController extends Controller
         ActivityLog::log(
             $queueEntry->office_id,
             'queue_updated',
-            auth()->user()->name . ' updated queue #' . $queueEntry->queue_number . ' to ' . $validated['status'],
+            auth()->user()->name.' updated queue #'.$queueEntry->queue_number.' to '.$validated['status'],
             auth()->id(),
             QueueEntry::class,
             $queueEntry->id,
@@ -115,7 +115,7 @@ class OfficeController extends Controller
         ActivityLog::log(
             $appointment->office_id,
             'appointment_accepted',
-            auth()->user()->name . ' accepted appointment for ' . $appointment->display_name . ' at ' . \Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A'),
+            auth()->user()->name.' accepted appointment for '.$appointment->display_name.' at '.\Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A'),
             auth()->id(),
             Appointment::class,
             $appointment->id,
@@ -133,7 +133,7 @@ class OfficeController extends Controller
         ActivityLog::log(
             $appointment->office_id,
             'appointment_completed',
-            auth()->user()->name . ' completed appointment for ' . $appointment->display_name,
+            auth()->user()->name.' completed appointment for '.$appointment->display_name,
             auth()->id(),
             Appointment::class,
             $appointment->id,
@@ -151,7 +151,7 @@ class OfficeController extends Controller
         ActivityLog::log(
             $appointment->office_id,
             'appointment_cancelled',
-            auth()->user()->name . ' cancelled appointment for ' . $appointment->display_name,
+            auth()->user()->name.' cancelled appointment for '.$appointment->display_name,
             auth()->id(),
             Appointment::class,
             $appointment->id,
@@ -168,6 +168,7 @@ class OfficeController extends Controller
         if (! $office) {
             return redirect()->route('office.dashboard')->with('error', 'No office assigned.');
         }
+
         return view('office.qr', compact('office'));
     }
 
@@ -185,8 +186,8 @@ class OfficeController extends Controller
 
         if ($request->boolean('download')) {
             $ext = $result->getMimeType() === 'image/svg+xml' ? 'svg' : 'png';
-            $filename = 'qr-' . \Illuminate\Support\Str::slug($office->name) . '.' . $ext;
-            $response->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+            $filename = 'qr-'.\Illuminate\Support\Str::slug($office->name).'.'.$ext;
+            $response->header('Content-Disposition', 'attachment; filename="'.$filename.'"');
         }
 
         return $response;
@@ -241,6 +242,7 @@ class OfficeController extends Controller
         $date = $request->get('date', today()->toDateString());
         $queueEntries = $office->queueEntries()->where('queue_date', $date)->orderBy('queue_number')->get();
         $appointments = $office->appointments()->where('appointment_date', $date)->orderBy('appointment_time')->get();
+
         return view('office.reports', compact('office', 'queueEntries', 'appointments', 'date'));
     }
 
@@ -277,7 +279,7 @@ class OfficeController extends Controller
 
     private function downloadReportCsv($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus): Response
     {
-        $filename = 'report-' . \Illuminate\Support\Str::slug($office->name) . '-' . $date . '.csv';
+        $filename = 'report-'.\Illuminate\Support\Str::slug($office->name).'-'.$date.'.csv';
 
         $callback = function () use ($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus) {
             $out = fopen('php://output', 'w');
@@ -332,7 +334,7 @@ class OfficeController extends Controller
 
         return response()->stream($callback, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 
@@ -340,11 +342,11 @@ class OfficeController extends Controller
     {
         $html = view('office.report-print', compact('office', 'date', 'queueEntries', 'appointments', 'queueByStatus', 'appointmentsByStatus'))->render();
 
-        $filename = 'report-' . \Illuminate\Support\Str::slug($office->name) . '-' . $date . '.html';
+        $filename = 'report-'.\Illuminate\Support\Str::slug($office->name).'-'.$date.'.html';
 
         return response($html, 200, [
             'Content-Type' => 'text/html; charset=UTF-8',
-            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
         ]);
     }
 

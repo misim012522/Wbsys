@@ -52,6 +52,7 @@ class ActivityLog extends Model
     ): self {
         $office = Office::find($officeId);
         $tenantId = $office?->tenant_id;
+
         return self::create([
             'tenant_id' => $tenantId,
             'office_id' => $officeId,

@@ -51,6 +51,7 @@ class QueueEntry extends Model
         if ($this->guest_phone) {
             return $this->guest_phone;
         }
+
         return $this->guest_contact ?? '—';
     }
 
@@ -64,10 +65,15 @@ class QueueEntry extends Model
     }
 
     public const STATUS_WAITING = 'waiting';
+
     public const STATUS_CALLED = 'called';
+
     public const STATUS_SERVING = 'serving';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_CANCELLED = 'cancelled';
+
     public const STATUS_NO_SHOW = 'no_show';
 
     public function scopeToday($query)
@@ -100,6 +106,7 @@ class QueueEntry extends Model
         if (! in_array($this->status, [self::STATUS_WAITING, self::STATUS_CALLED, self::STATUS_SERVING])) {
             return null;
         }
+
         return $this->office->queueEntries()
             ->where('queue_date', $this->queue_date)
             ->whereIn('status', [self::STATUS_WAITING, self::STATUS_CALLED, self::STATUS_SERVING])

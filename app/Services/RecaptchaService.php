@@ -38,6 +38,7 @@ class RecaptchaService
         }
 
         $body = $result->json();
+
         return isset($body['success']) && $body['success'] === true;
     }
 }

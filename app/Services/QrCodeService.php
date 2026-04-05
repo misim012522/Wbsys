@@ -15,7 +15,7 @@ class QrCodeService
      */
     public function build(string $data, bool $forcePng = false): \Endroid\QrCode\Writer\Result\ResultInterface
     {
-        $writer = $forcePng || extension_loaded('gd') ? new PngWriter() : new SvgWriter();
+        $writer = $forcePng || extension_loaded('gd') ? new PngWriter : new SvgWriter;
 
         $builder = new Builder(
             writer: $writer,
@@ -34,6 +34,6 @@ class QrCodeService
      */
     public function queueOfficeUrl(string $officeSlug): string
     {
-        return rtrim(config('app.url'), '/') . route('queue.office', ['slug' => $officeSlug], false);
+        return rtrim(config('app.url'), '/').route('queue.office', ['slug' => $officeSlug], false);
     }
 }

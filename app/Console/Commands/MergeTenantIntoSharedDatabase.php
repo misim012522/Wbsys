@@ -5,10 +5,10 @@ namespace App\Console\Commands;
 use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
 use Illuminate\Console\Command;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\QueryException;
 
 class MergeTenantIntoSharedDatabase extends Command
 {
@@ -36,6 +36,7 @@ class MergeTenantIntoSharedDatabase extends Command
 
         if ($tenants->isEmpty()) {
             $this->error('No tenants found to migrate.');
+
             return self::FAILURE;
         }
 
@@ -44,6 +45,7 @@ class MergeTenantIntoSharedDatabase extends Command
 
             if ($this->tenantDatabaseManager->usesSharedDatabase($tenant)) {
                 $this->line('  Already using the shared database.');
+
                 continue;
             }
 
@@ -52,6 +54,7 @@ class MergeTenantIntoSharedDatabase extends Command
 
                 if (! Schema::connection('tenant')->hasTable('users')) {
                     $this->warn('  Skipped: tenant source tables were not found.');
+
                     continue;
                 }
 

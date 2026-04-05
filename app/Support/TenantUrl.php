@@ -81,7 +81,7 @@ class TenantUrl
         $parts = parse_url($baseUrl);
         $scheme = $parts['scheme'] ?? 'http';
         $host = self::tenantHost($tenant, $parts['host'] ?? 'localhost');
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
 
         return $scheme.'://'.$host.$port.'/'.ltrim($path, '/');
     }

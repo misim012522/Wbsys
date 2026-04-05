@@ -1,6 +1,7 @@
 @php
     $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
     $viewer = auth()->user();
+    $guestQueueEnabled = $tenant?->getSetting('customization.guest_queue', true) ?? true;
 @endphp
 
 <div class="mb-6 overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
@@ -40,7 +41,7 @@
                 <a href="{{ route('admin.users.index') }}" class="rounded-full px-4 py-2.5 text-sm font-medium {{ request()->routeIs('admin.users.index') ? 'bg-emerald-600 text-white shadow-sm' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Office staff</a>
                 <a href="{{ route('admin.users.archived') }}" class="rounded-full px-4 py-2.5 text-sm font-medium {{ request()->routeIs('admin.users.archived') ? 'bg-emerald-600 text-white shadow-sm' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Archived staff</a>
             @endif
-            @if($viewer?->hasPermission('office.serve'))
+            @if($viewer?->hasPermission('office.serve') && $guestQueueEnabled)
                 <a href="{{ route('admin.qr') }}" class="rounded-full px-4 py-2.5 text-sm font-medium {{ request()->routeIs('admin.qr*') ? 'bg-emerald-600 text-white shadow-sm' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">QR codes</a>
             @endif
             @if($viewer?->hasPermission('reports.view'))

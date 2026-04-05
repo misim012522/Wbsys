@@ -5,8 +5,8 @@ namespace App\Http\Requests;
 use App\Support\ReservedUsernames;
 use App\Support\TenantWorkspaceUrlValidator;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CentralTenantSignupRequest extends FormRequest
 {
