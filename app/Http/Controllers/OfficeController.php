@@ -172,7 +172,7 @@ class OfficeController extends Controller
         return view('office.qr', compact('office'));
     }
 
-    /** Generate QR code image for the officer's office. Uses SVG so it works without the GD extension. */
+    /** Generate QR code image for the officer's office. */
     public function qrCodeImage(Request $request): Response
     {
         $office = auth()->user()->office;

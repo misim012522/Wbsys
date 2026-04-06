@@ -36,6 +36,14 @@ class RedirectIfAuthenticated
                 return redirect()->route('tenant.home');
             }
 
+            if (
+                $tenantOnHost
+                && $request->isMethod('GET')
+                && trim($request->path(), '/') === 'login'
+            ) {
+                return $next($request);
+            }
+
             return redirect()->away(TenantUrl::forUserDashboard($user));
         }
 

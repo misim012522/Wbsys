@@ -35,7 +35,11 @@ class HydrateTenantSessionUser
 
                 if ($user && (int) $user->tenant_id === (int) $tenant->id) {
                     $user->setConnection('tenant');
-                    Auth::setUser($user);
+                    Auth::login($user);
+                    $request->session()->put('tenant_auth', [
+                        'tenant_id' => $tenant->id,
+                        'user_id' => $user->id,
+                    ]);
                 }
             }
         }

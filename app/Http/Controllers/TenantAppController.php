@@ -19,7 +19,7 @@ class TenantAppController extends Controller
                 ]);
             }
 
-            return redirect()->away(TenantUrl::forUserDashboard(auth()->user()));
+            return redirect()->route('login');
         }
 
         $tenant = app()->bound('current_tenant') ? app('current_tenant') : null;

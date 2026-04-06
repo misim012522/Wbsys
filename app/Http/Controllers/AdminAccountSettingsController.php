@@ -14,8 +14,11 @@ class AdminAccountSettingsController extends Controller
     {
         $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
         $admin = auth()->user();
+        $subscription = $tenant?->subscriptions()->latest('id')->first();
+        $workspaceUrl = $tenant ? \App\Support\TenantUrl::workspace($tenant) : null;
+        $loginUrl = $tenant ? \App\Support\TenantUrl::login($tenant) : null;
 
-        return view('admin.account-settings', compact('tenant', 'admin'));
+        return view('admin.account-settings', compact('tenant', 'admin', 'subscription', 'workspaceUrl', 'loginUrl'));
     }
 
     public function update(Request $request): RedirectResponse

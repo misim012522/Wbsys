@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('guest')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
     Route::get('/auth/continue', [AuthController::class, 'continueLogin'])->name('login.continue');
     Route::get('/email/verification-sent', [AuthController::class, 'showVerificationSent'])->name('verification.sent');
     Route::get('/registration-pending', [AuthController::class, 'showRegistrationPending'])->name('registration.pending');

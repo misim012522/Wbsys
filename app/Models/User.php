@@ -76,15 +76,6 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Office::class);
     }
 
-    public function roleRecord(): ?Role
-    {
-        if ($this->isCentralUser()) {
-            return null;
-        }
-
-        return Role::bySlug($this->role)->forTenant($this->tenant_id)->active()->first();
-    }
-
     public function queueEntries(): HasMany
     {
         return $this->hasMany(QueueEntry::class);
@@ -160,9 +151,18 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        $role = Role::bySlug($this->role)->forTenant($this->tenant_id)->first();
+        if ($this->isOfficeStaff()) {
+            $tenant = app()->bound('current_tenant') ? app('current_tenant') : $this->tenant;
 
-        return $role ? $role->hasPermission($permissionSlug) : false;
+            $permissions = [
+                'office.serve' => (bool) ($tenant?->getSetting('rbac.office_staff.office.serve', true) ?? true),
+                'reports.view' => (bool) ($tenant?->getSetting('rbac.office_staff.reports.view', true) ?? true),
+            ];
+
+            return $permissions[$permissionSlug] ?? false;
+        }
+
+        return false;
     }
 
     public function hasAnyPermission(string ...$permissionSlugs): bool
@@ -182,12 +182,20 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'central.dashboard';
         }
 
-        if ($this->isTenantAdmin() || $this->hasAnyPermission('users.manage', 'offices.manage', 'queue.manage', 'appointments.manage', 'reports.view')) {
+        if ($this->isTenantAdmin()) {
             return 'admin.dashboard';
         }
 
-        if ($this->hasPermission('office.serve')) {
-            return 'office.dashboard';
+        if ($this->isOfficeStaff()) {
+            if ($this->hasPermission('office.serve')) {
+                return 'office.dashboard';
+            }
+
+            if ($this->hasPermission('reports.view')) {
+                return 'office.reports';
+            }
+
+            return 'tenant.settings.edit';
         }
 
         if ($this->isStudent()) {
@@ -203,7 +211,12 @@ class User extends Authenticatable implements MustVerifyEmail
             return 'System Admin';
         }
 
-        return $this->roleRecord()?->name ?? str($this->role)->replace('_', ' ')->title()->toString();
+        return match ($this->role) {
+            self::ROLE_TENANT_ADMIN => 'Tenant Admin',
+            self::ROLE_OFFICE_STAFF => 'Office Staff',
+            self::ROLE_STUDENT => 'Student',
+            default => str($this->role)->replace('_', ' ')->title()->toString(),
+        };
     }
 
     public function sendPasswordResetNotification($token): void

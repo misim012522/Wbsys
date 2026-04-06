@@ -448,7 +448,7 @@ class CentralController extends Controller
                 ->where('tenant_id', $tenant->id)
                 ->count();
 
-            $officeStaffCount = User::query()
+            $officeStaffCount = User::on('tenant')
                 ->where('tenant_id', $tenant->id)
                 ->where('role', User::ROLE_OFFICE_STAFF)
                 ->count();

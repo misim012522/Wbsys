@@ -30,6 +30,11 @@ class ResolveTenant
 
         $host = (string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost());
         $host = preg_replace('/:\d+$/', '', $host) ?: $request->getHost();
+
+        if ($redirect = $this->normalizeLegacyLocalhostTenantHost($request, $host)) {
+            return $redirect;
+        }
+
         $tenant = Tenant::query()->where('domain', $host)->first();
         if (! $tenant && count(explode('.', $host)) >= 2) {
             $subdomain = explode('.', $host)[0];
@@ -40,7 +45,7 @@ class ResolveTenant
             ! $tenant
             && app()->environment('testing')
             && ! str_starts_with($request->path(), 'central')
-            && ! in_array($request->path(), ['login', 'auth/continue', '/'], true)
+            && ! in_array($request->path(), ['login', 'auth/continue'], true)
         ) {
             $activeTenants = Tenant::active()->get();
 
@@ -79,5 +84,31 @@ class ResolveTenant
 
         return redirect()->away(TenantUrl::login(null, true))
             ->with('info', 'Logging out due to deactivation.');
+    }
+
+    private function normalizeLegacyLocalhostTenantHost(Request $request, string $host): ?RedirectResponse
+    {
+        if (! str_ends_with($host, '.localhost')) {
+            return null;
+        }
+
+        $subdomain = explode('.', $host)[0] ?? '';
+
+        if ($subdomain === '') {
+            return null;
+        }
+
+        $tenant = Tenant::query()->where('subdomain', $subdomain)->first();
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $targetBase = rtrim(TenantUrl::workspace($tenant), '/');
+        $path = '/'.ltrim($request->getPathInfo(), '/');
+        $query = $request->getQueryString();
+        $target = $targetBase.($path === '/' ? '' : $path).($query ? '?'.$query : '');
+
+        return redirect()->away($target, 302);
     }
 }

@@ -70,7 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/session/tenant-status', [ApiController::class, 'tenantSessionStatus'])->name('api.session.tenant-status');
 });
 
-Route::middleware(['tenant.required', 'auth', 'tenant.context'])->group(function () {
+Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'auth', 'tenant.context'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
     Route::get('/settings', [TenantAccountSettingsController::class, 'edit'])->name('tenant.settings.edit');
     Route::put('/settings', [TenantAccountSettingsController::class, 'update'])->name('tenant.settings.update');

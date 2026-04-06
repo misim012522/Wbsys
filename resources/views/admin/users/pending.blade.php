@@ -15,6 +15,11 @@
 @if(session('info'))
     <p class="mb-4 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm">{{ session('info') }}</p>
 @endif
+@if(session('success'))
+    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        {{ session('success') }}
+    </div>
+@endif
 @error('user')
     <p class="mb-4 px-4 py-2 rounded-lg bg-red-100 text-red-800 text-sm">{{ $message }}</p>
 @enderror
@@ -100,21 +105,6 @@
     </div>
 @endif
 
-@if(session('success'))
-<div id="success-popup" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="success-popup-title">
-    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-6 sm:p-8 text-center">
-        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-4">
-            <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-        </div>
-        <h2 id="success-popup-title" class="text-xl font-bold text-slate-800 mb-2">Office staff account confirmed</h2>
-        <p class="text-slate-600 mb-6">{{ session('success') }}</p>
-        <button type="button" onclick="document.getElementById('success-popup').remove()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
-            OK
-        </button>
-    </div>
-</div>
 <script>
 (function() {
     document.querySelectorAll('[data-admin-action-form]').forEach(function (form) {
@@ -140,16 +130,9 @@
         });
     });
 
-    var popup = document.getElementById('success-popup');
-    if (popup) {
-        popup.addEventListener('click', function(e) {
-            if (e.target === popup) popup.remove();
-        });
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') popup.remove();
-        });
+    if (window.showToast && typeof window.showToast.success === 'function' && @json((bool) session('success'))) {
+        window.showToast.success(@json(session('success')));
     }
 })();
 </script>
-@endif
 @endsection

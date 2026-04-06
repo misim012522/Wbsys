@@ -60,6 +60,227 @@ test('tenant home shows tenant workspace onboarding for administrators and staff
         ->assertDontSee('Create account');
 });
 
+test('tenant workspace login page is shown instead of reusing an active staff session', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get('/login')
+        ->assertOk()
+        ->assertSee('Sign in to continue')
+        ->assertSee('Log in')
+        ->assertDontSee('Office Staff Dashboard');
+});
+
+test('opening tenant login in a new tab does not log out the current workspace session', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get('/login')
+        ->assertOk()
+        ->assertSee('Sign in to continue');
+
+    $this->withServerVariables(tenantHost())
+        ->get('/admin')
+        ->assertOk();
+});
+
+test('tenant admin can still open admin routes after visiting the tenant login page', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get('/login')
+        ->assertOk();
+
+    $this->withServerVariables(tenantHost())
+        ->get(route('admin.dashboard'))
+        ->assertOk();
+
+    $this->withServerVariables(tenantHost())
+        ->get(route('admin.settings.edit'))
+        ->assertOk();
+});
+
+test('tenant login page hides authenticated admin header controls', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get('/login')
+        ->assertOk()
+        ->assertDontSee('Admin settings')
+        ->assertDontSee('Log out')
+        ->assertSee('Enter your workspace credentials below.')
+        ->assertDontSee('data-tenant-session-monitor-url', false);
+
+    $this->withServerVariables(tenantHost())
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('data-tenant-session-monitor-url', false);
+});
+
+test('tenant admin header navigation still works after another tab opens tenant login', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertSee('Admin settings');
+
+    $this->withServerVariables(tenantHost())
+        ->get('/login')
+        ->assertOk()
+        ->assertDontSee('Admin settings')
+        ->assertDontSee('Log out');
+
+    $this->withServerVariables(tenantHost())
+        ->get(route('admin.settings.edit'))
+        ->assertOk()
+        ->assertSee('Admin settings')
+        ->assertSee('Change password');
+
+    $this->withServerVariables(tenantHost())
+        ->get(route('admin.profile'))
+        ->assertRedirect(route('admin.settings.edit'));
+});
+
+test('tenant home redirects authenticated workspace users back to the login page', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get('/tenant')
+        ->assertRedirect(route('login'));
+});
+
+test('tenant workspace root redirects authenticated tenant admins to the login page', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get('/')
+        ->assertRedirect(\App\Support\TenantUrl::login($tenant));
+});
+
 test('tenant register page redirects back to login with guidance', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
@@ -103,6 +324,212 @@ test('tenant dashboard renders for approved office staff users on their tenant d
         ->withServerVariables(tenantHost())
         ->get('/dashboard')
         ->assertRedirect(route('office.dashboard'));
+});
+
+test('office staff dashboard shows QR code access even when guest queue is disabled', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+        'settings' => [
+            'theme' => [
+                'guest_queue_enabled' => false,
+                'appointments_enabled' => true,
+            ],
+        ],
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.dashboard'))
+        ->assertOk()
+        ->assertSee('QR code');
+});
+
+test('office staff qr page includes the full office qr toolkit', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.qr'))
+        ->assertOk()
+        ->assertSee('Open public page')
+        ->assertSee('Open QR image')
+        ->assertSee('Download QR image')
+        ->assertSee(route('queue.office', ['slug' => $office->slug]), false);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.qr.image'))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'image/svg+xml');
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.qr.image', ['download' => 1]))
+        ->assertOk()
+        ->assertHeader('Content-Disposition');
+});
+
+test('simple tenant rbac keeps office staff and admin in separate workspaces', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $officeId = \App\Models\Office::query()->value('id');
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $officeId,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.dashboard'))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.dashboard'))
+        ->assertForbidden();
+});
+
+test('tenant admin can view and update simple rbac settings', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.rbac.edit'))
+        ->assertOk()
+        ->assertSee('Access control')
+        ->assertSee('Serve queues and appointments')
+        ->assertSee('View reports');
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->put(route('admin.rbac.update'), [
+            'office_staff_office_serve' => '1',
+        ])
+        ->assertRedirect(route('admin.rbac.edit'));
+
+    $tenant->refresh();
+
+    expect($tenant->getSetting('rbac.office_staff.office.serve', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
+});
+
+test('simple rbac settings can block office staff reports without affecting admin pages', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+        'settings' => [
+            'rbac' => [
+                'office_staff' => [
+                    'office' => ['serve' => true],
+                    'reports' => ['view' => false],
+                ],
+            ],
+        ],
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($staff)
+        ->withServerVariables(tenantHost())
+        ->get(route('office.reports'))
+        ->assertForbidden();
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.dashboard'))
+        ->assertOk();
 });
 
 test('legacy student accounts can still open the tenant dashboard entry page', function () {
@@ -518,6 +945,7 @@ test('tenant admin can change password from account settings', function () {
         ->get(route('admin.settings.edit'))
         ->assertOk()
         ->assertSee('Admin settings')
+        ->assertSee('Workspace info')
         ->assertSee('Profile settings')
         ->assertSee('Change password');
 
@@ -560,7 +988,7 @@ test('tenant admin can view registered workspace profile details', function () {
 
     $this->actingAs($admin)
         ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
-        ->get(route('admin.profile'))
+        ->get(route('admin.settings.edit'))
         ->assertOk()
         ->assertSee('Workspace info')
         ->assertSee('Registrar Office')
@@ -570,6 +998,12 @@ test('tenant admin can view registered workspace profile details', function () {
         ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
         ->assertSee(\App\Support\TenantUrl::login($tenant), false)
         ->assertDontSee('Password123!');
+
+    $this->actingAs($admin)
+        ->withServerVariables(['HTTP_HOST' => 'registrar.localhost'])
+        ->get(route('admin.profile'))
+        ->assertRedirect(route('admin.settings.edit'))
+        ->assertSessionHas('info', 'Workspace info is now included in Admin settings.');
 });
 
 test('tenant workspace settings page renders on the dedicated tenant domain', function () {

@@ -430,3 +430,63 @@ test('tenant login on a tenant domain lands on the shared tenant dashboard route
 
     expect($location)->toStartWith('http://cot.localhost/auth/continue?token=');
 });
+
+test('office staff login still lands on an allowed tenant page when live operations access is disabled', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+        'settings' => [
+            'rbac' => [
+                'office_staff' => [
+                    'office' => ['serve' => false],
+                    'reports' => ['view' => false],
+                ],
+            ],
+        ],
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::on('tenant')->create([
+        'name' => 'Office Staff',
+        'username' => 'office.staff',
+        'email' => 'staff@acme.test',
+        'phone' => '09123456780',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+    $staff->forceFill(['email_verified_at' => now()])->save();
+
+    $response = $this->withHeader('Host', 'acme.localhost')
+        ->withServerVariables(loginTenantHost())
+        ->post('/login', [
+            'login' => 'office.staff',
+            'password' => 'Password123!',
+        ]);
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith('http://acme.localhost/auth/continue?token=');
+
+    $this->withHeader('Host', 'acme.localhost')
+        ->get($location)
+        ->assertRedirect(route('tenant.settings.edit'));
+});

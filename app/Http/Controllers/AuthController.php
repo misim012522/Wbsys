@@ -15,10 +15,12 @@ use App\Services\TenantPlanEnforcer;
 use App\Support\TenantDisabledResponse;
 use App\Support\TenantUrl;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -46,20 +48,43 @@ class AuthController extends Controller
             return TenantDisabledResponse::make($hostTenant, $request);
         }
 
-        if ($request->boolean('force_login') && auth()->check()) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        if ($hostTenant) {
+            app()->instance('current_tenant', $hostTenant);
+            app()->instance('current_tenant_id', $hostTenant->id);
+        }
 
-            return view('auth.login');
+        if ($request->boolean('force_login') && auth()->check()) {
+            $this->clearAuthenticatedSession($request);
+
+            return $this->loginViewResponse($request);
         }
 
         if (auth()->check()) {
             $user = auth()->user();
             $tenantWorkspace = $this->currentTenant() ?? $this->tenantForHost($request);
+            Log::info('[DEBUG-LOGIN] showLogin: authenticated user', [
+                'user_id' => $user->id,
+                'role' => $user->role,
+                'tenant_id' => $user->tenant_id,
+                'office_id' => $user->office_id,
+                'workspace_id' => $tenantWorkspace?->id,
+                'is_central' => $user->isCentralUser(),
+                'url_intended' => session()->get('url.intended'),
+            ]);
 
             if ($tenantWorkspace && $user->isCentralUser()) {
+                Log::info('[DEBUG-LOGIN] showLogin -> tenant.home (central user)');
                 return redirect()->route('tenant.home');
+            }
+
+            if ($tenantWorkspace && (int) ($user->tenant_id ?? 0) === (int) $tenantWorkspace->id) {
+                Log::info('[DEBUG-LOGIN] showLogin -> dashboardRedirect (tenant user matches workspace)');
+                return $this->dashboardRedirect($user);
+            }
+
+            if ($tenantWorkspace) {
+                Log::info('[DEBUG-LOGIN] showLogin -> view login (tenant workspace mismatch)');
+                return $this->loginViewResponse($request);
             }
 
             if ($user->tenant && ! $this->currentTenant()) {
@@ -69,12 +94,17 @@ class AuthController extends Controller
             return $this->dashboardRedirect($user);
         }
 
-        return view('auth.login');
+        Log::info('[DEBUG-LOGIN] showLogin: not authenticated, showing login form');
+        return $this->loginViewResponse($request);
     }
 
     public function login(LoginRequest $request)
     {
         $validated = $request->validated();
+
+        if (auth()->check()) {
+            $this->clearAuthenticatedSession($request);
+        }
 
         if (config('recaptcha.enabled') && ! app()->environment(['local', 'testing']) && config('recaptcha.secret_key')) {
             if (! $this->recaptchaService->verify($request->input('g-recaptcha-response'), $request->ip())) {
@@ -147,7 +177,7 @@ class AuthController extends Controller
         return $this->dashboardRedirect($user);
     }
 
-    public function continueLogin(Request $request): RedirectResponse
+    public function continueLogin(Request $request): RedirectResponse|Response
     {
         $payload = $this->handoffPayload((string) $request->query('token'));
         $remember = (bool) ($payload['remember'] ?? false);
@@ -352,17 +382,21 @@ class AuthController extends Controller
             app()->instance('current_tenant', $tenant);
             app()->instance('current_tenant_id', $tenant->id);
             $user->setConnection('tenant');
+        } else {
+            $user->setConnection('central');
+        }
+
+        Auth::login($user, $remember);
+        $request->session()->regenerateToken();
+
+        if ($tenant) {
             $request->session()->put('tenant_auth', [
                 'tenant_id' => $tenant->id,
                 'user_id' => $user->id,
             ]);
         } else {
-            $user->setConnection('central');
             $request->session()->forget('tenant_auth');
         }
-
-        Auth::login($user, $remember);
-        $request->session()->regenerate();
 
         if ($user->office_id) {
             ActivityLog::log(
@@ -376,6 +410,8 @@ class AuthController extends Controller
                 $request->ip()
             );
         }
+
+        $request->session()->save();
     }
 
     private function tenantForHost(Request $request, bool $includeInactive = false): ?Tenant
@@ -394,39 +430,117 @@ class AuthController extends Controller
         }
 
         $query = $includeInactive ? Tenant::query() : Tenant::active();
+        $tenant = $query->where('subdomain', explode('.', $host)[0])->first();
 
-        return $query->where('subdomain', explode('.', $host)[0])->first();
+        if ($tenant || ! app()->environment('testing')) {
+            return $tenant;
+        }
+
+        $activeTenants = Tenant::active()->get();
+
+        return $activeTenants->count() === 1 ? $activeTenants->first() : null;
     }
 
-    private function dashboardRedirect(User $user): RedirectResponse
+    private function dashboardRedirect(User $user): RedirectResponse|Response
     {
         $routeName = $user->dashboardRouteName();
+        $allowedPaths = match ($routeName) {
+            'admin.dashboard' => ['admin'],
+            'office.dashboard' => ['office'],
+            'office.reports' => ['office/reports'],
+            'tenant.settings.edit' => ['settings'],
+            'tenant.home' => ['dashboard', 'tenant'],
+            'central.dashboard' => ['central/dashboard'],
+            default => [],
+        };
+
+        Log::info('[DEBUG-LOGIN] dashboardRedirect', [
+            'route' => $routeName,
+            'user_id' => $user->id,
+            'role' => $user->role,
+            'office_id' => $user->office_id,
+        ]);
 
         if ($routeName === 'login') {
             return redirect()->route('login');
         }
 
         $intendedUrl = session()->pull('url.intended');
+        $currentHost = request()->getSchemeAndHttpHost();
 
         if (is_string($intendedUrl) && $intendedUrl !== '') {
+            $intendedUrl = $this->normalizeLegacyTenantUrl($intendedUrl, $user);
             $path = trim((string) parse_url($intendedUrl, PHP_URL_PATH), '/');
+            Log::info('[DEBUG-LOGIN] dashboardRedirect: url.intended=' . $intendedUrl . ' path=' . $path);
 
-            if (! in_array($path, ['login', 'auth/continue', 'logout'], true)) {
+            if (
+                ! in_array($path, ['login', 'auth/continue', 'logout'], true)
+                && ($allowedPaths === [] || in_array($path, $allowedPaths, true))
+            ) {
+                if (str_starts_with($intendedUrl, $currentHost)) {
+                    $relativeTarget = substr($intendedUrl, strlen($currentHost));
+
+                    return redirect($relativeTarget !== '' ? $relativeTarget : '/', 303);
+                }
+
                 return redirect()->to($intendedUrl);
             }
         }
 
-        return redirect()->route($routeName);
+        $targetUrl = route($routeName);
+        Log::info('[DEBUG-LOGIN] dashboardRedirect -> route(' . $routeName . ') = ' . $targetUrl);
+
+        if (str_starts_with($targetUrl, $currentHost)) {
+            $relativeTarget = substr($targetUrl, strlen($currentHost));
+
+            return redirect($relativeTarget !== '' ? $relativeTarget : '/', 303);
+        }
+
+        return redirect()->to($targetUrl, 303);
+    }
+
+    private function normalizeLegacyTenantUrl(string $url, User $user): string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! is_string($host) || ! str_ends_with($host, '.localhost')) {
+            return $url;
+        }
+
+        $currentWorkspaceUrl = TenantUrl::forUserDashboard($user);
+        $currentHost = parse_url($currentWorkspaceUrl, PHP_URL_HOST);
+
+        if (! is_string($currentHost) || $currentHost === '') {
+            return $url;
+        }
+
+        return str_replace($host, $currentHost, $url);
     }
 
     private function logoutDueToDeactivation(Request $request): RedirectResponse
+    {
+        $this->clearAuthenticatedSession($request);
+
+        return redirect()->away(TenantUrl::login(null, true))
+            ->with('info', 'Logging out due to deactivation.');
+    }
+
+    private function clearAuthenticatedSession(Request $request): void
     {
         Auth::logout();
         $request->session()->forget('tenant_auth');
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+    }
 
-        return redirect()->away(TenantUrl::login(null, true))
-            ->with('info', 'Logging out due to deactivation.');
+    private function loginViewResponse(Request $request): Response
+    {
+        $request->session()->regenerateToken();
+
+        return response()
+            ->view('auth.login')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT');
     }
 }

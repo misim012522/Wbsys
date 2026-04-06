@@ -39,7 +39,15 @@ class TenantUrl
         }
 
         if ($user?->isOfficeStaff()) {
-            return self::forPath($tenant, '/office');
+            if ($user->hasPermission('office.serve')) {
+                return self::forPath($tenant, '/office');
+            }
+
+            if ($user->hasPermission('reports.view')) {
+                return self::forPath($tenant, '/office/reports');
+            }
+
+            return self::forPath($tenant, '/settings');
         }
 
         if ($user?->isStudent()) {
@@ -72,12 +80,11 @@ class TenantUrl
 
     public static function forPath(?Tenant $tenant, string $path = '/'): string
     {
-        $baseUrl = self::baseUrl();
-
         if (! $tenant) {
-            return rtrim($baseUrl, '/').'/'.ltrim($path, '/');
+            return rtrim(self::configuredBaseUrl(), '/').'/'.ltrim($path, '/');
         }
 
+        $baseUrl = self::baseUrl();
         $parts = parse_url($baseUrl);
         $scheme = $parts['scheme'] ?? 'http';
         $host = self::tenantHost($tenant, $parts['host'] ?? 'localhost');
@@ -88,7 +95,7 @@ class TenantUrl
 
     private static function baseUrl(): string
     {
-        $configuredUrl = (string) config('app.url');
+        $configuredUrl = self::configuredBaseUrl();
 
         if (app()->runningInConsole()) {
             return $configuredUrl;
@@ -118,6 +125,11 @@ class TenantUrl
         return $root;
     }
 
+    private static function configuredBaseUrl(): string
+    {
+        return (string) config('app.url');
+    }
+
     private static function tenantHost(Tenant $tenant, string $baseHost): string
     {
         $baseHost = trim($baseHost);
@@ -132,6 +144,10 @@ class TenantUrl
         }
 
         if (filter_var($baseHost, FILTER_VALIDATE_IP) || in_array($baseHost, ['localhost', '127.0.0.1'], true)) {
+            return $tenant->subdomain.'.'.$localTenantBaseDomain;
+        }
+
+        if ($localTenantBaseDomain !== '' && $baseHost === $localTenantBaseDomain) {
             return $tenant->subdomain.'.'.$localTenantBaseDomain;
         }
 

@@ -161,6 +161,71 @@ test('central dashboard only shows the main tenant account and hides office staf
         ->assertDontSee('registrar.staff');
 });
 
+test('central dashboard usage summary counts tenant office staff', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
+    $suffix = Str::lower(Str::random(6));
+
+    $developer = User::factory()->create([
+        'username' => 'developer',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office '.$suffix,
+        'slug' => 'registrar-office-'.$suffix,
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar-'.$suffix,
+        'database_name' => 'tenant_registrar_office_'.$suffix,
+        'email' => 'registrar-'.$suffix.'@example.test',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Registrar Admin',
+        'username' => 'registrar.admin',
+        'email' => 'registrar-admin-'.$suffix.'@example.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    User::on('tenant')->create([
+        'name' => 'Office Staff One',
+        'username' => 'registrar.staff.one',
+        'email' => 'staff-one-'.$suffix.'@example.test',
+        'phone' => '09998887771',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    User::on('tenant')->create([
+        'name' => 'Office Staff Two',
+        'username' => 'registrar.staff.two',
+        'email' => 'staff-two-'.$suffix.'@example.test',
+        'phone' => '09998887772',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $this->actingAs($developer)
+        ->get(route('central.dashboard'))
+        ->assertOk()
+        ->assertSeeText('2')
+        ->assertSeeText('office staff');
+});
+
 test('tenant registration creates a dedicated tenant database, tenant admin, and emails credentials', function () {
     Carbon::setTestNow('2026-03-19 10:15:00');
 

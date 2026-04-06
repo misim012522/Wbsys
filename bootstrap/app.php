@@ -11,8 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prependToGroup('web', [\App\Http\Middleware\ConfigureSessionCookie::class]);
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenant::class]);
         $middleware->appendToGroup('web', [\App\Http\Middleware\HydrateTenantSessionUser::class]);
+        $middleware->appendToGroup('web', [\App\Http\Middleware\DebugAuth::class]);
         $middleware->alias([
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'central.user' => \App\Http\Middleware\EnsureCentralUser::class,

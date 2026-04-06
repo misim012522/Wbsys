@@ -25,9 +25,7 @@
 
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-                @if($queueEnabled)
-                    <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
-                @endif
+                <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
                 @if($appointmentsEnabled || $queueEnabled)
                     <a href="{{ route('office.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Reports</a>
                 @endif

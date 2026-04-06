@@ -1,3 +1,7 @@
+@php
+    $showAuthenticatedHeader = auth()->check()
+        && ! (request()->routeIs('login') && app()->bound('current_tenant'));
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -23,11 +27,6 @@
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
     @if(session('status')) data-status-message="{{ session('status') }}" @endif
-    @auth
-        @if(! auth()->user()->isCentralUser())
-            data-tenant-session-monitor-url="{{ route('api.session.tenant-status') }}"
-        @endif
-    @endauth
 >
     <div id="toast-container"></div>
 
@@ -39,7 +38,7 @@
                 $tenantWorkspace = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
             @endphp
 
-            @auth
+            @if($showAuthenticatedHeader)
                 <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
                     @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
                     {{ $brandName }}
@@ -49,10 +48,10 @@
                     @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
                     {{ $brandName }}
                 </a>
-            @endauth
+            @endif
 
             <div class="flex items-center gap-4">
-                @auth
+                @if($showAuthenticatedHeader)
                     @unless($tenantWorkspace && auth()->user()->isAdmin())
                         <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-sm text-slate-600 hover:text-slate-900">
                             {{ auth()->user()->isCentralUser() ? 'Central' : (auth()->user()->isAdmin() ? 'Admin' : (auth()->user()->isOfficeStaff() ? 'Office' : 'My workspace')) }}
@@ -87,7 +86,7 @@
                         <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
                         <a href="{{ route('tenant.home') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Tenant workspace</a>
                     @endif
-                @endauth
+                @endif
             </div>
         </nav>
     </header>

@@ -17,6 +17,10 @@ class HomeController extends Controller
         if (auth()->check()) {
             $user = auth()->user();
 
+            if (app()->bound('current_tenant')) {
+                return redirect()->away(TenantUrl::login(app('current_tenant')));
+            }
+
             if ($user->tenant && ! app()->bound('current_tenant')) {
                 return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
             }
@@ -44,7 +48,7 @@ class HomeController extends Controller
         }
 
         if ($user->isOfficeStaff()) {
-            return redirect()->route('office.dashboard');
+            return redirect()->route($user->dashboardRouteName());
         }
 
         $tenant = app()->bound('current_tenant') ? app('current_tenant') : $user->tenant;
