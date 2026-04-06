@@ -25,6 +25,136 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public const ROLE_STUDENT = 'student';
 
+    public const OFFICE_STAFF_PERMISSION_DEFINITIONS = [
+        'office.dashboard' => [
+            'setting' => 'rbac.office_staff.office.dashboard',
+            'default' => true,
+            'input' => 'office_staff_office_dashboard',
+            'label' => 'Open office dashboard',
+            'description' => 'Lets office staff open their main office workspace and view live queue and appointment summaries.',
+            'badge' => 'emerald',
+        ],
+        'office.qr' => [
+            'setting' => 'rbac.office_staff.office.qr',
+            'default' => true,
+            'input' => 'office_staff_office_qr',
+            'label' => 'Use QR tools',
+            'description' => 'Lets office staff open the QR page and download the office QR code for walk-in access.',
+            'badge' => 'teal',
+        ],
+        'office.queue.manage' => [
+            'setting' => 'rbac.office_staff.office.queue.manage',
+            'default' => true,
+            'input' => 'office_staff_office_queue_manage',
+            'label' => 'Manage queue operations',
+            'description' => 'Lets office staff call the next number and update queue statuses for their assigned office.',
+            'badge' => 'amber',
+        ],
+        'office.appointments.manage' => [
+            'setting' => 'rbac.office_staff.office.appointments.manage',
+            'default' => true,
+            'input' => 'office_staff_office_appointments_manage',
+            'label' => 'Manage appointments',
+            'description' => 'Lets office staff accept, complete, and cancel office appointments.',
+            'badge' => 'rose',
+        ],
+        'office.activity.view' => [
+            'setting' => 'rbac.office_staff.office.activity.view',
+            'default' => true,
+            'input' => 'office_staff_office_activity_view',
+            'label' => 'View activity log',
+            'description' => 'Lets office staff review office activity history and filter daily operations.',
+            'badge' => 'slate',
+        ],
+        'reports.view' => [
+            'setting' => 'rbac.office_staff.reports.view',
+            'default' => true,
+            'input' => 'office_staff_reports_view',
+            'label' => 'View reports',
+            'description' => 'Lets office staff open and download office reports when the tenant plan supports reports.',
+            'badge' => 'sky',
+        ],
+    ];
+
+    public const TENANT_ADMIN_PERMISSION_DEFINITIONS = [
+        'admin.dashboard' => [
+            'setting' => null,
+            'default' => true,
+            'input' => null,
+            'label' => 'Open admin dashboard',
+            'description' => 'Core tenant admin landing page access. This stays enabled to avoid locking the workspace out.',
+            'badge' => 'emerald',
+            'locked' => true,
+        ],
+        'admin.profile' => [
+            'setting' => null,
+            'default' => true,
+            'input' => null,
+            'label' => 'View admin profile',
+            'description' => 'Lets the tenant admin view the built-in admin profile screen.',
+            'badge' => 'teal',
+            'locked' => true,
+        ],
+        'admin.office.manage' => [
+            'setting' => 'rbac.tenant_admin.admin.office.manage',
+            'default' => true,
+            'input' => 'tenant_admin_admin_office_manage',
+            'label' => 'Manage offices',
+            'description' => 'Lets the tenant admin create, edit, and manage offices under the tenant workspace.',
+            'badge' => 'amber',
+        ],
+        'admin.office.serve' => [
+            'setting' => 'rbac.tenant_admin.admin.office.serve',
+            'default' => true,
+            'input' => 'tenant_admin_admin_office_serve',
+            'label' => 'Use admin QR and serve tools',
+            'description' => 'Lets the tenant admin open QR pages and directly serve queue and appointment operations from admin pages.',
+            'badge' => 'rose',
+        ],
+        'users.manage' => [
+            'setting' => 'rbac.tenant_admin.users.manage',
+            'default' => true,
+            'input' => 'tenant_admin_users_manage',
+            'label' => 'Manage office staff accounts',
+            'description' => 'Lets the tenant admin approve, archive, recover, and delete office staff accounts.',
+            'badge' => 'sky',
+        ],
+        'reports.view' => [
+            'setting' => 'rbac.tenant_admin.reports.view',
+            'default' => true,
+            'input' => 'tenant_admin_reports_view',
+            'label' => 'View tenant reports',
+            'description' => 'Lets the tenant admin open and download tenant-level reports.',
+            'badge' => 'slate',
+        ],
+        'admin.customization.manage' => [
+            'setting' => 'rbac.tenant_admin.admin.customization.manage',
+            'default' => true,
+            'input' => 'tenant_admin_admin_customization_manage',
+            'label' => 'Manage customization',
+            'description' => 'Lets the tenant admin edit tenant branding, labels, and workspace customization settings.',
+            'badge' => 'teal',
+        ],
+        'admin.rbac.manage' => [
+            'setting' => null,
+            'default' => true,
+            'input' => null,
+            'label' => 'Manage access control',
+            'description' => 'Lets the tenant admin update RBAC settings. This stays enabled to prevent accidental lockout.',
+            'badge' => 'emerald',
+            'locked' => true,
+        ],
+        'admin.settings.manage' => [
+            'setting' => null,
+            'default' => true,
+            'input' => null,
+            'label' => 'Manage admin settings',
+            'description' => 'Lets the tenant admin update account and workspace settings. This stays enabled to preserve recovery access.',
+            'badge' => 'emerald',
+            'locked' => true,
+        ],
+    ];
+
     protected $fillable = [
         'name',
         'username',
@@ -148,16 +278,27 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         if ($this->isTenantAdmin()) {
-            return true;
+            $tenant = app()->bound('current_tenant') ? app('current_tenant') : $this->tenant;
+            $permissions = self::tenantAdminPermissionStates($tenant);
+
+            if ($permissionSlug === 'office.serve') {
+                return $permissions['admin.office.serve'] ?? false;
+            }
+
+            return $permissions[$permissionSlug] ?? false;
         }
 
         if ($this->isOfficeStaff()) {
             $tenant = app()->bound('current_tenant') ? app('current_tenant') : $this->tenant;
+            $permissions = self::officeStaffPermissionStates($tenant);
 
-            $permissions = [
-                'office.serve' => (bool) ($tenant?->getSetting('rbac.office_staff.office.serve', true) ?? true),
-                'reports.view' => (bool) ($tenant?->getSetting('rbac.office_staff.reports.view', true) ?? true),
-            ];
+            if ($permissionSlug === 'office.serve') {
+                return ($permissions['office.dashboard'] ?? false)
+                    || ($permissions['office.queue.manage'] ?? false)
+                    || ($permissions['office.appointments.manage'] ?? false)
+                    || ($permissions['office.qr'] ?? false)
+                    || ($permissions['office.activity.view'] ?? false);
+            }
 
             return $permissions[$permissionSlug] ?? false;
         }
@@ -187,12 +328,20 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         if ($this->isOfficeStaff()) {
-            if ($this->hasPermission('office.serve')) {
+            if ($this->hasPermission('office.dashboard')) {
                 return 'office.dashboard';
+            }
+
+            if ($this->hasPermission('office.qr')) {
+                return 'office.qr';
             }
 
             if ($this->hasPermission('reports.view')) {
                 return 'office.reports';
+            }
+
+            if ($this->hasPermission('office.activity.view')) {
+                return 'office.activity';
             }
 
             return 'tenant.settings.edit';
@@ -235,5 +384,42 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return parent::resolveRouteBinding($value, $field);
+    }
+
+    public static function officeStaffPermissionDefinitions(): array
+    {
+        return self::OFFICE_STAFF_PERMISSION_DEFINITIONS;
+    }
+
+    public static function tenantAdminPermissionDefinitions(): array
+    {
+        return self::TENANT_ADMIN_PERMISSION_DEFINITIONS;
+    }
+
+    public static function tenantAdminPermissionStates(?Tenant $tenant): array
+    {
+        $states = [];
+
+        foreach (self::tenantAdminPermissionDefinitions() as $slug => $definition) {
+            $default = $definition['default'] ?? false;
+            $setting = $definition['setting'] ?? null;
+            $states[$slug] = $setting === null
+                ? (bool) $default
+                : (bool) ($tenant?->getSetting($setting, $default) ?? $default);
+        }
+
+        return $states;
+    }
+
+    public static function officeStaffPermissionStates(?Tenant $tenant): array
+    {
+        $states = [];
+
+        foreach (self::officeStaffPermissionDefinitions() as $slug => $definition) {
+            $default = $definition['default'] ?? false;
+            $states[$slug] = (bool) ($tenant?->getSetting($definition['setting'], $default) ?? $default);
+        }
+
+        return $states;
     }
 }

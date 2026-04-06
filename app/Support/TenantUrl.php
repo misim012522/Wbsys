@@ -39,12 +39,20 @@ class TenantUrl
         }
 
         if ($user?->isOfficeStaff()) {
-            if ($user->hasPermission('office.serve')) {
+            if ($user->hasPermission('office.dashboard')) {
                 return self::forPath($tenant, '/office');
+            }
+
+            if ($user->hasPermission('office.qr')) {
+                return self::forPath($tenant, '/office/qr');
             }
 
             if ($user->hasPermission('reports.view')) {
                 return self::forPath($tenant, '/office/reports');
+            }
+
+            if ($user->hasPermission('office.activity.view')) {
+                return self::forPath($tenant, '/office/activity');
             }
 
             return self::forPath($tenant, '/settings');

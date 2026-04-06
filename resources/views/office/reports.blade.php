@@ -3,11 +3,20 @@
 @section('title', 'Reports — ' . $office->name)
 
 @section('content')
+@php
+    $viewer = auth()->user();
+    $canViewActivity = $viewer?->hasPermission('office.activity.view');
+    $canOpenDashboard = $viewer?->hasPermission('office.dashboard');
+@endphp
 <div class="flex items-center justify-between mb-8">
     <h1 class="text-2xl font-bold text-slate-800">Reports — {{ $office->name }}</h1>
     <div class="flex gap-2">
-        <a href="{{ route('office.activity') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Activity</a>
-        <a href="{{ route('office.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">My queue</a>
+        @if($canViewActivity)
+            <a href="{{ route('office.activity') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">Activity</a>
+        @endif
+        @if($canOpenDashboard)
+            <a href="{{ route('office.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">My queue</a>
+        @endif
     </div>
 </div>
 

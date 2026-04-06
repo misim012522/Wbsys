@@ -6,6 +6,9 @@
 @php
     $queueUrl = route('queue.office', ['slug' => $office->slug]);
     $qrImageUrl = route('office.qr.image');
+    $viewer = auth()->user();
+    $canViewActivity = $viewer?->hasPermission('office.activity.view');
+    $canOpenDashboard = $viewer?->hasPermission('office.dashboard');
 @endphp
 <div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
     <div class="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_42%,_#eef6ff_100%)] p-6">
@@ -17,8 +20,12 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-                <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Activity</a>
-                <a href="{{ route('office.dashboard') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Live operations</a>
+                @if($canViewActivity)
+                    <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Activity</a>
+                @endif
+                @if($canOpenDashboard)
+                    <a href="{{ route('office.dashboard') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Live operations</a>
+                @endif
             </div>
         </div>
     </div>

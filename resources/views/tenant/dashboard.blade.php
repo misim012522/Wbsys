@@ -13,6 +13,10 @@
     $officeLabel = $tenantTheme['office_label'] ?? 'Office';
     $queueEnabled = (bool) ($tenantTheme['guest_queue_enabled'] ?? true);
     $appointmentsEnabled = (bool) ($tenantTheme['appointments_enabled'] ?? true);
+    $canOpenOfficeDashboard = $user->hasPermission('office.dashboard');
+    $canUseOfficeQr = $user->hasPermission('office.qr');
+    $canViewOfficeActivity = $user->hasPermission('office.activity.view');
+    $canViewOfficeReports = $user->hasPermission('reports.view');
 @endphp
 
 <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -37,12 +41,16 @@
                 <a href="{{ route('admin.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Reports</a>
             @endif
         @elseif($user->isOfficeStaff())
-            <a href="{{ route('office.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open office dashboard</a>
+            @if($canOpenOfficeDashboard)
+                <a href="{{ route('office.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open office dashboard</a>
+            @endif
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-            @if($queueEnabled)
+            @if($queueEnabled && $canUseOfficeQr)
                 <a href="{{ route('office.qr') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Office QR access</a>
             @endif
-            <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Activity log</a>
+            @if($canViewOfficeActivity)
+                <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Activity log</a>
+            @endif
         @else
             <a href="{{ route('tenant.home') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Workspace home</a>
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
@@ -107,11 +115,13 @@
                     </div>
                 @endforeach
             @elseif($user->isOfficeStaff())
-                <a href="{{ route('office.dashboard') }}" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 hover:bg-emerald-100">
-                    <p class="font-semibold">{{ $officeLabel }} operations</p>
-                    <p class="mt-1 text-emerald-800">Manage {{ strtolower($queueLabel) }}, {{ strtolower($appointmentLabel) }} schedules, and status updates for this tenant.</p>
-                </a>
-                @if($appointmentsEnabled || $queueEnabled)
+                @if($canOpenOfficeDashboard)
+                    <a href="{{ route('office.dashboard') }}" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 hover:bg-emerald-100">
+                        <p class="font-semibold">{{ $officeLabel }} operations</p>
+                        <p class="mt-1 text-emerald-800">Manage {{ strtolower($queueLabel) }}, {{ strtolower($appointmentLabel) }} schedules, and status updates for this tenant.</p>
+                    </a>
+                @endif
+                @if($canViewOfficeReports && ($appointmentsEnabled || $queueEnabled))
                     <a href="{{ route('office.reports') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 hover:bg-slate-100">
                         <p class="font-semibold">Reports and activity</p>
                         <p class="mt-1 text-slate-600">Open reports and review daily {{ strtolower($officeLabel) }} activity for this tenant.</p>

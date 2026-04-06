@@ -61,7 +61,7 @@ class CentralController extends Controller
             return back()->with('error', "Tenant {$tenant->name} could not be deleted. Please try again.");
         }
 
-        return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+        return redirect()->route('central.dashboard')
             ->with('success', "Tenant {$tenant->name} was deleted successfully.");
     }
 
@@ -86,7 +86,7 @@ class CentralController extends Controller
         });
 
         if ($validator->fails()) {
-            return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+            return redirect()->route('central.dashboard')
                 ->withErrors($validator, 'tenantUpdate_'.$tenant->id)
                 ->withInput()
                 ->with('open_modal', 'tenant-edit-modal-'.$tenant->id);
@@ -103,8 +103,26 @@ class CentralController extends Controller
             'domain' => $validated['domain'] ?: null,
         ]);
 
-        return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+        return redirect()->route('central.dashboard')
             ->with('success', "Tenant {$tenant->name} was updated successfully.");
+    }
+
+    public function updateRbac(Request $request, Tenant $tenant): RedirectResponse
+    {
+        foreach (User::tenantAdminPermissionDefinitions() as $definition) {
+            if (($definition['setting'] ?? null) === null || ($definition['input'] ?? null) === null) {
+                continue;
+            }
+
+            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
+        }
+
+        foreach (User::officeStaffPermissionDefinitions() as $definition) {
+            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
+        }
+
+        return redirect()->route('central.dashboard')
+            ->with('success', "Access control for {$tenant->name} was updated successfully.");
     }
 
     public function toggleActivation(Tenant $tenant): RedirectResponse
@@ -119,7 +137,7 @@ class CentralController extends Controller
             fn (User $admin) => $admin->notify(new TenantActivationStatusNotification($tenant))
         );
 
-        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard())
+        $response = redirect()->route('central.dashboard')
             ->with('success', "Tenant {$tenant->name} was {$statusLabel} successfully.");
 
         if (! $notificationSent) {
@@ -144,7 +162,7 @@ class CentralController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+            return redirect()->route('central.dashboard')
                 ->withErrors($validator, 'tenantSubscription_'.$tenant->id)
                 ->withInput()
                 ->with('open_modal', 'tenant-subscription-modal-'.$tenant->id);
@@ -170,7 +188,7 @@ class CentralController extends Controller
             fn (User $admin) => $admin->notify(new TenantSubscriptionUpdatedNotification($tenant, $plan, $subscription))
         );
 
-        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard())
+        $response = redirect()->route('central.dashboard')
             ->with('success', "Subscription for {$tenant->name} was updated successfully.");
 
         if (! $notificationSent) {
@@ -187,7 +205,7 @@ class CentralController extends Controller
             fn (User $admin) => $admin->notify(new TenantWorkspaceAccessNotification($tenant))
         );
 
-        return redirect()->away(\App\Support\TenantUrl::centralDashboard())->with(
+        return redirect()->route('central.dashboard')->with(
             $notificationSent ? 'success' : 'error',
             $notificationSent
                 ? "Workspace access details were emailed to {$tenant->name}."
@@ -211,7 +229,7 @@ class CentralController extends Controller
                 ->first();
 
             if (! $admin) {
-                return redirect()->away(\App\Support\TenantUrl::centralDashboard())
+                return redirect()->route('central.dashboard')
                     ->with('error', "No tenant admin account was found for {$tenant->name}.");
             }
 
@@ -226,7 +244,7 @@ class CentralController extends Controller
             report($e);
         }
 
-        $response = redirect()->away(\App\Support\TenantUrl::centralDashboard());
+        $response = redirect()->route('central.dashboard');
 
         if (! $passwordReset) {
             return $response->with('error', "The temporary password could not be reset for {$tenant->name}.");

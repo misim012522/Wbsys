@@ -38,15 +38,19 @@
             @if($viewer?->hasPermission('users.manage'))
                 <a href="{{ route('admin.users.index') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.users.index') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Office staff</a>
             @endif
-            @if($viewer?->hasPermission('office.serve') && $guestQueueEnabled)
+            @if($viewer?->hasPermission('admin.office.serve') && $guestQueueEnabled)
                 <a href="{{ route('admin.qr') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.qr*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">QR codes</a>
             @endif
             @if($viewer?->hasPermission('reports.view'))
                 <a href="{{ route('admin.reports') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.reports') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Reports</a>
             @endif
-            @if($viewer?->isTenantAdmin())
+            @if($viewer?->hasPermission('admin.rbac.manage'))
                 <a href="{{ route('admin.rbac.edit') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.rbac.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Access control</a>
+            @endif
+            @if($viewer?->hasPermission('admin.customization.manage'))
                 <a href="{{ route('admin.customization.index') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.customization.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Customization</a>
+            @endif
+            @if($viewer?->hasPermission('admin.settings.manage'))
                 <a href="{{ route('admin.settings.edit') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.settings.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Admin settings</a>
             @endif
         </div>

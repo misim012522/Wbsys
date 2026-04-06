@@ -53,6 +53,7 @@ test('central dashboard shows the tenant table', function () {
     Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 0, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
+    $suffix = Str::lower(Str::random(6));
 
     $developer = User::factory()->create([
         'username' => 'developer',
@@ -62,13 +63,13 @@ test('central dashboard shows the tenant table', function () {
     ]);
 
     $tenant = Tenant::create([
-        'name' => 'Registrar Office',
-        'slug' => 'registrar-office',
+        'name' => 'Registrar Office '.$suffix,
+        'slug' => 'registrar-office-'.$suffix,
         'plan_id' => Plan::where('slug', 'pro')->value('id'),
-        'subdomain' => 'registrar',
-        'database_name' => 'tenant_registrar_office',
+        'subdomain' => 'registrar-'.$suffix,
+        'database_name' => tenantDatabaseName('Registrar Office '.$suffix),
         'address' => 'Main Campus, Building A',
-        'email' => 'registrar@example.test',
+        'email' => 'registrar-'.$suffix.'@example.test',
         'contact_number' => '09123456789',
         'is_active' => true,
     ]);
@@ -76,7 +77,7 @@ test('central dashboard shows the tenant table', function () {
     app(TenantDatabaseManager::class)->provision($tenant, [
         'name' => 'Registrar Admin',
         'username' => 'registrar.admin',
-        'email' => 'registrar-admin@example.test',
+        'email' => 'registrar-admin-'.$suffix.'@example.test',
         'phone' => '09123456789',
         'password' => 'Password123!',
     ]);
@@ -95,7 +96,7 @@ test('central dashboard shows the tenant table', function () {
         ->assertSee('Tenant credentials are sent by email during registration.')
         ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
         ->assertSee(\App\Support\TenantUrl::login($tenant), false)
-        ->assertSee('registrar.lvh.me')
+        ->assertSee('registrar-'.$suffix.'.lvh.me')
         ->assertSee('Main tenant account')
         ->assertSee('Registrar Admin')
         ->assertSee('registrar.admin')
@@ -104,6 +105,10 @@ test('central dashboard shows the tenant table', function () {
         ->assertSee('Deactivate tenant')
         ->assertSee('Send access email')
         ->assertSee('Edit subscription')
+        ->assertSee('Access control')
+        ->assertSee('Manage offices')
+        ->assertSee('Manage office staff accounts')
+        ->assertSee('Manage queue operations')
         ->assertDontSee('Register tenant');
 });
 
@@ -504,6 +509,35 @@ test('central admin can update tenant details from the dashboard', function () {
     expect($tenant->email)->toBe('admissions@example.test');
     expect($tenant->subdomain)->toBe('admissions');
     expect($tenant->domain)->toBeNull();
+});
+
+test('central admin can update tenant rbac settings from the dashboard', function () {
+    $context = createManagedTenantForCentralTests();
+
+    $this->actingAs($context['developer'])
+        ->patch(route('central.tenants.rbac', $context['tenant']), [
+            'tenant_admin_admin_office_manage' => '1',
+            'tenant_admin_users_manage' => '1',
+            'office_staff_office_dashboard' => '1',
+            'office_staff_office_qr' => '1',
+            'office_staff_office_activity_view' => '1',
+        ])
+        ->assertRedirect(route('central.dashboard'))
+        ->assertSessionHas('success');
+
+    $tenant = $context['tenant']->fresh();
+
+    expect($tenant->getSetting('rbac.tenant_admin.admin.office.manage', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.tenant_admin.users.manage', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.tenant_admin.admin.office.serve', true))->toBeFalse();
+    expect($tenant->getSetting('rbac.tenant_admin.reports.view', true))->toBeFalse();
+    expect($tenant->getSetting('rbac.tenant_admin.admin.customization.manage', true))->toBeFalse();
+    expect($tenant->getSetting('rbac.office_staff.office.dashboard', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.office_staff.office.qr', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.office_staff.office.activity.view', true))->toBeTrue();
+    expect($tenant->getSetting('rbac.office_staff.office.queue.manage', true))->toBeFalse();
+    expect($tenant->getSetting('rbac.office_staff.office.appointments.manage', true))->toBeFalse();
+    expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
 });
 
 test('central admin can deactivate and reactivate a tenant and notify the tenant admin', function () {

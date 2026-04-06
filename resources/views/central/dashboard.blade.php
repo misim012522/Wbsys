@@ -160,6 +160,14 @@
                                             >
                                                 Edit subscription
                                             </button>
+
+                                            <button
+                                                type="button"
+                                                data-modal-target="tenant-rbac-modal-{{ $tenant->id }}"
+                                                class="rounded-lg border border-sky-200 px-3 py-2 text-center text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
+                                            >
+                                                Access control
+                                            </button>
                                         </div>
                                     </div>
 
@@ -241,9 +249,23 @@
     @php
         $latestSubscription = $tenant->subscriptions->sortByDesc('id')->first();
         $tenantUpdateErrorBag = 'tenantUpdate_'.$tenant->id;
+        $tenantRbacErrorBag = 'tenantRbac_'.$tenant->id;
         $tenantSubscriptionErrorBag = 'tenantSubscription_'.$tenant->id;
         $isTenantUpdateModalOpen = session('open_modal') === 'tenant-edit-modal-'.$tenant->id;
+        $isTenantRbacModalOpen = session('open_modal') === 'tenant-rbac-modal-'.$tenant->id;
         $isTenantSubscriptionModalOpen = session('open_modal') === 'tenant-subscription-modal-'.$tenant->id;
+        $tenantAdminPermissionDefinitions = \App\Models\User::tenantAdminPermissionDefinitions();
+        $tenantAdminPermissionStates = \App\Models\User::tenantAdminPermissionStates($tenant);
+        $tenantPermissionDefinitions = \App\Models\User::officeStaffPermissionDefinitions();
+        $tenantPermissionStates = \App\Models\User::officeStaffPermissionStates($tenant);
+        $badgeClasses = [
+            'emerald' => ['enabled' => 'bg-emerald-100 text-emerald-700', 'accent' => 'border-emerald-200 bg-emerald-50/60'],
+            'teal' => ['enabled' => 'bg-teal-100 text-teal-700', 'accent' => 'border-teal-200 bg-teal-50/60'],
+            'amber' => ['enabled' => 'bg-amber-100 text-amber-700', 'accent' => 'border-amber-200 bg-amber-50/60'],
+            'rose' => ['enabled' => 'bg-rose-100 text-rose-700', 'accent' => 'border-rose-200 bg-rose-50/60'],
+            'slate' => ['enabled' => 'bg-slate-200 text-slate-700', 'accent' => 'border-slate-200 bg-slate-50/80'],
+            'sky' => ['enabled' => 'bg-sky-100 text-sky-700', 'accent' => 'border-sky-200 bg-sky-50/60'],
+        ];
     @endphp
     <div id="tenant-edit-modal-{{ $tenant->id }}" data-dashboard-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 px-4">
         <div class="w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
@@ -324,6 +346,103 @@
                     <button type="submit" data-submit-button data-default-label="Save tenant" data-loading-label="Saving tenant..." class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
                         Save tenant
                     </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="tenant-rbac-modal-{{ $tenant->id }}" data-dashboard-modal class="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-6">
+        <div class="w-full max-w-[56rem] rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-2xl sm:p-5 lg:p-6">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">Access Control</p>
+                    <h2 class="mt-2 text-xl font-bold text-slate-900 sm:text-2xl">Manage {{ $tenant->name }} RBAC</h2>
+                    <p class="mt-2 text-sm text-slate-500">Control which tenant admin and office staff features are enabled for this tenant without signing in to the tenant workspace.</p>
+                </div>
+                <button type="button" data-modal-close class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Close dialog">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+
+            <form method="POST" action="{{ route('central.tenants.rbac', $tenant) }}" class="mt-6" data-modal-submit-form>
+                @csrf
+                @method('PATCH')
+                @if($errors->{$tenantRbacErrorBag}->any())
+                    <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        Please review the access control settings below.
+                    </div>
+                @endif
+
+                <div class="mb-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    Core recovery pages stay enabled for tenant admins. Other admin tools and office staff features can be controlled below.
+                </div>
+
+                <div class="mb-6">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tenant admin</p>
+                    <div class="grid gap-3 xl:grid-cols-2">
+                        @foreach($tenantAdminPermissionDefinitions as $slug => $definition)
+                            @php
+                                $oldValue = $isTenantRbacModalOpen ? old($definition['input']) : null;
+                                $enabled = ($definition['setting'] ?? null) === null
+                                    ? ($tenantAdminPermissionStates[$slug] ?? false)
+                                    : ($isTenantRbacModalOpen ? filled($oldValue) : ($tenantAdminPermissionStates[$slug] ?? false));
+                                $styles = $badgeClasses[$definition['badge']] ?? $badgeClasses['slate'];
+                                $isLocked = $definition['locked'] ?? false;
+                            @endphp
+                            <label class="flex items-start gap-3 rounded-[1.25rem] border p-3.5 sm:p-4 {{ $styles['accent'] }}">
+                                <input type="checkbox" name="{{ $definition['input'] }}" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" {{ $enabled ? 'checked' : '' }} {{ $isLocked ? 'disabled' : '' }}>
+                                <span class="flex min-w-0 flex-1 flex-col gap-2">
+                                    <span class="block text-sm font-semibold leading-6 text-slate-900">{{ $definition['label'] }}</span>
+                                    <span class="flex flex-wrap items-center gap-2">
+                                        <span class="rounded-full {{ $enabled ? $styles['enabled'] : 'bg-slate-100 text-slate-500' }} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+                                            {{ $enabled ? 'Enabled' : 'Disabled' }}
+                                        </span>
+                                        @if($isLocked)
+                                            <span class="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white">Always on</span>
+                                        @endif
+                                    </span>
+                                    <span class="block text-sm leading-6 text-slate-600">{{ $definition['description'] }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+
+                <p class="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Office staff</p>
+                <div class="grid gap-3 xl:grid-cols-2">
+                    @foreach($tenantPermissionDefinitions as $slug => $definition)
+                        @php
+                            $oldValue = $isTenantRbacModalOpen ? old($definition['input']) : null;
+                            $enabled = $isTenantRbacModalOpen
+                                ? filled($oldValue)
+                                : ($tenantPermissionStates[$slug] ?? false);
+                            $styles = $badgeClasses[$definition['badge']] ?? $badgeClasses['slate'];
+                        @endphp
+                        <label class="flex items-start gap-3 rounded-[1.25rem] border p-3.5 sm:p-4 {{ $styles['accent'] }}">
+                            <input type="checkbox" name="{{ $definition['input'] }}" value="1" class="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" {{ $enabled ? 'checked' : '' }}>
+                            <span class="flex min-w-0 flex-1 flex-col gap-2">
+                                <span class="block text-sm font-semibold leading-6 text-slate-900">{{ $definition['label'] }}</span>
+                                <span class="flex flex-wrap items-center gap-2">
+                                    <span class="rounded-full {{ $enabled ? $styles['enabled'] : 'bg-slate-100 text-slate-500' }} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]">
+                                        {{ $enabled ? 'Enabled' : 'Disabled' }}
+                                    </span>
+                                </span>
+                                <span class="block text-sm leading-6 text-slate-600">{{ $definition['description'] }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+
+                <div class="mt-6 flex items-center justify-between gap-3">
+                    <p data-submit-status class="hidden text-sm font-medium text-sky-700">Saving access control...</p>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" data-modal-close class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                            Cancel
+                        </button>
+                        <button type="submit" data-submit-button data-default-label="Save access control" data-loading-label="Saving access control..." class="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700">
+                            Save access control
+                        </button>
                     </div>
                 </div>
             </form>

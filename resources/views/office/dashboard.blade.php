@@ -5,12 +5,18 @@
 @section('content')
 @php
     $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
+    $viewer = auth()->user();
     $dashboardProfile = \App\Support\TenantDashboardProfile::for($tenant);
     $queueLabel = $tenantTheme['queue_label'] ?? 'Queue';
     $appointmentLabel = $tenantTheme['appointment_label'] ?? 'Appointment';
     $officeLabel = $tenantTheme['office_label'] ?? 'Office';
     $queueEnabled = (bool) ($tenantTheme['guest_queue_enabled'] ?? true);
     $appointmentsEnabled = (bool) ($tenantTheme['appointments_enabled'] ?? true);
+    $canUseQr = $viewer?->hasPermission('office.qr');
+    $canManageQueue = $viewer?->hasPermission('office.queue.manage');
+    $canManageAppointments = $viewer?->hasPermission('office.appointments.manage');
+    $canViewReports = $viewer?->hasPermission('reports.view');
+    $canViewActivity = $viewer?->hasPermission('office.activity.view');
 @endphp
 
 <div class="mb-6 overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-xl shadow-slate-200/50">
@@ -25,11 +31,15 @@
 
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-                <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
-                @if($appointmentsEnabled || $queueEnabled)
+                @if($canUseQr)
+                    <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
+                @endif
+                @if($canViewReports && ($appointmentsEnabled || $queueEnabled))
                     <a href="{{ route('office.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Reports</a>
                 @endif
-                <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Activity</a>
+                @if($canViewActivity)
+                    <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Activity</a>
+                @endif
             </div>
         </div>
     </div>
@@ -42,10 +52,12 @@
             <p class="mt-2 text-sm text-slate-500">The actions below reflect the enabled features and labels configured for this tenant.</p>
         </div>
         <div class="flex gap-2 flex-wrap">
-            <form method="POST" action="{{ route('office.call-next') }}" class="inline">
-                @csrf
-                <button type="submit" class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Call next</button>
-            </form>
+            @if($canManageQueue)
+                <form method="POST" action="{{ route('office.call-next') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Call next</button>
+                </form>
+            @endif
         </div>
     </div>
 </div>
@@ -134,7 +146,7 @@
                             </p>
                         </div>
                         <div class="flex shrink-0 gap-2">
-                            @if($q->status === 'waiting')
+                            @if($canManageQueue && $q->status === 'waiting')
                                 <form method="POST" action="{{ route('office.queue.update', $q) }}">
                                     @csrf
                                     @method('PATCH')
@@ -142,7 +154,7 @@
                                     <button type="submit" class="rounded-full bg-amber-100 px-3 py-1.5 text-xs text-amber-800 hover:bg-amber-200">Call</button>
                                 </form>
                             @endif
-                            @if(in_array($q->status, ['called', 'serving']))
+                            @if($canManageQueue && in_array($q->status, ['called', 'serving']))
                                 <form method="POST" action="{{ route('office.queue.update', $q) }}">
                                     @csrf
                                     @method('PATCH')
@@ -156,7 +168,7 @@
                                     <button type="submit" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-700">Complete</button>
                                 </form>
                             @endif
-                            @if(in_array($q->status, ['waiting', 'called', 'serving']))
+                            @if($canManageQueue && in_array($q->status, ['waiting', 'called', 'serving']))
                                 <form method="POST" action="{{ route('office.queue.update', $q) }}">
                                     @csrf
                                     @method('PATCH')
@@ -205,13 +217,13 @@
                             </p>
                         </div>
                         <div class="flex shrink-0 gap-2">
-                            @if($a->status === 'pending')
+                            @if($canManageAppointments && $a->status === 'pending')
                                 <form method="POST" action="{{ route('office.appointments.accept', $a) }}">
                                     @csrf
                                     <button type="submit" class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs text-emerald-800">Accept</button>
                                 </form>
                             @endif
-                            @if(in_array($a->status, ['pending', 'confirmed']))
+                            @if($canManageAppointments && in_array($a->status, ['pending', 'confirmed']))
                                 <form method="POST" action="{{ route('office.appointments.complete', $a) }}">
                                     @csrf
                                     <button type="submit" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-700">Complete</button>

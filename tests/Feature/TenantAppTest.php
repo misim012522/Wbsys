@@ -464,25 +464,81 @@ test('tenant admin can view and update simple rbac settings', function () {
         'password' => 'Password123!',
     ]);
 
+      $this->actingAs($admin)
+          ->withServerVariables(tenantHost())
+          ->get(route('admin.rbac.edit'))
+          ->assertOk()
+          ->assertSee('Access control')
+          ->assertSee('Manage offices')
+          ->assertSee('Manage office staff accounts')
+          ->assertSee('Manage queue operations')
+          ->assertSee('Manage appointments')
+          ->assertSee('Use QR tools')
+          ->assertSee('View activity log')
+          ->assertSee('View reports');
+
+      $this->actingAs($admin)
+          ->withServerVariables(tenantHost())
+          ->put(route('admin.rbac.update'), [
+              'tenant_admin_admin_office_manage' => '1',
+              'tenant_admin_users_manage' => '1',
+              'office_staff_office_dashboard' => '1',
+              'office_staff_office_qr' => '1',
+              'office_staff_office_queue_manage' => '1',
+              'office_staff_office_activity_view' => '1',
+          ])
+          ->assertRedirect(route('admin.rbac.edit'));
+
+      $tenant->refresh();
+
+      expect($tenant->getSetting('rbac.tenant_admin.admin.office.manage', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.tenant_admin.users.manage', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.tenant_admin.admin.office.serve', true))->toBeFalse();
+      expect($tenant->getSetting('rbac.tenant_admin.reports.view', true))->toBeFalse();
+      expect($tenant->getSetting('rbac.tenant_admin.admin.customization.manage', true))->toBeFalse();
+      expect($tenant->getSetting('rbac.office_staff.office.dashboard', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.office_staff.office.qr', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.office_staff.office.queue.manage', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.office_staff.office.activity.view', true))->toBeTrue();
+      expect($tenant->getSetting('rbac.office_staff.office.appointments.manage', true))->toBeFalse();
+      expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
+  });
+
+test('tenant rbac can disable tenant admin reports while keeping recovery pages available', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+        'settings' => [
+            'rbac' => [
+                'tenant_admin' => [
+                    'reports' => ['view' => false],
+                ],
+            ],
+        ],
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('admin.reports'))
+        ->assertForbidden();
+
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())
         ->get(route('admin.rbac.edit'))
-        ->assertOk()
-        ->assertSee('Access control')
-        ->assertSee('Serve queues and appointments')
-        ->assertSee('View reports');
-
-    $this->actingAs($admin)
-        ->withServerVariables(tenantHost())
-        ->put(route('admin.rbac.update'), [
-            'office_staff_office_serve' => '1',
-        ])
-        ->assertRedirect(route('admin.rbac.edit'));
-
-    $tenant->refresh();
-
-    expect($tenant->getSetting('rbac.office_staff.office.serve', true))->toBeTrue();
-    expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
+        ->assertOk();
 });
 
 test('simple rbac settings can block office staff reports without affecting admin pages', function () {
@@ -494,13 +550,19 @@ test('simple rbac settings can block office staff reports without affecting admi
         'subdomain' => 'acme',
         'database_name' => 'tenant_'.Str::random(10),
         'is_active' => true,
-        'settings' => [
-            'rbac' => [
-                'office_staff' => [
-                    'office' => ['serve' => true],
-                    'reports' => ['view' => false],
-                ],
-            ],
+          'settings' => [
+              'rbac' => [
+                  'office_staff' => [
+                      'office' => [
+                          'dashboard' => true,
+                          'qr' => true,
+                          'queue' => ['manage' => true],
+                          'appointments' => ['manage' => true],
+                          'activity' => ['view' => true],
+                      ],
+                      'reports' => ['view' => false],
+                  ],
+              ],
         ],
     ]);
 
@@ -526,11 +588,81 @@ test('simple rbac settings can block office staff reports without affecting admi
         ->get(route('office.reports'))
         ->assertForbidden();
 
-    $this->actingAs($admin)
-        ->withServerVariables(tenantHost())
-        ->get(route('admin.dashboard'))
-        ->assertOk();
-});
+      $this->actingAs($admin)
+          ->withServerVariables(tenantHost())
+          ->get(route('admin.dashboard'))
+          ->assertOk();
+  });
+
+  test('simple rbac settings can disable queue operations while keeping dashboard access', function () {
+      $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+      $tenant = Tenant::create([
+          'name' => 'Acme Office',
+          'slug' => 'acme-office',
+          'plan_id' => $plan->id,
+          'subdomain' => 'acme',
+          'database_name' => 'tenant_'.Str::random(10),
+          'is_active' => true,
+          'settings' => [
+              'rbac' => [
+                  'office_staff' => [
+                      'office' => [
+                          'dashboard' => true,
+                          'qr' => true,
+                          'queue' => ['manage' => false],
+                          'appointments' => ['manage' => true],
+                          'activity' => ['view' => true],
+                      ],
+                      'reports' => ['view' => true],
+                  ],
+              ],
+          ],
+      ]);
+
+      app(TenantDatabaseManager::class)->provision($tenant, [
+          'name' => 'Tenant Admin',
+          'username' => 'tenant.admin',
+          'email' => 'admin@acme.test',
+          'phone' => '09123456789',
+          'password' => 'Password123!',
+      ]);
+
+      app(TenantDatabaseManager::class)->activate($tenant);
+
+      $officeId = \App\Models\Office::query()->value('id');
+      $staff = User::factory()->create([
+          'role' => User::ROLE_OFFICE_STAFF,
+          'tenant_id' => $tenant->id,
+          'office_id' => $officeId,
+          'approved_at' => now(),
+      ]);
+
+      $queueEntry = \App\Models\QueueEntry::query()->create([
+          'office_id' => $officeId,
+          'queue_number' => 1,
+          'display_name' => 'Test Guest',
+          'queue_date' => today()->toDateString(),
+          'status' => \App\Models\QueueEntry::STATUS_WAITING,
+          'reference_code' => 'Q-1001',
+      ]);
+
+      $this->actingAs($staff)
+          ->withServerVariables(tenantHost())
+          ->get(route('office.dashboard'))
+          ->assertOk();
+
+      $this->actingAs($staff)
+          ->withServerVariables(tenantHost())
+          ->post(route('office.call-next'))
+          ->assertForbidden();
+
+      $this->actingAs($staff)
+          ->withServerVariables(tenantHost())
+          ->patch(route('office.queue.update', $queueEntry), [
+              'status' => 'serving',
+          ])
+          ->assertForbidden();
+  });
 
 test('legacy student accounts can still open the tenant dashboard entry page', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
