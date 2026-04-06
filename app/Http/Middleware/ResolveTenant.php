@@ -5,8 +5,11 @@ namespace App\Http\Middleware;
 use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
 use App\Support\TenantDisabledResponse;
+use App\Support\TenantUrl;
 use Closure;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -48,6 +51,14 @@ class ResolveTenant
 
         if ($tenant) {
             if (! $tenant->is_active) {
+                $tenantAuth = $request->session()->get('tenant_auth');
+                $authenticatedTenantId = (int) (Auth::user()?->tenant_id ?? 0);
+                $sessionTenantId = is_array($tenantAuth) ? (int) ($tenantAuth['tenant_id'] ?? 0) : 0;
+
+                if ($authenticatedTenantId === (int) $tenant->id || $sessionTenantId === (int) $tenant->id) {
+                    return $this->logoutDueToDeactivation($request);
+                }
+
                 return TenantDisabledResponse::make($tenant, $request);
             }
 
@@ -57,5 +68,16 @@ class ResolveTenant
         }
 
         return $next($request);
+    }
+
+    private function logoutDueToDeactivation(Request $request): RedirectResponse
+    {
+        Auth::logout();
+        $request->session()->forget('tenant_auth');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->away(TenantUrl::login(null, true))
+            ->with('info', 'Logging out due to deactivation.');
     }
 }

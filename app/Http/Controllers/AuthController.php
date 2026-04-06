@@ -33,6 +33,15 @@ class AuthController extends Controller
     {
         $hostTenant = $this->tenantForHost($request, includeInactive: true);
 
+        if (
+            $hostTenant
+            && ! $hostTenant->is_active
+            && auth()->check()
+            && (int) (auth()->user()?->tenant_id ?? 0) === (int) $hostTenant->id
+        ) {
+            return $this->logoutDueToDeactivation($request);
+        }
+
         if ($hostTenant && ! $hostTenant->is_active) {
             return TenantDisabledResponse::make($hostTenant, $request);
         }
@@ -148,7 +157,9 @@ class AuthController extends Controller
             $tenant = $this->currentTenant();
 
             abort_unless($tenant && (int) $tenant->id === (int) ($payload['tenant_id'] ?? 0), 403);
-            abort_if(! $tenant->is_active, 423);
+            if (! $tenant->is_active) {
+                return $this->logoutDueToDeactivation($request);
+            }
 
             $this->tenantDatabaseManager->activate($tenant);
 
@@ -406,5 +417,16 @@ class AuthController extends Controller
         }
 
         return redirect()->route($routeName);
+    }
+
+    private function logoutDueToDeactivation(Request $request): RedirectResponse
+    {
+        Auth::logout();
+        $request->session()->forget('tenant_auth');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->away(TenantUrl::login(null, true))
+            ->with('info', 'Logging out due to deactivation.');
     }
 }

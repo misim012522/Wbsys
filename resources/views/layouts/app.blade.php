@@ -23,6 +23,11 @@
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
     @if(session('status')) data-status-message="{{ session('status') }}" @endif
+    @auth
+        @if(! auth()->user()->isCentralUser())
+            data-tenant-session-monitor-url="{{ route('api.session.tenant-status') }}"
+        @endif
+    @endauth
 >
     <div id="toast-container"></div>
 

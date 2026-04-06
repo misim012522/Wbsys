@@ -12,7 +12,10 @@ class AdminAccountSettingsController extends Controller
 {
     public function edit(): View
     {
-        return view('admin.account-settings');
+        $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
+        $admin = auth()->user();
+
+        return view('admin.account-settings', compact('tenant', 'admin'));
     }
 
     public function update(Request $request): RedirectResponse

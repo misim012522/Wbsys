@@ -50,7 +50,7 @@
                         <th class="px-4 py-3 font-medium">Usage Summary</th>
                         <th class="px-4 py-3 font-medium">Last Activity</th>
                         <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="px-4 py-3 font-medium">Actions</th>
+                        <th class="w-[16rem] px-4 py-3 font-medium">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -141,54 +141,67 @@
                                 </span>
                             </td>
                             <td class="px-4 py-4">
-                                <div class="space-y-3">
-                                    <button
-                                        type="button"
-                                        data-modal-target="tenant-edit-modal-{{ $tenant->id }}"
-                                        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                                    >
-                                        Edit tenant
-                                    </button>
+                                <div class="w-full min-w-[14rem] space-y-4">
+                                    <div class="space-y-2">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Manage</p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                data-modal-target="tenant-edit-modal-{{ $tenant->id }}"
+                                                class="rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                            >
+                                                Edit tenant
+                                            </button>
 
-                                    <button
-                                        type="button"
-                                        data-modal-target="tenant-subscription-modal-{{ $tenant->id }}"
-                                        class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
-                                    >
-                                        Edit subscription
-                                    </button>
+                                            <button
+                                                type="button"
+                                                data-modal-target="tenant-subscription-modal-{{ $tenant->id }}"
+                                                class="rounded-lg border border-emerald-200 px-3 py-2 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                            >
+                                                Edit subscription
+                                            </button>
+                                        </div>
+                                    </div>
 
-                                    <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                                            {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
+                                    <div class="space-y-2">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Access</p>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
+                                                @csrf
+                                                <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                                    Send access email
+                                                </button>
+                                            </form>
+
+                                            <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
+                                                @csrf
+                                                <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
+                                                    Reset temp password
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-2 border-t border-slate-200 pt-3">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status & danger</p>
+                                        <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                                {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
+                                            </button>
+                                        </form>
+
+                                        <button
+                                            type="button"
+                                            data-delete-tenant-trigger
+                                            data-tenant-name="{{ $tenant->name }}"
+                                            data-tenant-action="{{ route('central.tenants.destroy', $tenant) }}"
+                                            class="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                                        >
+                                            Delete tenant
                                         </button>
-                                    </form>
-
-                                    <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
-                                        @csrf
-                                        <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
-                                            Send access email
-                                        </button>
-                                    </form>
-
-                                    <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
-                                        @csrf
-                                        <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
-                                            Reset temp password
-                                        </button>
-                                    </form>
-
-                                    <button
-                                        type="button"
-                                        data-delete-tenant-trigger
-                                        data-tenant-name="{{ $tenant->name }}"
-                                        data-tenant-action="{{ route('central.tenants.destroy', $tenant) }}"
-                                        class="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
-                                    >
-                                        Delete tenant
-                                    </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>

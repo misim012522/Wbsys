@@ -517,8 +517,9 @@ test('tenant admin can change password from account settings', function () {
         ->withServerVariables(tenantHost())
         ->get(route('admin.settings.edit'))
         ->assertOk()
-        ->assertSee('Account settings')
-        ->assertSee('Update password');
+        ->assertSee('Admin settings')
+        ->assertSee('Profile settings')
+        ->assertSee('Change password');
 
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())

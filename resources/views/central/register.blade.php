@@ -6,28 +6,25 @@
 @php
     $planThemes = [
         'basic' => [
-            'badge' => 'bg-rose-500',
             'accent' => 'text-rose-500',
             'border' => 'peer-checked:border-rose-300',
-            'button' => 'bg-rose-500 text-white',
-            'glow' => 'peer-checked:shadow-rose-200/80',
-            'check' => 'bg-rose-500 text-white',
+            'ring' => 'peer-checked:ring-rose-100',
+            'soft' => 'bg-rose-50 text-rose-700',
+            'dot' => 'bg-rose-500',
         ],
         'pro' => [
-            'badge' => 'bg-emerald-500',
             'accent' => 'text-emerald-600',
             'border' => 'peer-checked:border-emerald-300',
-            'button' => 'bg-emerald-600 text-white',
-            'glow' => 'peer-checked:shadow-emerald-200/80',
-            'check' => 'bg-emerald-500 text-white',
+            'ring' => 'peer-checked:ring-emerald-100',
+            'soft' => 'bg-emerald-50 text-emerald-700',
+            'dot' => 'bg-emerald-500',
         ],
         'ultimate' => [
-            'badge' => 'bg-sky-500',
             'accent' => 'text-sky-600',
             'border' => 'peer-checked:border-sky-300',
-            'button' => 'bg-sky-600 text-white',
-            'glow' => 'peer-checked:shadow-sky-200/80',
-            'check' => 'bg-sky-500 text-white',
+            'ring' => 'peer-checked:ring-sky-100',
+            'soft' => 'bg-sky-50 text-sky-700',
+            'dot' => 'bg-sky-500',
         ],
     ];
 @endphp
@@ -65,7 +62,7 @@
 @endpush
 
 @section('content')
-<div class="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_26%),linear-gradient(180deg,_#f7faf9_0%,_#eef4f2_100%)] px-4 py-8 sm:px-6 sm:py-12">
+<div class="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
     <div class="mx-auto max-w-7xl">
         <div class="mb-8 flex flex-wrap items-center justify-between gap-4">
             <a href="{{ \App\Support\TenantUrl::login(null, true) }}" class="register-reveal-soft inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm backdrop-blur transition hover:-translate-x-0.5 hover:text-slate-900" style="--reveal-delay: 40ms;">
@@ -80,9 +77,7 @@
         <form method="POST" action="{{ \App\Support\TenantUrl::centralRegister() }}" class="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
             @csrf
 
-            <section class="register-reveal relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/70 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur md:p-8" style="--reveal-delay: 140ms;">
-                <div class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_60%),radial-gradient(circle_at_top_right,_rgba(59,130,246,0.16),_transparent_48%)]"></div>
-
+            <section class="register-reveal rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8" style="--reveal-delay: 140ms;">
                 <div class="relative max-w-2xl">
                     <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-700">
                         <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
@@ -94,7 +89,7 @@
                     </p>
                 </div>
 
-                <div class="relative mt-10 grid gap-6 lg:grid-cols-3">
+                <div class="relative mt-10 grid gap-4 lg:grid-cols-3">
                     @foreach($plans as $plan)
                         @php
                             $theme = $planThemes[$plan->slug] ?? $planThemes['pro'];
@@ -121,40 +116,42 @@
                                 data-plan-features="{{ $features->map(fn ($feature) => str($feature)->replace('_', ' ')->title())->implode(', ') }}"
                             >
 
-                            <div class="relative flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-white/80 bg-white/95 p-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] transition duration-200 group-hover:-translate-y-1.5 group-hover:shadow-[0_24px_55px_rgba(15,23,42,0.12)] {{ $theme['border'] }} {{ $theme['glow'] }} peer-checked:-translate-y-2 peer-checked:shadow-[0_26px_65px_rgba(15,23,42,0.16)] peer-checked:ring-4 peer-checked:ring-emerald-200/60">
-                                <div class="absolute left-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-white/90 text-slate-300 shadow-sm transition peer-checked:scale-110 peer-checked:border-transparent {{ $theme['check'] }}">
-                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                        <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.2 7.2a1 1 0 01-1.415 0l-3-3a1 1 0 111.414-1.42l2.293 2.294 6.493-6.494a1 1 0 011.415 0z" clip-rule="evenodd" />
-                                    </svg>
-                                </div>
+                            <div class="relative flex h-full flex-col rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm transition duration-200 group-hover:-translate-y-1 group-hover:shadow-md {{ $theme['border'] }} {{ $theme['ring'] }} peer-checked:ring-4">
                                 @if($plan->slug === 'pro')
-                                    <div class="absolute right-4 top-4 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+                                    <div class="absolute right-4 top-4 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
                                         Popular
                                     </div>
                                 @endif
 
-                                <div class="rounded-[1.5rem] {{ $theme['badge'] }} px-5 pb-8 pt-7 text-white shadow-inner">
-                                    <p class="text-xs font-semibold uppercase tracking-[0.28em] text-white/75">Plan</p>
-                                    <p class="mt-3 text-3xl font-semibold">{{ $plan->name }}</p>
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Plan</p>
+                                        <p class="mt-2 text-3xl font-semibold text-slate-900">{{ $plan->name }}</p>
+                                    </div>
+                                    <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full {{ $theme['soft'] }}">
+                                        <span class="h-2.5 w-2.5 rounded-full {{ $theme['dot'] }}"></span>
+                                    </span>
                                 </div>
 
-                                <div class="flex flex-1 flex-col px-2 pb-2 pt-6">
+                                <div class="flex flex-1 flex-col pt-8">
                                     <div class="flex items-end gap-2">
                                         <span class="text-5xl font-extrabold {{ $theme['accent'] }}">${{ number_format((float) $plan->price_monthly, 0) }}</span>
                                         <span class="pb-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Per month</span>
                                     </div>
 
+                                    <p class="mt-4 text-sm leading-6 text-slate-500">{{ $planSummary }}</p>
+
                                     <ul class="mt-6 space-y-3 text-sm text-slate-600">
                                         @foreach($features as $feature)
                                             <li class="flex items-center gap-3">
-                                                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">&#10003;</span>
+                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-500">&#10003;</span>
                                                 <span>{{ str($feature)->replace('_', ' ')->title() }}</span>
                                             </li>
                                         @endforeach
                                     </ul>
 
                                     <div class="mt-8">
-                                        <div class="inline-flex min-w-[10rem] items-center justify-center rounded-2xl border border-transparent px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] shadow-sm transition peer-checked:border-white/60 peer-checked:shadow-lg {{ $theme['button'] }}">
+                                        <div class="inline-flex min-w-[10rem] items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">
                                             {{ $isSelected ? 'Selected Plan' : 'Select Plan' }}
                                         </div>
                                     </div>
@@ -169,7 +166,7 @@
                 @enderror
             </section>
 
-            <section class="register-reveal rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur md:p-8" style="--reveal-delay: 260ms;">
+            <section class="register-reveal rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8" style="--reveal-delay: 260ms;">
                 <div>
                     <div class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-sky-700">
                         <span class="inline-block h-2 w-2 rounded-full bg-sky-500"></span>
@@ -212,14 +209,14 @@
                         </div>
                     </div>
 
-                    <div id="selected-plan-summary" class="register-reveal-soft rounded-[1.75rem] border border-emerald-200 bg-white px-5 py-5 shadow-sm" style="--reveal-delay: 380ms;">
+                    <div id="selected-plan-summary" class="register-reveal-soft rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-5 shadow-sm" style="--reveal-delay: 380ms;">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Chosen Plan</p>
                                 <h3 id="selected-plan-name" class="mt-2 text-2xl font-bold text-slate-900">Pro</h3>
                             </div>
-                            <div class="rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                                <span id="selected-plan-price">$29</span> / month
+                            <div class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                                <span id="selected-plan-price">$20</span> / month
                             </div>
                         </div>
                         <p id="selected-plan-summary-text" class="mt-4 text-sm leading-6 text-slate-600">
@@ -228,7 +225,7 @@
                         <p id="selected-plan-features" class="mt-4 text-sm text-slate-700">Queue, Appointments, Email Notifications</p>
                     </div>
 
-                    <div class="register-reveal-soft rounded-[1.75rem] border border-slate-200 bg-slate-900 px-5 py-5 text-white shadow-xl shadow-slate-900/10" style="--reveal-delay: 460ms;">
+                    <div class="register-reveal-soft rounded-[1.5rem] border border-slate-200 bg-slate-900 px-5 py-5 text-white shadow-sm" style="--reveal-delay: 460ms;">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <p class="text-sm font-semibold">Ready to create the tenant workspace?</p>

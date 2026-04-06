@@ -5,11 +5,44 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
+use App\Models\Tenant;
+use App\Support\TenantUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ApiController extends Controller
 {
+    public function tenantSessionStatus(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user || $user->tenant_id === null) {
+            return response()->json(['active' => true]);
+        }
+
+        $tenant = Tenant::find($user->tenant_id);
+
+        if (! $tenant || ! $tenant->is_active) {
+            Auth::logout();
+            $request->session()->forget('tenant_auth');
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return response()->json([
+                'active' => false,
+                'deactivated' => true,
+                'message' => 'Logging out due to deactivation.',
+                'redirect_url' => TenantUrl::login(null, true),
+            ], 423);
+        }
+
+        return response()->json([
+            'active' => true,
+            'tenant_id' => $tenant->id,
+        ]);
+    }
+
     /**
      * Get queue count for an office
      */

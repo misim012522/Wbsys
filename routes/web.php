@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
@@ -66,6 +67,7 @@ require __DIR__.'/api.php';
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/api/session/tenant-status', [ApiController::class, 'tenantSessionStatus'])->name('api.session.tenant-status');
 });
 
 Route::middleware(['tenant.required', 'auth', 'tenant.context'])->group(function () {

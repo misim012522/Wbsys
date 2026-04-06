@@ -16,7 +16,7 @@
                 </p>
             </div>
 
-            <div class="grid gap-6 px-8 py-8 lg:grid-cols-[1.3fr,0.9fr]">
+            <div class="px-8 py-8">
                 <div class="space-y-5">
                     <div class="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-5 py-4">
                         <p class="text-sm font-semibold text-amber-900">Workspace status: Disabled</p>
@@ -32,29 +32,6 @@
                             <li>Existing authenticated tenant sessions are signed out from protected pages.</li>
                             <li>Public central management remains available to authorized central administrators.</li>
                         </ul>
-                    </div>
-                </div>
-
-                <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-                    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace details</p>
-                    <dl class="mt-4 space-y-4 text-sm">
-                        <div>
-                            <dt class="text-slate-500">Workspace URL</dt>
-                            <dd class="mt-1 break-all font-medium text-slate-900">{{ $workspaceUrl }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-slate-500">Tenant contact email</dt>
-                            <dd class="mt-1 font-medium text-slate-900">{{ $contactEmail ?: 'Not available' }}</dd>
-                        </div>
-                    </dl>
-
-                    <div class="mt-6 flex flex-col gap-3">
-                        <a href="{{ $centralHomeUrl }}" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                            Go to central app
-                        </a>
-                        <a href="mailto:{{ $contactEmail }}" class="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 {{ $contactEmail ? '' : 'pointer-events-none opacity-50' }}">
-                            Contact tenant administrator
-                        </a>
                     </div>
                 </div>
             </div>

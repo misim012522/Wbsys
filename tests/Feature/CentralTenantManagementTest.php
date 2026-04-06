@@ -34,9 +34,9 @@ test('central app landing redirects guests to login', function () {
 });
 
 test('central register page shows the tenant registration form', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 19, 'is_active' => true]);
-    Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
-    Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 39, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 0, 'is_active' => true]);
+    Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
+    Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
 
     $this->get(route('central.register'))
         ->assertOk()
@@ -44,15 +44,15 @@ test('central register page shows the tenant registration form', function () {
         ->assertSee($plan->name)
         ->assertSee('Pro')
         ->assertSee('Ultimate')
-        ->assertSee('$19')
-        ->assertSee('$29')
-        ->assertSee('$39');
+        ->assertSee('$0')
+        ->assertSee('$20')
+        ->assertSee('$50');
 });
 
 test('central dashboard shows the tenant table', function () {
-    Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 19, 'is_active' => true]);
-    Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
-    Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 39, 'is_active' => true]);
+    Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 0, 'is_active' => true]);
+    Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
+    Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
 
     $developer = User::factory()->create([
         'username' => 'developer',
@@ -108,7 +108,7 @@ test('central dashboard shows the tenant table', function () {
 });
 
 test('central dashboard only shows the main tenant account and hides office staff data', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
     $developer = User::factory()->create([
@@ -164,7 +164,7 @@ test('central dashboard only shows the main tenant account and hides office staf
 test('tenant registration creates a dedicated tenant database, tenant admin, and emails credentials', function () {
     Carbon::setTestNow('2026-03-19 10:15:00');
 
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     Notification::fake();
 
     $tenantName = 'Registrar Office '.Str::upper(Str::random(4));
@@ -208,7 +208,7 @@ test('tenant registration creates a dedicated tenant database, tenant admin, and
 });
 
 test('registered tenant email becomes the tenant admin identity in the tenant workspace', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $tenantName = 'Admissions Office '.Str::upper(Str::random(4));
     $registeredEmail = 'admissions@example.test';
@@ -241,7 +241,7 @@ test('registered tenant email becomes the tenant admin identity in the tenant wo
 });
 
 test('tenant registration requires an admin username', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $this->from(route('central.register'))
         ->post(route('central.register.store'), [
@@ -257,7 +257,7 @@ test('tenant registration requires an admin username', function () {
 });
 
 test('tenant registration rejects sysadmin as the tenant admin username', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $this->from(route('central.register'))
         ->post(route('central.register.store'), [
@@ -275,7 +275,7 @@ test('tenant registration rejects sysadmin as the tenant admin username', functi
 });
 
 test('tenant credential and access emails include the real tenant admin username', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
     $tenant = Tenant::create([
@@ -307,7 +307,7 @@ test('tenant credential and access emails include the real tenant admin username
 test('tenant admin can open workspace url then log in to the designated admin dashboard', function () {
     config()->set('app.url', 'http://central.localhost');
 
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
     $tenant = Tenant::create([
@@ -364,7 +364,7 @@ test('tenant admin can open workspace url then log in to the designated admin da
 test('different tenants generate different workspace hosts', function () {
     config()->set('app.url', 'http://central.localhost');
 
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $registrar = Tenant::create([
         'name' => 'Registrar Office',
@@ -390,7 +390,7 @@ test('different tenants generate different workspace hosts', function () {
 });
 
 test('central admin can delete a tenant from the dashboard route', function () {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $developer = User::factory()->create([
         'username' => 'developer',
@@ -464,10 +464,10 @@ test('central admin can deactivate and reactivate a tenant and notify the tenant
     Notification::assertSentTo($context['admin'], TenantActivationStatusNotification::class);
 });
 
-test('deactivated tenant workspace shows a disabled page and blocks tenant dashboard access', function () {
+test('deactivated tenant workspace logs out tenant users with a deactivation notice while guest visitors still see the disabled page', function () {
     config()->set('app.url', 'http://central.localhost');
 
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $tenant = Tenant::create([
         'name' => 'Disabled Registrar',
         'slug' => 'disabled-registrar',
@@ -507,6 +507,19 @@ test('deactivated tenant workspace shows a disabled page and blocks tenant dashb
         ->where('tenant_id', $tenant->id)
         ->where('role', User::ROLE_TENANT_ADMIN)
         ->firstOrFail();
+    $officeId = \App\Models\Office::query()->value('id');
+    $officeStaff = User::on('tenant')->create([
+        'name' => 'Disabled Staff',
+        'username' => 'disabled.staff',
+        'email' => 'disabled-staff@test.local',
+        'phone' => '09123456780',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $officeId,
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
 
     auth()->logout();
 
@@ -516,14 +529,57 @@ test('deactivated tenant workspace shows a disabled page and blocks tenant dashb
 
     $this->actingAs($tenantAdmin)
         ->get(\App\Support\TenantUrl::dashboard($tenant, $tenantAdmin))
+        ->assertRedirect(\App\Support\TenantUrl::login(null, true))
+        ->assertSessionHas('info', 'Logging out due to deactivation.');
+
+    $this->actingAs($officeStaff)
+        ->get(\App\Support\TenantUrl::dashboard($tenant, $officeStaff))
+        ->assertRedirect(\App\Support\TenantUrl::login(null, true))
+        ->assertSessionHas('info', 'Logging out due to deactivation.');
+});
+
+test('tenant session status endpoint logs out deactivated tenant sessions automatically', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
+    $suffix = Str::lower(Str::random(6));
+    $tenant = Tenant::create([
+        'name' => 'Realtime Registrar '.$suffix,
+        'slug' => 'realtime-registrar-'.$suffix,
+        'plan_id' => $plan->id,
+        'subdomain' => 'realtime-registrar-'.$suffix,
+        'database_name' => tenantDatabaseName('Realtime Registrar '.$suffix),
+        'email' => 'realtime-'.$suffix.'@test.local',
+        'contact_number' => '09123456789',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Realtime Admin',
+        'username' => 'realtime.admin',
+        'email' => 'realtime-'.$suffix.'@test.local',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $tenant->forceFill(['is_active' => false])->save();
+
+    $this->actingAs($admin)
+        ->withHeader('Host', 'realtime-registrar-'.$suffix.'.localhost')
+        ->get(route('api.session.tenant-status'))
         ->assertStatus(423)
-        ->assertSee('Workspace status: Disabled');
+        ->assertJson([
+            'active' => false,
+            'deactivated' => true,
+            'message' => 'Logging out due to deactivation.',
+            'redirect_url' => \App\Support\TenantUrl::login(null, true),
+        ]);
 });
 
 test('central admin can update a tenant subscription and notify the tenant admin', function () {
     Notification::fake();
     $context = createManagedTenantForCentralTests();
-    $ultimate = Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 39, 'is_active' => true]);
+    $ultimate = Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
 
     $this->actingAs($context['developer'])
         ->patch(route('central.tenants.subscription', $context['tenant']), [
@@ -622,7 +678,7 @@ test('subscription update validation reopens the correct modal with named errors
 
 function createManagedTenantForCentralTests(): array
 {
-    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 29, 'is_active' => true]);
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
     $tenantName = 'Registrar Office '.$suffix;
     $tenantSlug = 'registrar-office-'.$suffix;
