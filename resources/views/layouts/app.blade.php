@@ -1,6 +1,6 @@
 @php
-    $showAuthenticatedHeader = auth()->check()
-        && ! (request()->routeIs('login') && app()->bound('current_tenant'));
+    $showAuthenticatedHeader = ($forceAuthenticatedHeader ?? false)
+        || (auth()->check() && ! (request()->routeIs('login') && app()->bound('current_tenant')));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">

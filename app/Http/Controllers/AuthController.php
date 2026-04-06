@@ -79,6 +79,11 @@ class AuthController extends Controller
 
             if ($tenantWorkspace && (int) ($user->tenant_id ?? 0) === (int) $tenantWorkspace->id) {
                 Log::info('[DEBUG-LOGIN] showLogin -> dashboardRedirect (tenant user matches workspace)');
+
+                if ($user->isOfficeStaff()) {
+                    return $this->officeDashboardResponse($request);
+                }
+
                 return $this->dashboardRedirect($user);
             }
 
@@ -173,6 +178,10 @@ class AuthController extends Controller
         }
 
         $this->signIn($request, $user, $request->boolean('remember'), $tenant);
+
+        if ($user->isOfficeStaff()) {
+            return $this->officeDashboardResponse($request);
+        }
 
         return $this->dashboardRedirect($user);
     }
@@ -539,6 +548,18 @@ class AuthController extends Controller
 
         return response()
             ->view('auth.login')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT');
+    }
+
+    private function officeDashboardResponse(Request $request): Response|RedirectResponse
+    {
+        $request->session()->forget('url.intended');
+        $request->session()->save();
+
+        return response()
+            ->view('auth.redirecting', ['target' => route('office.dashboard')])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
             ->header('Pragma', 'no-cache')
             ->header('Expires', 'Fri, 01 Jan 1990 00:00:00 GMT');

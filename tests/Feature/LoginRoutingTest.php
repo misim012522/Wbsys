@@ -475,8 +475,7 @@ test('office staff login still lands on an allowed tenant page when live operati
     ]);
     $staff->forceFill(['email_verified_at' => now()])->save();
 
-    $response = $this->withHeader('Host', 'acme.localhost')
-        ->withServerVariables(loginTenantHost())
+    $response = $this->withServerVariables(loginTenantHost())
         ->post('/login', [
             'login' => 'office.staff',
             'password' => 'Password123!',
@@ -489,4 +488,53 @@ test('office staff login still lands on an allowed tenant page when live operati
     $this->withHeader('Host', 'acme.localhost')
         ->get($location)
         ->assertRedirect(route('tenant.settings.edit'));
+});
+
+test('authenticated office staff visiting the tenant login page gets a direct handoff to the office dashboard', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::on('tenant')->create([
+        'name' => 'Office Staff',
+        'username' => 'office.staff',
+        'email' => 'staff@acme.test',
+        'phone' => '09123456780',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+    $staff->forceFill(['email_verified_at' => now()])->save();
+
+    $response = $this->actingAs($staff)
+        ->withHeader('Host', 'acme.localhost')
+        ->withServerVariables(loginTenantHost())
+        ->get('/login');
+
+    $response->assertOk()
+        ->assertSee(route('office.dashboard'), false)
+        ->assertSee('Redirecting...');
+
+    $this->assertAuthenticated();
+    $this->assertAuthenticatedAs($staff);
 });
