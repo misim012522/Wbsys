@@ -22,6 +22,7 @@ use App\Support\TenantDatabaseName;
 use App\Support\TenantWorkspaceUrlValidator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -36,11 +37,12 @@ class CentralController extends Controller
 
     public function home(): View|RedirectResponse
     {
-        if (! auth()->check()) {
+        if (! Auth::check()) {
             return redirect()->route('login');
         }
 
-        abort_unless(auth()->user()?->isCentralUser(), 403);
+        $user = Auth::user();
+        abort_unless($user instanceof User && $user->isCentralUser(), 403);
 
         return view('central.dashboard', $this->dashboardViewData());
     }
@@ -147,6 +149,57 @@ class CentralController extends Controller
         return $response;
     }
 
+    public function approve(Tenant $tenant): RedirectResponse
+    {
+        if ($tenant->approved_at) {
+            return redirect()->route('central.dashboard')
+                ->with('info', "Tenant {$tenant->name} is already approved.");
+        }
+
+        $newPassword = $this->generateReadableTemporaryPassword();
+        $notificationSent = false;
+
+        try {
+            $this->tenantDatabaseManager->activate($tenant);
+
+            $admin = User::on('tenant')
+                ->where('tenant_id', $tenant->id)
+                ->where('role', User::ROLE_TENANT_ADMIN)
+                ->orderBy('id')
+                ->first();
+
+            if (! $admin) {
+                return redirect()->route('central.dashboard')
+                    ->with('error', "No tenant admin account was found for {$tenant->name}. Please reset the tenant setup first.");
+            }
+
+            $admin->forceFill([
+                'password' => Hash::make($newPassword),
+            ])->save();
+
+            $tenant->forceFill([
+                'approved_at' => now(),
+                'is_active' => true,
+            ])->save();
+
+            $admin->notify(new TenantCredentialsNotification($tenant, $newPassword));
+            $notificationSent = true;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('central.dashboard')
+                ->with('error', "Tenant {$tenant->name} could not be approved. Please try again.");
+        }
+
+        if (! $notificationSent) {
+            return redirect()->route('central.dashboard')
+                ->with('info', "Tenant {$tenant->name} was approved, but the credentials email could not be sent.");
+        }
+
+        return redirect()->route('central.dashboard')
+            ->with('success', "Tenant {$tenant->name} was approved and credentials were sent by email.");
+    }
+
     public function updateSubscription(Request $request, Tenant $tenant): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
@@ -200,6 +253,11 @@ class CentralController extends Controller
 
     public function sendWorkspaceAccess(Tenant $tenant): RedirectResponse
     {
+        if (! $tenant->approved_at) {
+            return redirect()->route('central.dashboard')
+                ->with('info', "Approve {$tenant->name} first before sending workspace access details.");
+        }
+
         $notificationSent = $this->notifyTenantAdmin(
             $tenant,
             fn (User $admin) => $admin->notify(new TenantWorkspaceAccessNotification($tenant))
@@ -215,6 +273,11 @@ class CentralController extends Controller
 
     public function resetTenantPassword(Tenant $tenant): RedirectResponse
     {
+        if (! $tenant->approved_at) {
+            return redirect()->route('central.dashboard')
+                ->with('info', "Approve {$tenant->name} first before sending tenant credentials.");
+        }
+
         $newPassword = $this->generateReadableTemporaryPassword();
         $passwordReset = false;
         $notificationSent = false;
@@ -273,8 +336,6 @@ class CentralController extends Controller
         $plan = Plan::findOrFail($validated['plan_id']);
         $tenant = null;
         $generatedPassword = $this->generateReadableTemporaryPassword();
-        $admin = null;
-        $mailDeliveryFailed = false;
 
         try {
             DB::connection('central')->transaction(function () use ($validated, $plan, &$tenant): void {
@@ -306,7 +367,8 @@ class CentralController extends Controller
                             'profile' => TenantDashboardProfile::inferFromName($tenantName),
                         ],
                     ],
-                    'is_active' => true,
+                    'is_active' => false,
+                    'approved_at' => null,
                 ]);
                 $tenant->save();
 
@@ -330,14 +392,7 @@ class CentralController extends Controller
                 'password' => $generatedPassword,
             ];
 
-            $admin = $this->tenantDatabaseManager->provision($tenant, $adminData);
-
-            try {
-                $admin->notify(new TenantCredentialsNotification($tenant, $generatedPassword));
-            } catch (\Throwable $e) {
-                $mailDeliveryFailed = true;
-                report($e);
-            }
+            $this->tenantDatabaseManager->provision($tenant, $adminData);
         } catch (\Throwable $e) {
             if ($tenant) {
                 rescue(fn () => $this->tenantDatabaseManager->deleteTenantArtifacts($tenant), report: false);
@@ -353,21 +408,10 @@ class CentralController extends Controller
                 ->withErrors(['tenant_name' => 'Tenant registration failed while preparing the tenant database. Please try again.']);
         }
 
-        $response = redirect()->route('login')->with(
+        return redirect()->route('login')->with(
             'success',
-            $mailDeliveryFailed
-                ? sprintf('Tenant %s has been registered, but the credentials email could not be sent right now.', $tenant->name)
-                : sprintf('Tenant %s has been registered. Credentials were sent to %s.', $tenant->name, $validated['email'])
+            sprintf('Tenant %s has been registered and is pending central approval. Credentials will be emailed after approval.', $tenant->name)
         );
-
-        if ($mailDeliveryFailed) {
-            $response->with(
-                'info',
-                'Please verify your mail server settings or try resending the tenant credentials.'
-            );
-        }
-
-        return $response;
     }
 
     private function generateUniqueTenantValue(string $column, string $source): string

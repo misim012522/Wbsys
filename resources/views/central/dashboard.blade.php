@@ -34,7 +34,7 @@
 
     <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Tenant credentials are sent by email during registration. Use this dashboard to manage activation, tenant details, subscription details, and central email notifications without logging in as the tenant.
+            New tenant registrations stay pending until approved in this dashboard. Approving a tenant activates their workspace and sends credentials by email.
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 text-sm">
@@ -136,9 +136,15 @@
                                 <div class="max-w-[14rem] text-sm text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
                             </td>
                             <td class="px-4 py-4">
-                                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                                    {{ $tenant->is_active ? 'Active' : 'Inactive' }}
-                                </span>
+                                @if(! $tenant->approved_at)
+                                    <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                        Pending approval
+                                    </span>
+                                @else
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                        {{ $tenant->is_active ? 'Active' : 'Inactive' }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-4 py-4">
                                 <div class="w-full min-w-[14rem] space-y-4">
@@ -173,32 +179,48 @@
 
                                     <div class="space-y-2">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Access</p>
-                                        <div class="grid grid-cols-2 gap-2">
-                                            <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
-                                                @csrf
-                                                <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
-                                                    Send access email
-                                                </button>
-                                            </form>
+                                        @if(! $tenant->approved_at)
+                                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                                Approve this tenant first. Access and credential emails are enabled after approval.
+                                            </div>
+                                        @else
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
+                                                    @csrf
+                                                    <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                                        Send access email
+                                                    </button>
+                                                </form>
 
-                                            <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
-                                                @csrf
-                                                <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
-                                                    Reset temp password
-                                                </button>
-                                            </form>
-                                        </div>
+                                                <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
+                                                    @csrf
+                                                    <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
+                                                        Reset temp password
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        @endif
                                     </div>
 
                                     <div class="space-y-2 border-t border-slate-200 pt-3">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Status & danger</p>
-                                        <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                                                {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
-                                            </button>
-                                        </form>
+                                        @if(! $tenant->approved_at)
+                                            <form method="POST" action="{{ route('central.tenants.approve', $tenant) }}" data-row-action-form>
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" data-row-action-button data-default-label="Approve tenant" data-loading-label="Approving..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                                    Approve tenant
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                                    {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
+                                                </button>
+                                            </form>
+                                        @endif
 
                                         <button
                                             type="button"
@@ -602,6 +624,18 @@
 
             if (modalForm) {
                 modalForm.setAttribute('action', action || '');
+                // Ensure the form has a fresh CSRF token value in case the page token rotated
+                const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (metaToken) {
+                    let tokenInput = modalForm.querySelector('input[name="_token"]');
+                    if (!tokenInput) {
+                        tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = '_token';
+                        modalForm.prepend(tokenInput);
+                    }
+                    tokenInput.value = metaToken;
+                }
             }
 
             if (confirmButton) {

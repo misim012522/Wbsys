@@ -17,12 +17,12 @@ class Tenant extends Model
         'name', 'slug', 'plan_id', 'domain', 'subdomain',
         'database_name',
         'address', 'email', 'contact_name', 'contact_number',
-        'settings', 'support_url', 'app_version', 'is_active',
+        'settings', 'support_url', 'app_version', 'is_active', 'approved_at',
     ];
 
     protected function casts(): array
     {
-        return ['settings' => 'array', 'is_active' => 'boolean'];
+        return ['settings' => 'array', 'is_active' => 'boolean', 'approved_at' => 'datetime'];
     }
 
     protected static function booted(): void

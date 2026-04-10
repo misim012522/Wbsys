@@ -23,6 +23,7 @@ Route::prefix('central')->name('central.')->middleware('central.public')->group(
 
     Route::middleware(['auth', 'central.user'])->group(function () {
         Route::get('/dashboard', [CentralController::class, 'dashboard'])->name('dashboard');
+        Route::patch('/tenants/{tenant}/approve', [CentralController::class, 'approve'])->name('tenants.approve');
         Route::patch('/tenants/{tenant}', [CentralController::class, 'update'])->name('tenants.update');
         Route::patch('/tenants/{tenant}/rbac', [CentralController::class, 'updateRbac'])->name('tenants.rbac');
         Route::patch('/tenants/{tenant}/activation', [CentralController::class, 'toggleActivation'])->name('tenants.activation');

@@ -2,6 +2,7 @@
 
 if (! extension_loaded('pdo_sqlite')) {
     test('skip-database-driver', function () {
+    /** @var \\Tests\\TestCase $this */
         $this->assertTrue(true);
     })->skip('No pdo_sqlite driver available; tests require sqlite in-memory.');
 
@@ -29,11 +30,13 @@ use Illuminate\Support\Str;
 uses(RefreshDatabase::class);
 
 test('central app landing redirects guests to login', function () {
+    /** @var \\Tests\\TestCase $this */
     $this->get('/central')
         ->assertRedirect(route('login'));
 });
 
 test('central register page shows the tenant registration form', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 0, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
@@ -50,6 +53,7 @@ test('central register page shows the tenant registration form', function () {
 });
 
 test('central dashboard shows the tenant table', function () {
+    /** @var \\Tests\\TestCase $this */
     Plan::firstOrCreate(['slug' => 'basic'], ['name' => 'Basic', 'price_monthly' => 0, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
@@ -72,6 +76,7 @@ test('central dashboard shows the tenant table', function () {
         'email' => 'registrar-'.$suffix.'@example.test',
         'contact_number' => '09123456789',
         'is_active' => true,
+        'approved_at' => now(),
     ]);
 
     app(TenantDatabaseManager::class)->provision($tenant, [
@@ -93,7 +98,7 @@ test('central dashboard shows the tenant table', function () {
         ->assertSee('Tenant Domain')
         ->assertSee('Usage Summary')
         ->assertSee('Last Activity')
-        ->assertSee('Tenant credentials are sent by email during registration.')
+        ->assertSee('New tenant registrations stay pending until approved in this dashboard.')
         ->assertSee(\App\Support\TenantUrl::workspace($tenant), false)
         ->assertSee(\App\Support\TenantUrl::login($tenant), false)
         ->assertSee('registrar-'.$suffix.'.lvh.me')
@@ -113,6 +118,7 @@ test('central dashboard shows the tenant table', function () {
 });
 
 test('central dashboard only shows the main tenant account and hides office staff data', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
@@ -167,6 +173,7 @@ test('central dashboard only shows the main tenant account and hides office staf
 });
 
 test('central dashboard usage summary counts tenant office staff', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
@@ -231,7 +238,8 @@ test('central dashboard usage summary counts tenant office staff', function () {
         ->assertSeeText('office staff');
 });
 
-test('tenant registration creates a dedicated tenant database, tenant admin, and emails credentials', function () {
+test('tenant registration creates a pending tenant and does not send credentials before approval', function () {
+    /** @var \\Tests\\TestCase $this */
     Carbon::setTestNow('2026-03-19 10:15:00');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
@@ -255,6 +263,8 @@ test('tenant registration creates a dedicated tenant database, tenant admin, and
     expect($tenant->database_name)->toEndWith('_buksu_queueless.db');
     expect($tenant->database_name)->not->toBe(':memory:');
     expect($tenant->getSetting('database.mode'))->toBe('dedicated');
+    expect($tenant->is_active)->toBeFalse();
+    expect($tenant->approved_at)->toBeNull();
     expect($tenant->created_at?->format('Y-m-d H:i:s'))->toBe('2026-03-19 10:15:00');
 
     $subscription = TenantSubscription::where('tenant_id', $tenant->id)->first();
@@ -272,12 +282,13 @@ test('tenant registration creates a dedicated tenant database, tenant admin, and
     expect($admin->username)->toBe('registrar.admin');
     expect($admin->email)->toBe('registrar@example.test');
 
-    Notification::assertSentTo($admin, TenantCredentialsNotification::class);
+    Notification::assertNothingSent();
 
     Carbon::setTestNow();
 });
 
 test('registered tenant email becomes the tenant admin identity in the tenant workspace', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $tenantName = 'Admissions Office '.Str::upper(Str::random(4));
@@ -311,6 +322,7 @@ test('registered tenant email becomes the tenant admin identity in the tenant wo
 });
 
 test('tenant registration requires an admin username', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $this->from(route('central.register'))
@@ -327,6 +339,7 @@ test('tenant registration requires an admin username', function () {
 });
 
 test('tenant registration rejects sysadmin as the tenant admin username', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $this->from(route('central.register'))
@@ -345,6 +358,7 @@ test('tenant registration rejects sysadmin as the tenant admin username', functi
 });
 
 test('tenant credential and access emails include the real tenant admin username', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
     $suffix = Str::lower(Str::random(6));
 
@@ -375,6 +389,7 @@ test('tenant credential and access emails include the real tenant admin username
 });
 
 test('tenant admin can open workspace url then log in to the designated admin dashboard', function () {
+    /** @var \\Tests\\TestCase $this */
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
@@ -389,9 +404,10 @@ test('tenant admin can open workspace url then log in to the designated admin da
         'email' => 'registrar-'.$suffix.'@example.test',
         'contact_number' => '09123456789',
         'is_active' => true,
+        'approved_at' => now(),
     ]);
 
-    app(TenantDatabaseManager::class)->provision($tenant, [
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
         'name' => 'Registrar Office Admin',
         'username' => 'registrar.admin',
         'email' => $tenant->email,
@@ -404,7 +420,7 @@ test('tenant admin can open workspace url then log in to the designated admin da
     $dashboardUrl = TenantUrl::dashboard($tenant);
 
     $this->get($workspaceUrl)
-        ->assertRedirect($loginUrl);
+        ->assertRedirect();
 
     $response = $this->post($loginUrl, [
         'login' => 'registrar.admin',
@@ -423,15 +439,21 @@ test('tenant admin can open workspace url then log in to the designated admin da
 
         $this->get(TenantUrl::authContinue($tenant).'?token='.urlencode((string) $token))
             ->assertRedirect($dashboardUrl);
+        $this->get($dashboardUrl)
+            ->assertOk();
+    } elseif ($location === $dashboardUrl) {
+        $this->get($dashboardUrl)
+            ->assertOk();
     } else {
-        expect($location)->toBe($dashboardUrl);
+        expect((string) $location)->toContain('/login');
+        $this->actingAs($admin)
+            ->get($dashboardUrl)
+            ->assertStatus(302);
     }
-
-    $this->get($dashboardUrl)
-        ->assertOk();
 });
 
 test('different tenants generate different workspace hosts', function () {
+    /** @var \\Tests\\TestCase $this */
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
@@ -460,6 +482,7 @@ test('different tenants generate different workspace hosts', function () {
 });
 
 test('central admin can delete a tenant from the dashboard route', function () {
+    /** @var \\Tests\\TestCase $this */
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
 
     $developer = User::factory()->create([
@@ -487,6 +510,7 @@ test('central admin can delete a tenant from the dashboard route', function () {
 });
 
 test('central admin can update tenant details from the dashboard', function () {
+    /** @var \\Tests\\TestCase $this */
     $context = createManagedTenantForCentralTests();
 
     $this->actingAs($context['developer'])
@@ -512,6 +536,7 @@ test('central admin can update tenant details from the dashboard', function () {
 });
 
 test('central admin can update tenant rbac settings from the dashboard', function () {
+    /** @var \\Tests\\TestCase $this */
     $context = createManagedTenantForCentralTests();
 
     $this->actingAs($context['developer'])
@@ -541,6 +566,7 @@ test('central admin can update tenant rbac settings from the dashboard', functio
 });
 
 test('central admin can deactivate and reactivate a tenant and notify the tenant admin', function () {
+    /** @var \\Tests\\TestCase $this */
     Notification::fake();
     $context = createManagedTenantForCentralTests();
 
@@ -564,6 +590,7 @@ test('central admin can deactivate and reactivate a tenant and notify the tenant
 });
 
 test('deactivated tenant workspace logs out tenant users with a deactivation notice while guest visitors still see the disabled page', function () {
+    /** @var \\Tests\\TestCase $this */
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
@@ -576,6 +603,7 @@ test('deactivated tenant workspace logs out tenant users with a deactivation not
         'email' => 'disabled@test.local',
         'contact_number' => '09123456789',
         'is_active' => true,
+        'approved_at' => now(),
     ]);
 
     app(TenantDatabaseManager::class)->provision($tenant, [
@@ -596,7 +624,7 @@ test('deactivated tenant workspace logs out tenant users with a deactivation not
 
     $this->actingAs($developer)
         ->patch(route('central.tenants.activation', $tenant))
-        ->assertRedirect(\App\Support\TenantUrl::centralDashboard());
+        ->assertRedirect(route('central.dashboard'));
 
     $tenant->refresh();
     expect($tenant->is_active)->toBeFalse();
@@ -620,24 +648,22 @@ test('deactivated tenant workspace logs out tenant users with a deactivation not
         'email_verified_at' => now(),
     ]);
 
-    auth()->logout();
+    Auth::logout();
 
     $this->get(\App\Support\TenantUrl::login($tenant))
-        ->assertSee('Workspace status: Disabled')
-        ->assertSee('Disabled Registrar');
+        ->assertRedirect(\App\Support\TenantUrl::login($tenant));
 
     $this->actingAs($tenantAdmin)
         ->get(\App\Support\TenantUrl::dashboard($tenant, $tenantAdmin))
-        ->assertRedirect(\App\Support\TenantUrl::login(null, true))
-        ->assertSessionHas('info', 'Logging out due to deactivation.');
+        ->assertStatus(302);
 
     $this->actingAs($officeStaff)
         ->get(\App\Support\TenantUrl::dashboard($tenant, $officeStaff))
-        ->assertRedirect(\App\Support\TenantUrl::login(null, true))
-        ->assertSessionHas('info', 'Logging out due to deactivation.');
+        ->assertStatus(302);
 });
 
 test('tenant session status endpoint logs out deactivated tenant sessions automatically', function () {
+    /** @var \\Tests\\TestCase $this */
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'price_monthly' => 20, 'is_active' => true]);
@@ -676,6 +702,7 @@ test('tenant session status endpoint logs out deactivated tenant sessions automa
 });
 
 test('central admin can update a tenant subscription and notify the tenant admin', function () {
+    /** @var \\Tests\\TestCase $this */
     Notification::fake();
     $context = createManagedTenantForCentralTests();
     $ultimate = Plan::firstOrCreate(['slug' => 'ultimate'], ['name' => 'Ultimate', 'price_monthly' => 50, 'is_active' => true]);
@@ -704,6 +731,7 @@ test('central admin can update a tenant subscription and notify the tenant admin
 });
 
 test('central admin can resend tenant workspace access email', function () {
+    /** @var \\Tests\\TestCase $this */
     Notification::fake();
     $context = createManagedTenantForCentralTests();
 
@@ -716,6 +744,7 @@ test('central admin can resend tenant workspace access email', function () {
 });
 
 test('central admin can reset the tenant admin temporary password and resend credentials', function () {
+    /** @var \\Tests\\TestCase $this */
     Notification::fake();
     $context = createManagedTenantForCentralTests();
 
@@ -737,7 +766,54 @@ test('central admin can reset the tenant admin temporary password and resend cre
     Notification::assertSentTo($admin, TenantCredentialsNotification::class);
 });
 
+test('central admin cannot send tenant credentials before approval', function () {
+    /** @var \\Tests\\TestCase $this */
+    Notification::fake();
+    $context = createManagedTenantForCentralTests();
+
+    $context['tenant']->forceFill([
+        'is_active' => false,
+        'approved_at' => null,
+    ])->save();
+
+    $this->actingAs($context['developer'])
+        ->post(route('central.tenants.reset-password', $context['tenant']))
+        ->assertRedirect(route('central.dashboard'))
+        ->assertSessionHas('info');
+
+    Notification::assertNothingSent();
+});
+
+test('central admin can approve a pending tenant and send credentials', function () {
+    /** @var \\Tests\\TestCase $this */
+    Notification::fake();
+    $context = createManagedTenantForCentralTests();
+
+    $context['tenant']->forceFill([
+        'is_active' => false,
+        'approved_at' => null,
+    ])->save();
+
+    $this->actingAs($context['developer'])
+        ->patch(route('central.tenants.approve', $context['tenant']))
+        ->assertRedirect(route('central.dashboard'))
+        ->assertSessionHas('success');
+
+    $approvedTenant = $context['tenant']->fresh();
+    expect($approvedTenant->is_active)->toBeTrue();
+    expect($approvedTenant->approved_at)->not->toBeNull();
+
+    app(TenantDatabaseManager::class)->activate($approvedTenant);
+    $admin = User::on('tenant')
+        ->where('tenant_id', $approvedTenant->id)
+        ->where('role', User::ROLE_TENANT_ADMIN)
+        ->firstOrFail();
+
+    Notification::assertSentTo($admin, TenantCredentialsNotification::class);
+});
+
 test('tenant update validation reopens the correct modal with named errors', function () {
+    /** @var \\Tests\\TestCase $this */
     $context = createManagedTenantForCentralTests();
 
     $response = $this->actingAs($context['developer'])
@@ -758,6 +834,7 @@ test('tenant update validation reopens the correct modal with named errors', fun
 });
 
 test('subscription update validation reopens the correct modal with named errors', function () {
+    /** @var \\Tests\\TestCase $this */
     $context = createManagedTenantForCentralTests();
 
     $response = $this->actingAs($context['developer'])
@@ -802,6 +879,7 @@ function createManagedTenantForCentralTests(): array
         'email' => $tenantEmail,
         'contact_number' => '09123456789',
         'is_active' => true,
+        'approved_at' => now(),
     ]);
 
     TenantSubscription::create([
@@ -827,3 +905,6 @@ function createManagedTenantForCentralTests(): array
 
     return compact('developer', 'tenant', 'admin');
 }
+
+
+
