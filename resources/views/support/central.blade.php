@@ -61,23 +61,11 @@
         </section>
     </section>
 
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div id="central-support-conversation">
+    <section class="flex min-h-[46rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div id="central-support-conversation" class="min-h-0 flex-1">
             @include('support.partials.central-conversation', ['activeThread' => $activeThread])
         </div>
         @if(($supportReady ?? true) && $activeThread)
-            <div class="border-b border-slate-200 px-6 py-5">
-                <form method="POST" action="{{ route('central.support.status.update', $activeThread) }}" class="flex flex-wrap items-center gap-2">
-                    @csrf
-                    @method('PATCH')
-                    <select name="status" class="rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20">
-                        @foreach([\App\Models\SupportThread::STATUS_OPEN, \App\Models\SupportThread::STATUS_IN_PROGRESS, \App\Models\SupportThread::STATUS_RESOLVED] as $status)
-                            <option value="{{ $status }}" @selected($activeThread->status === $status)>{{ str($status)->replace('_', ' ')->title() }}</option>
-                        @endforeach
-                    </select>
-                    <button type="submit" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Update status</button>
-                </form>
-            </div>
             <div class="px-6 py-5">
                 <form method="POST" action="{{ route('central.support.messages.store', $activeThread) }}" class="space-y-4">
                     @csrf

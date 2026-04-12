@@ -47,8 +47,8 @@
     </div>
 </div>
 
-<div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-    <div class="space-y-6">
+<div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
+    <div class="space-y-6 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto xl:pr-2">
         <section class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_45%,_#eef6ff_100%)] p-6">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Overview</p>
@@ -62,10 +62,10 @@
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm ring-1 ring-slate-200">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 14a4 4 0 10-8 0m8 0H8m8 0v2a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2m8 0a4 4 0 00-8 0" /></svg>
                         </div>
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Administrator</p>
                             <p class="mt-2 text-lg font-semibold text-slate-900">{{ $admin?->name ?? 'N/A' }}</p>
-                            <p class="mt-1 text-sm text-slate-600">{{ $admin?->email ?? 'No email assigned' }}</p>
+                            <p class="mt-1 break-all text-sm text-slate-600">{{ $admin?->email ?? 'No email assigned' }}</p>
                             <p class="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">Username: {{ $admin?->username ?? 'N/A' }}</p>
                         </div>
                     </div>
@@ -76,7 +76,7 @@
                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm ring-1 ring-slate-200">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 7.5l9-4 9 4m-18 0v9l9 4 9-4v-9m-18 0l9 4 9-4" /></svg>
                         </div>
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace</p>
                             <p class="mt-2 text-lg font-semibold text-slate-900">{{ $tenant?->name ?? 'N/A' }}</p>
                             <p class="mt-1 text-sm text-slate-600">Subdomain: {{ $tenant?->subdomain ?? 'N/A' }}</p>
@@ -101,7 +101,7 @@
 
     </div>
 
-    <div class="space-y-6">
+    <div class="space-y-6 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto xl:pr-2">
         <section class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-slate-50/80 p-6">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Identity</p>
@@ -113,19 +113,19 @@
                 <dl class="grid gap-3 sm:grid-cols-2">
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Name</dt>
-                        <dd class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->name ?? 'N/A' }}</dd>
+                        <dd class="mt-1 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->name ?? 'N/A' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</dt>
-                        <dd class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->phone ?: 'N/A' }}</dd>
+                        <dd class="mt-1 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->phone ?: 'N/A' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email</dt>
-                        <dd class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->email ?? 'N/A' }}</dd>
+                        <dd class="mt-1 min-w-0 break-all rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">{{ $admin?->email ?? 'N/A' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Role</dt>
-                        <dd class="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium capitalize text-slate-800">{{ str_replace('_', ' ', $admin?->role ?? 'tenant_admin') }}</dd>
+                        <dd class="mt-1 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium capitalize text-slate-800">{{ str_replace('_', ' ', $admin?->role ?? 'tenant_admin') }}</dd>
                     </div>
                 </dl>
             </div>

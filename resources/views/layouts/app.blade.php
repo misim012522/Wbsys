@@ -109,5 +109,7 @@
     <div class="max-w-6xl mx-auto px-4 py-8">
         @yield('content')
     </div>
+
+    @include('support.partials.tenant-floating-widget')
 </body>
 </html>

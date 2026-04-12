@@ -48,7 +48,6 @@
             @if($viewer?->hasPermission('admin.rbac.manage'))
                 <a href="{{ route('admin.rbac.edit') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.rbac.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Access control</a>
             @endif
-            <a href="{{ route('support.tenant.index') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('support.tenant.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Support{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             @if($viewer?->hasPermission('admin.customization.manage'))
                 <a href="{{ route('admin.customization.index') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.customization.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Customization</a>
             @endif

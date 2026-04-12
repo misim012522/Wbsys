@@ -153,7 +153,7 @@ class AdminController extends Controller
         abort_unless($office, 404);
 
         $url = $this->qrCodeService->queueOfficeUrl($office->slug);
-        $result = $this->qrCodeService->build($url, true);
+        $result = $this->qrCodeService->build($url);
 
         return response($result->getString())
             ->header('Content-Type', $result->getMimeType());

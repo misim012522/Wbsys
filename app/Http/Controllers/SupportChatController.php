@@ -106,15 +106,32 @@ class SupportChatController extends Controller
         $thread = null;
 
         DB::connection('central')->transaction(function () use ($tenant, $request, $validated, &$thread): void {
-            $thread = SupportThread::create([
-                'tenant_id' => $tenant->id,
-                'thread_type' => SupportThread::TYPE_SUPPORT,
-                'subject' => trim($validated['subject']),
-                'status' => SupportThread::STATUS_OPEN,
-                'last_message_at' => now(),
-                'tenant_last_read_at' => now(),
-                'central_last_read_at' => null,
-            ]);
+            $thread = SupportThread::query()
+                ->where('tenant_id', $tenant->id)
+                ->where('thread_type', SupportThread::TYPE_SUPPORT)
+                ->orderByDesc(DB::raw('COALESCE(last_message_at, created_at)'))
+                ->first();
+
+            if (! $thread) {
+                $thread = SupportThread::create([
+                    'tenant_id' => $tenant->id,
+                    'thread_type' => SupportThread::TYPE_SUPPORT,
+                    'subject' => trim($validated['subject']),
+                    'status' => SupportThread::STATUS_OPEN,
+                    'last_message_at' => now(),
+                    'tenant_last_read_at' => now(),
+                    'central_last_read_at' => null,
+                ]);
+            } else {
+                $thread->forceFill([
+                    'subject' => $thread->subject ?: trim($validated['subject']),
+                    'status' => $thread->status === SupportThread::STATUS_RESOLVED
+                        ? SupportThread::STATUS_IN_PROGRESS
+                        : $thread->status,
+                    'last_message_at' => now(),
+                    'tenant_last_read_at' => now(),
+                ])->save();
+            }
 
             $this->createMessage(
                 $thread,
@@ -127,8 +144,9 @@ class SupportChatController extends Controller
         });
 
         return redirect()
-            ->route('support.tenant.index', ['thread' => $thread?->id])
-            ->with('success', 'Your support thread has been created.');
+            ->back()
+            ->with('support_widget_thread_id', $thread?->id)
+            ->with('support_widget_open', true);
     }
 
     public function tenantStoreMessage(Request $request, SupportThread $thread): RedirectResponse
@@ -162,8 +180,9 @@ class SupportChatController extends Controller
         });
 
         return redirect()
-            ->route('support.tenant.index', ['thread' => $thread->id])
-            ->with('success', 'Your message has been sent to central support.');
+            ->back()
+            ->with('support_widget_thread_id', $thread->id)
+            ->with('support_widget_open', true);
     }
 
     public function centralIndex(Request $request): View
@@ -302,8 +321,7 @@ class SupportChatController extends Controller
         });
 
         return redirect()
-            ->route('support.central.index', ['thread' => $thread->id])
-            ->with('success', 'Your reply has been sent to the tenant.');
+            ->route('central.support.index', ['thread' => $thread->id]);
     }
 
     public function centralUpdateStatus(Request $request, SupportThread $thread): RedirectResponse
@@ -317,7 +335,7 @@ class SupportChatController extends Controller
         $thread->forceFill(['status' => $validated['status']])->save();
 
         return redirect()
-            ->route('support.central.index', ['thread' => $thread->id])
+            ->route('central.support.index', ['thread' => $thread->id])
             ->with('success', 'Support thread status updated.');
     }
 

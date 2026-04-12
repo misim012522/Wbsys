@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\SupportThread;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -70,6 +72,50 @@ class AppServiceProvider extends ServiceProvider
                     ];
                 }
                 $view->with('tenantTheme', $tenantTheme);
+
+                $supportWidget = [
+                    'enabled' => false,
+                    'ready' => false,
+                    'threads' => collect(),
+                    'activeThread' => null,
+                    'unreadCount' => 0,
+                    'open' => false,
+                ];
+
+                $user = auth()->user();
+                $tenantUser = $tenant && $user && ! $user->isCentralUser();
+
+                if ($tenantUser && SupportThread::supportTablesExist()) {
+                    $threads = SupportThread::query()
+                        ->where('tenant_id', $tenant->id)
+                        ->with('tenant')
+                        ->orderByDesc(DB::raw('COALESCE(last_message_at, created_at)'))
+                        ->get();
+
+                    $selectedThreadId = request()->integer('support_thread')
+                        ?: session('support_widget_thread_id');
+
+                    $activeThread = $selectedThreadId
+                        ? $threads->firstWhere('id', $selectedThreadId)
+                        : $threads->first();
+
+                    if ($activeThread) {
+                        $activeThread->load('messages');
+                    }
+
+                    $supportWidget = [
+                        'enabled' => true,
+                        'ready' => true,
+                        'threads' => $threads,
+                        'activeThread' => $activeThread,
+                        'unreadCount' => $threads->filter(fn (SupportThread $thread) => $thread->hasUnreadForTenant())->count(),
+                        'open' => request()->boolean('support_open') || session('support_widget_open', false),
+                    ];
+                } elseif ($tenantUser) {
+                    $supportWidget['enabled'] = true;
+                }
+
+                $view->with('tenantSupportWidget', $supportWidget);
             } catch (\Throwable $e) {
                 // Prevent errors in view composer from causing infinite exception rendering loops
                 // Set safe defaults instead
@@ -84,6 +130,14 @@ class AppServiceProvider extends ServiceProvider
                     'appointments_enabled' => true,
                     'show_service_type' => true,
                     'show_purpose_field' => true,
+                ]);
+                $view->with('tenantSupportWidget', [
+                    'enabled' => false,
+                    'ready' => false,
+                    'threads' => collect(),
+                    'activeThread' => null,
+                    'unreadCount' => 0,
+                    'open' => false,
                 ]);
             }
         });
