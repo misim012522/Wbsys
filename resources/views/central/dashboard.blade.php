@@ -5,13 +5,25 @@
 @section('content')
 <div class="space-y-8" data-central-dashboard-root data-open-modal="{{ session('open_modal', '') }}">
     <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-            Central App
-        </span>
-        <h1 class="mt-4 text-3xl font-bold text-slate-900">Central dashboard</h1>
-        <p class="mt-2 max-w-3xl text-sm text-slate-600">
-            View all registered tenants, confirm each tenant domain, and monitor subscription details from the central system.
-        </p>
+        @php
+            $centralSupportUnreadCount = \App\Models\SupportThread::unreadCountForCentral();
+        @endphp
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                    Central App
+                </span>
+                <h1 class="mt-4 text-3xl font-bold text-slate-900">Central dashboard</h1>
+                <p class="mt-2 max-w-3xl text-sm text-slate-600">
+                    View all registered tenants, confirm each tenant domain, and monitor subscription details from the central system.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('central.support.index') }}" class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">
+                    Support inbox{{ $centralSupportUnreadCount ? ' ('.$centralSupportUnreadCount.')' : '' }}
+                </a>
+            </div>
+        </div>
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">
@@ -36,24 +48,24 @@
         <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             New tenant registrations stay pending until approved in this dashboard. Approving a tenant activates their workspace and sends credentials by email.
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <div class="overflow-x-auto rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#ffffff_12%)] p-3">
+            <table class="min-w-[112rem] border-separate border-spacing-y-3 text-sm">
                 <thead>
                     <tr class="text-left text-slate-500">
-                        <th class="px-4 py-3 font-medium">Tenant Name</th>
-                        <th class="px-4 py-3 font-medium">Tenant Domain</th>
-                        <th class="px-4 py-3 font-medium">Address</th>
-                        <th class="px-4 py-3 font-medium">Contact Number</th>
-                        <th class="px-4 py-3 font-medium">Email</th>
-                        <th class="px-4 py-3 font-medium">Created At</th>
-                        <th class="px-4 py-3 font-medium">Subscription Plan</th>
-                        <th class="px-4 py-3 font-medium">Usage Summary</th>
-                        <th class="px-4 py-3 font-medium">Last Activity</th>
-                        <th class="px-4 py-3 font-medium">Status</th>
-                        <th class="w-[16rem] px-4 py-3 font-medium">Actions</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Tenant Name</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Tenant Domain</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Address</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Contact Number</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Email</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Created At</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Subscription Plan</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Usage Summary</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Last Activity</th>
+                        <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Status</th>
+                        <th class="w-[18rem] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em]">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @forelse($tenants as $tenant)
                         @php
                             $workspaceUrl = \App\Support\TenantUrl::workspace($tenant);
@@ -70,10 +82,10 @@
                             ];
                         @endphp
                         <tr class="align-top">
-                            <td class="px-4 py-4">
+                            <td class="rounded-l-3xl border-y border-l border-slate-200 bg-white px-4 py-5 shadow-sm">
                                 <div class="font-semibold text-slate-900">{{ $tenant->name }}</div>
                                 <div class="text-xs text-slate-500">Slug: {{ $tenant->slug }}</div>
-                                <div class="mt-3 space-y-1">
+                                <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-1">
                                     <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Main tenant account</p>
                                     @if($tenantAdmin)
                                         <div class="text-sm font-medium text-slate-800">{{ $tenantAdmin->name }}</div>
@@ -84,77 +96,96 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="px-4 py-4">
-                                <div class="space-y-2">
-                                    <div>
-                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tenant domain</p>
-                                        <div class="break-all text-sm font-semibold text-slate-900">
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 shadow-sm">
+                                <div class="space-y-3">
+                                    <div class="rounded-2xl border border-sky-200 bg-sky-50/70 p-3">
+                                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">Tenant domain</p>
+                                        <div class="mt-2 break-all text-sm font-semibold text-slate-900">
                                             {{ $workspaceHost }}
                                         </div>
                                     </div>
-                                    <div>
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Workspace URL</p>
-                                        <a href="{{ $workspaceUrl }}" class="break-all text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline">
+                                        <a href="{{ $workspaceUrl }}" class="mt-2 block break-all text-sm font-medium text-emerald-700 hover:text-emerald-800 hover:underline">
                                             {{ $workspaceUrl }}
                                         </a>
                                     </div>
-                                    <div>
+                                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Login URL</p>
-                                        <a href="{{ $loginUrl }}" class="break-all text-xs text-slate-600 hover:text-slate-900 hover:underline">
+                                        <a href="{{ $loginUrl }}" class="mt-2 block break-all text-xs text-slate-600 hover:text-slate-900 hover:underline">
                                             {{ $loginUrl }}
                                         </a>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-4 py-4 text-slate-600">{{ $tenant->address ?: 'N/A' }}</td>
-                            <td class="px-4 py-4 text-slate-600">{{ $tenant->contact_number ?: 'N/A' }}</td>
-                            <td class="px-4 py-4 text-slate-600">
-                                <div>{{ $tenant->email ?: 'N/A' }}</div>
-                                <div class="mt-1 text-xs text-slate-400">Registration contact</div>
-                            </td>
-                            <td class="px-4 py-4 text-slate-600">{{ optional($tenant->created_at)->format('M d, Y h:i A') ?: 'N/A' }}</td>
-                            <td class="px-4 py-4 text-slate-600">
-                                <div class="font-medium text-slate-900">{{ $tenant->plan?->name ?? 'N/A' }}</div>
-                                @if($latestSubscription)
-                                    <div class="mt-1 text-xs text-slate-500">
-                                        {{ str($latestSubscription->status)->replace('_', ' ')->title() }}
-                                        @if($latestSubscription->ends_at)
-                                            until {{ $latestSubscription->ends_at->format('M d, Y') }}
-                                        @endif
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-4 py-4 text-slate-600">
-                                <div class="space-y-1 text-xs">
-                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> office staff</div>
-                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
-                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues today</div>
-                                    <div><span class="font-semibold text-slate-800">{{ $tenantInsight['today_appointment_count'] }}</span> appointments today</div>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 min-w-[10rem]">
+                                    <div class="text-sm font-medium text-slate-900">{{ $tenant->address ?: 'N/A' }}</div>
                                 </div>
                             </td>
-                            <td class="px-4 py-4 text-slate-600">
-                                <div class="max-w-[14rem] text-sm text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 min-w-[8rem]">
+                                    <div class="text-sm font-medium text-slate-900">{{ $tenant->contact_number ?: 'N/A' }}</div>
+                                </div>
                             </td>
-                            <td class="px-4 py-4">
-                                @if(! $tenant->approved_at)
-                                    <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                                        Pending approval
-                                    </span>
-                                @else
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
-                                        {{ $tenant->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                @endif
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 min-w-[14rem]">
+                                    <div class="break-all text-sm font-medium text-slate-900">{{ $tenant->email ?: 'N/A' }}</div>
+                                    <div class="mt-1 text-xs text-slate-400">Registration contact</div>
+                                </div>
                             </td>
-                            <td class="px-4 py-4">
-                                <div class="w-full min-w-[14rem] space-y-4">
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-3 min-w-[9rem]">
+                                    <div class="text-sm font-medium text-slate-900">{{ optional($tenant->created_at)->format('M d, Y') ?: 'N/A' }}</div>
+                                    <div class="mt-1 text-xs text-slate-500">{{ optional($tenant->created_at)->format('h:i A') ?: '' }}</div>
+                                </div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 min-w-[9rem]">
+                                    <div class="font-medium text-slate-900">{{ $tenant->plan?->name ?? 'N/A' }}</div>
+                                    @if($latestSubscription)
+                                        <div class="mt-1 text-xs text-slate-500">
+                                            {{ str($latestSubscription->status)->replace('_', ' ')->title() }}
+                                            @if($latestSubscription->ends_at)
+                                                until {{ $latestSubscription->ends_at->format('M d, Y') }}
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="grid min-w-[10rem] grid-cols-2 gap-2 text-xs">
+                                    <div class="rounded-xl bg-slate-50 px-3 py-3"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> office staff</div>
+                                    <div class="rounded-xl bg-slate-50 px-3 py-3"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
+                                    <div class="rounded-xl bg-slate-50 px-3 py-3"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues today</div>
+                                    <div class="rounded-xl bg-slate-50 px-3 py-3"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_appointment_count'] }}</span> appointments today</div>
+                                </div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 text-slate-600 shadow-sm">
+                                <div class="max-w-[14rem] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-4 py-5 shadow-sm">
+                                <div class="min-w-[8rem]">
+                                    @if(! $tenant->approved_at)
+                                        <span class="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                            Pending approval
+                                        </span>
+                                    @else
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                            {{ $tenant->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="rounded-r-3xl border-y border-r border-slate-200 bg-white px-4 py-5 shadow-sm">
+                                <div class="w-full min-w-[16rem] space-y-4">
                                     <div class="space-y-2">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Manage</p>
-                                        <div class="grid grid-cols-2 gap-2">
+                                        <div class="grid grid-cols-1 gap-2">
                                             <button
                                                 type="button"
                                                 data-modal-target="tenant-edit-modal-{{ $tenant->id }}"
-                                                class="rounded-lg border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                                                class="rounded-xl border border-slate-300 px-3 py-2.5 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                             >
                                                 Edit tenant
                                             </button>
@@ -162,39 +193,38 @@
                                             <button
                                                 type="button"
                                                 data-modal-target="tenant-subscription-modal-{{ $tenant->id }}"
-                                                class="rounded-lg border border-emerald-200 px-3 py-2 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
+                                                class="rounded-xl border border-emerald-200 px-3 py-2.5 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50"
                                             >
                                                 Edit subscription
                                             </button>
 
-                                            <button
-                                                type="button"
-                                                data-modal-target="tenant-rbac-modal-{{ $tenant->id }}"
-                                                class="rounded-lg border border-sky-200 px-3 py-2 text-center text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
+                                            <a
+                                                href="{{ route('central.tenants.rbac.edit', $tenant) }}"
+                                                class="rounded-xl border border-sky-200 px-3 py-2.5 text-center text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
                                             >
                                                 Access control
-                                            </button>
+                                            </a>
                                         </div>
                                     </div>
 
                                     <div class="space-y-2">
                                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Access</p>
                                         @if(! $tenant->approved_at)
-                                            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                            <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
                                                 Approve this tenant first. Access and credential emails are enabled after approval.
                                             </div>
                                         @else
-                                            <div class="grid grid-cols-2 gap-2">
+                                            <div class="grid grid-cols-1 gap-2">
                                                 <form method="POST" action="{{ route('central.tenants.workspace-access', $tenant) }}" data-row-action-form>
                                                     @csrf
-                                                    <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                                    <button type="submit" data-row-action-button data-default-label="Send access email" data-loading-label="Sending email..." class="w-full rounded-xl border border-emerald-200 px-3 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
                                                         Send access email
                                                     </button>
                                                 </form>
 
                                                 <form method="POST" action="{{ route('central.tenants.reset-password', $tenant) }}" data-row-action-form>
                                                     @csrf
-                                                    <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
+                                                    <button type="submit" data-row-action-button data-default-label="Reset temp password" data-loading-label="Resetting..." class="w-full rounded-xl border border-amber-200 px-3 py-2.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-50">
                                                         Reset temp password
                                                     </button>
                                                 </form>
@@ -208,7 +238,7 @@
                                             <form method="POST" action="{{ route('central.tenants.approve', $tenant) }}" data-row-action-form>
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" data-row-action-button data-default-label="Approve tenant" data-loading-label="Approving..." class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
+                                                <button type="submit" data-row-action-button data-default-label="Approve tenant" data-loading-label="Approving..." class="w-full rounded-xl border border-emerald-200 px-3 py-2.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50">
                                                     Approve tenant
                                                 </button>
                                             </form>
@@ -216,7 +246,7 @@
                                             <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                                                <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                                                     {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
                                                 </button>
                                             </form>
@@ -227,7 +257,7 @@
                                             data-delete-tenant-trigger
                                             data-tenant-name="{{ $tenant->name }}"
                                             data-tenant-action="{{ route('central.tenants.destroy', $tenant) }}"
-                                            class="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
+                                            class="w-full rounded-xl border border-red-200 px-3 py-2.5 text-xs font-semibold text-red-600 transition hover:border-red-300 hover:bg-red-50"
                                         >
                                             Delete tenant
                                         </button>

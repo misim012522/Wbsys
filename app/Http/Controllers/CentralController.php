@@ -16,6 +16,7 @@ use App\Notifications\TenantCredentialsNotification;
 use App\Notifications\TenantSubscriptionUpdatedNotification;
 use App\Notifications\TenantWorkspaceAccessNotification;
 use App\Services\TenantDatabaseManager;
+use App\Services\TenantRbacService;
 use App\Support\CentralPricing;
 use App\Support\TenantDashboardProfile;
 use App\Support\TenantDatabaseName;
@@ -32,7 +33,8 @@ use Illuminate\View\View;
 class CentralController extends Controller
 {
     public function __construct(
-        private TenantDatabaseManager $tenantDatabaseManager
+        private TenantDatabaseManager $tenantDatabaseManager,
+        private TenantRbacService $tenantRbacService
     ) {}
 
     public function home(): View|RedirectResponse
@@ -111,20 +113,27 @@ class CentralController extends Controller
 
     public function updateRbac(Request $request, Tenant $tenant): RedirectResponse
     {
-        foreach (User::tenantAdminPermissionDefinitions() as $definition) {
-            if (($definition['setting'] ?? null) === null || ($definition['input'] ?? null) === null) {
-                continue;
-            }
+        $this->tenantRbacService->updateFromRequest($tenant, $request->all());
 
-            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
-        }
-
-        foreach (User::officeStaffPermissionDefinitions() as $definition) {
-            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
-        }
-
-        return redirect()->route('central.dashboard')
+        return redirect()->route('central.tenants.rbac.edit', $tenant)
             ->with('success', "Access control for {$tenant->name} was updated successfully.");
+    }
+
+    public function editRbac(Tenant $tenant): View
+    {
+        return view('admin.rbac', array_merge(
+            $this->tenantRbacService->viewData($tenant),
+            [
+                'pageMode' => 'central',
+                'pageTitle' => "Access Control: {$tenant->name}",
+                'pageDescription' => 'Configure RBAC for this specific registered tenant from the central workspace.',
+                'saveAction' => route('central.tenants.rbac', $tenant),
+                'saveMethod' => 'PATCH',
+                'saveButtonLabel' => 'Save tenant access',
+                'backUrl' => route('central.dashboard'),
+                'backLabel' => 'Back to central dashboard',
+            ]
+        ));
     }
 
     public function toggleActivation(Tenant $tenant): RedirectResponse
@@ -157,6 +166,7 @@ class CentralController extends Controller
         }
 
         $newPassword = $this->generateReadableTemporaryPassword();
+        $tenantApproved = false;
         $notificationSent = false;
 
         try {
@@ -181,22 +191,26 @@ class CentralController extends Controller
                 'approved_at' => now(),
                 'is_active' => true,
             ])->save();
+            $tenantApproved = true;
 
             $admin->notify(new TenantCredentialsNotification($tenant, $newPassword));
             $notificationSent = true;
         } catch (\Throwable $e) {
             report($e);
+        }
 
-            return redirect()->route('central.dashboard')
-                ->with('error', "Tenant {$tenant->name} could not be approved. Please try again.");
+        $response = redirect()->route('central.dashboard');
+
+        if (! $tenantApproved) {
+            return $response->with('error', "Tenant {$tenant->name} could not be approved. Please try again.");
         }
 
         if (! $notificationSent) {
-            return redirect()->route('central.dashboard')
+            return $response
                 ->with('info', "Tenant {$tenant->name} was approved, but the credentials email could not be sent.");
         }
 
-        return redirect()->route('central.dashboard')
+        return $response
             ->with('success', "Tenant {$tenant->name} was approved and credentials were sent by email.");
     }
 
@@ -323,10 +337,7 @@ class CentralController extends Controller
     public function create(): View
     {
         return view('central.register', [
-            'plans' => Plan::active()
-                ->get()
-                ->sortBy(fn (Plan $plan) => array_search($plan->slug, array_column(CentralPricing::plans(), 'slug'), true))
-                ->values(),
+            'plans' => $this->availablePlans(),
         ]);
     }
 
@@ -450,16 +461,26 @@ class CentralController extends Controller
         return [
             'tenantCount' => $tenants->count(),
             'activeTenantCount' => $tenants->where('is_active', true)->count(),
-            'planCount' => Plan::active()->count(),
+            'planCount' => $this->availablePlans()->count(),
             'subscriptionCount' => \App\Models\TenantSubscription::query()->count(),
-            'plans' => Plan::active()
-                ->get()
-                ->sortBy(fn (Plan $plan) => array_search($plan->slug, array_column(CentralPricing::plans(), 'slug'), true))
-                ->values(),
+            'plans' => $this->availablePlans(),
             'tenants' => $tenants,
             'tenantAdmins' => $tenantAdmins,
             'tenantInsights' => $tenantInsights,
         ];
+    }
+
+    private function availablePlans()
+    {
+        $allowedSlugs = array_column(CentralPricing::plans(), 'slug');
+        $planOrder = array_flip($allowedSlugs);
+
+        return Plan::active()
+            ->whereIn('slug', $allowedSlugs)
+            ->get()
+            ->sortBy(fn (Plan $plan) => $planOrder[$plan->slug] ?? PHP_INT_MAX)
+            ->unique('slug')
+            ->values();
     }
 
     private function notifyTenantAdmin(Tenant $tenant, callable $callback): bool

@@ -2,22 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Services\TenantRbacService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class AdminRbacController extends Controller
 {
+    public function __construct(
+        private TenantRbacService $tenantRbacService
+    ) {}
+
     public function edit(): View
     {
         $tenant = app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
-        $tenantAdminPermissionDefinitions = User::tenantAdminPermissionDefinitions();
-        $tenantAdminPermissions = User::tenantAdminPermissionStates($tenant);
-        $permissionDefinitions = User::officeStaffPermissionDefinitions();
-        $officeStaffPermissions = User::officeStaffPermissionStates($tenant);
 
-        return view('admin.rbac', compact('tenant', 'tenantAdminPermissions', 'tenantAdminPermissionDefinitions', 'officeStaffPermissions', 'permissionDefinitions'));
+        return view('admin.rbac', array_merge(
+            $this->tenantRbacService->viewData($tenant),
+            [
+                'pageMode' => 'tenant',
+                'pageTitle' => 'Access Control',
+                'pageDescription' => 'Manage access control for this tenant workspace.',
+                'saveAction' => route('admin.rbac.update'),
+                'saveMethod' => 'PUT',
+                'saveButtonLabel' => 'Save access',
+            ]
+        ));
     }
 
     public function update(Request $request): RedirectResponse
@@ -26,20 +36,10 @@ class AdminRbacController extends Controller
 
         abort_unless($tenant, 404);
 
-        foreach (User::tenantAdminPermissionDefinitions() as $definition) {
-            if (($definition['setting'] ?? null) === null || ($definition['input'] ?? null) === null) {
-                continue;
-            }
-
-            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
-        }
-
-        foreach (User::officeStaffPermissionDefinitions() as $definition) {
-            $tenant->setSetting($definition['setting'], $request->boolean($definition['input']));
-        }
+        $this->tenantRbacService->updateFromRequest($tenant, $request->all());
 
         return redirect()
             ->route('admin.rbac.edit')
-            ->with('success', 'Office staff access has been updated.');
+            ->with('success', 'Tenant access control has been updated.');
     }
 }

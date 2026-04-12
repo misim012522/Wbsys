@@ -19,6 +19,13 @@
 /storage/*.key
 /storage/pail
 /vendor
+/database/*.sqlite
+/database/*.db
+/database/tenants/*.db
+/database/migrations/tenants/*-*/
+/cookies.txt
+/post_response.html
+/null
 Homestead.json
 Homestead.yaml
 Thumbs.db

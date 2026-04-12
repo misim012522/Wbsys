@@ -74,9 +74,9 @@
                     <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
                         @csrf
                         <button
-                            type="submit"
+                            type="button"
                             class="text-sm text-slate-600 hover:text-slate-900"
-                            onclick="window.showToast.success('Logged out successfully. Redirecting...'); setTimeout(() => document.getElementById('logout-form').submit(), 500);"
+                            onclick="window.showToast.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('logout-form').submit(), 500);"
                         >
                             Log out
                         </button>

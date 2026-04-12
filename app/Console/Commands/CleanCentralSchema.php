@@ -23,7 +23,7 @@ class CleanCentralSchema extends Command
             return self::FAILURE;
         }
 
-        $keep = ['migrations', 'users', 'plans', 'tenants', 'tenant_subscriptions'];
+        $keep = ['migrations', 'users', 'plans', 'tenants', 'tenant_subscriptions', 'support_threads', 'support_messages'];
         $tables = $this->listTables($driver);
         $drop = array_values(array_diff($tables, $keep));
 

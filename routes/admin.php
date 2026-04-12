@@ -16,7 +16,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard')->middleware(['role:tenant_admin', 'permission:admin.dashboard']);
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile')->middleware(['role:tenant_admin', 'permission:admin.profile']);
     Route::get('/qr', [AdminController::class, 'qrCodes'])->name('qr')->middleware(['role:tenant_admin', 'permission:admin.office.serve']);
-    Route::get('/qr/{office}/image', [AdminController::class, 'qrCodeImage'])->name('qr.image')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
+    Route::get('/qr/image', [AdminController::class, 'qrCodeImage'])->name('qr.image')->middleware(['role:tenant_admin', 'permission:admin.office.serve']);
     Route::get('/serve/{office}', [AdminController::class, 'serveOffice'])->name('serve')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
     Route::post('/serve/{office}/call-next', [AdminController::class, 'callNext'])->name('call-next')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
     Route::patch('/queue/{queueEntry}', [AdminController::class, 'updateQueueStatus'])->name('queue.update')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:queueEntry']);

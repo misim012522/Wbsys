@@ -17,6 +17,7 @@
     $canUseOfficeQr = $user->hasPermission('office.qr');
     $canViewOfficeActivity = $user->hasPermission('office.activity.view');
     $canViewOfficeReports = $user->hasPermission('reports.view');
+    $supportUnreadCount = \App\Models\SupportThread::unreadCountForTenant($tenant?->id);
 @endphp
 
 <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -36,6 +37,7 @@
         @if($user->isAdmin())
             <a href="{{ route('admin.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open admin dashboard</a>
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             <a href="{{ route('admin.users.pending') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Pending office staff</a>
             @if($appointmentsEnabled || $queueEnabled)
                 <a href="{{ route('admin.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Reports</a>
@@ -45,6 +47,7 @@
                 <a href="{{ route('office.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open office dashboard</a>
             @endif
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             @if($queueEnabled && $canUseOfficeQr)
                 <a href="{{ route('office.qr') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Office QR access</a>
             @endif
@@ -54,6 +57,7 @@
         @else
             <a href="{{ route('tenant.home') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Workspace home</a>
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
         @endif
     </div>
 </div>

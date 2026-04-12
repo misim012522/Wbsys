@@ -30,18 +30,9 @@ class SetupCentralApp extends Command
             return self::FAILURE;
         }
 
-        $migrateOptions = [
-            '--database' => 'central',
-            '--path' => database_path('migrations/central'),
-            '--realpath' => true,
-            '--force' => true,
-        ];
-
-        if ($this->option('fresh')) {
-            $this->callSilent('migrate:fresh', $migrateOptions);
-        } else {
-            $this->callSilent('migrate', $migrateOptions);
-        }
+        $this->callSilent('central:migrate', [
+            '--fresh' => $this->option('fresh'),
+        ]);
 
         $this->callSilent('db:seed', [
             '--class' => 'Database\\Seeders\\DatabaseSeeder',

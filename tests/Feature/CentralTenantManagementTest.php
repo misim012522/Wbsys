@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -547,7 +548,7 @@ test('central admin can update tenant rbac settings from the dashboard', functio
             'office_staff_office_qr' => '1',
             'office_staff_office_activity_view' => '1',
         ])
-        ->assertRedirect(route('central.dashboard'))
+        ->assertRedirect(route('central.tenants.rbac.edit', $context['tenant']))
         ->assertSessionHas('success');
 
     $tenant = $context['tenant']->fresh();
@@ -563,6 +564,21 @@ test('central admin can update tenant rbac settings from the dashboard', functio
     expect($tenant->getSetting('rbac.office_staff.office.queue.manage', true))->toBeFalse();
     expect($tenant->getSetting('rbac.office_staff.office.appointments.manage', true))->toBeFalse();
     expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
+});
+
+test('central admin can open a dedicated rbac page for a specific tenant', function () {
+    /** @var \\Tests\\TestCase $this */
+    $context = createManagedTenantForCentralTests();
+
+    $this->actingAs($context['developer'])
+        ->get(route('central.tenants.rbac.edit', $context['tenant']))
+        ->assertOk()
+        ->assertSee('Central RBAC')
+        ->assertSee($context['tenant']->name)
+        ->assertSee('Manage offices')
+        ->assertSee('Manage office staff accounts')
+        ->assertSee('Manage queue operations')
+        ->assertSee('Any changes saved here only affect this tenant');
 });
 
 test('central admin can deactivate and reactivate a tenant and notify the tenant admin', function () {
@@ -812,6 +828,37 @@ test('central admin can approve a pending tenant and send credentials', function
     Notification::assertSentTo($admin, TenantCredentialsNotification::class);
 });
 
+test('central admin approval still succeeds when tenant credentials email cannot be sent', function () {
+    /** @var \Tests\TestCase $this */
+    Notification::fake();
+    $context = createManagedTenantForCentralTests();
+
+    $context['tenant']->forceFill([
+        'is_active' => false,
+        'approved_at' => null,
+    ])->save();
+
+    Notification::shouldReceive('send')
+        ->andThrow(new RuntimeException('SMTP unavailable'));
+
+    $this->actingAs($context['developer'])
+        ->patch(route('central.tenants.approve', $context['tenant']))
+        ->assertRedirect(route('central.dashboard'))
+        ->assertSessionHas('info');
+
+    $approvedTenant = $context['tenant']->fresh();
+    expect($approvedTenant->is_active)->toBeTrue();
+    expect($approvedTenant->approved_at)->not->toBeNull();
+
+    app(TenantDatabaseManager::class)->activate($approvedTenant);
+    $admin = User::on('tenant')
+        ->where('tenant_id', $approvedTenant->id)
+        ->where('role', User::ROLE_TENANT_ADMIN)
+        ->firstOrFail();
+
+    expect(Hash::check('temporary-password', $admin->password))->toBeFalse();
+});
+
 test('tenant update validation reopens the correct modal with named errors', function () {
     /** @var \\Tests\\TestCase $this */
     $context = createManagedTenantForCentralTests();
@@ -905,6 +952,3 @@ function createManagedTenantForCentralTests(): array
 
     return compact('developer', 'tenant', 'admin');
 }
-
-
-

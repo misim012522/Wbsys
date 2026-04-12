@@ -19,12 +19,12 @@
         <div class="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
             <h2 class="mb-2 text-xl font-semibold text-slate-800">{{ $office->name }}</h2>
             <div class="inline-block rounded-[1.5rem] border-2 border-slate-200 bg-white p-4 shadow-inner">
-                <img src="{{ route('admin.qr.image', $office) }}" alt="QR code for {{ $office->name }}" class="w-64 h-64" width="256" height="256">
+                <img src="{{ route('admin.qr.image') }}" alt="QR code for {{ $office->name }}" class="w-64 h-64" width="256" height="256">
             </div>
             <p class="mt-4 text-sm font-mono text-slate-500 break-all">{{ route('queue.office', ['slug' => $office->slug]) }}</p>
             <div class="mt-4 flex justify-center gap-3">
                 <a href="{{ route('queue.office', ['slug' => $office->slug]) }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Open public page</a>
-                <a href="{{ route('admin.qr.image', $office) }}" target="_blank" rel="noreferrer" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Open QR image</a>
+                <a href="{{ route('admin.qr.image') }}" target="_blank" rel="noreferrer" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Open QR image</a>
             </div>
         </div>
     </div>

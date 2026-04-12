@@ -144,10 +144,13 @@ class AdminController extends Controller
         return view('admin.qr', compact('office'));
     }
 
-    /** Generate QR code image for an office (URL that end users scan). Uses APP_URL so QR works from any device. */
-    public function qrCodeImage(Office $office): Response
+    /** Generate QR code image for the tenant's default office. Uses APP_URL so QR works from any device. */
+    public function qrCodeImage(): Response
     {
         abort_unless($this->currentTenant()?->getSetting('customization.guest_queue', true) ?? true, 404);
+
+        $office = $this->defaultOffice();
+        abort_unless($office, 404);
 
         $url = $this->qrCodeService->queueOfficeUrl($office->slug);
         $result = $this->qrCodeService->build($url, true);

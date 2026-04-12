@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CentralController;
+use App\Http\Controllers\SupportChatController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,6 +24,12 @@ Route::prefix('central')->name('central.')->middleware('central.public')->group(
 
     Route::middleware(['auth', 'central.user'])->group(function () {
         Route::get('/dashboard', [CentralController::class, 'dashboard'])->name('dashboard');
+        Route::get('/support', [SupportChatController::class, 'centralIndex'])->name('support.index');
+        Route::get('/support/snapshot', [SupportChatController::class, 'centralSnapshot'])->name('support.snapshot');
+        Route::post('/support/announcements', [SupportChatController::class, 'centralStoreAnnouncement'])->name('support.announcements.store');
+        Route::post('/support/threads/{thread}/messages', [SupportChatController::class, 'centralStoreMessage'])->name('support.messages.store');
+        Route::patch('/support/threads/{thread}/status', [SupportChatController::class, 'centralUpdateStatus'])->name('support.status.update');
+        Route::get('/tenants/{tenant}/rbac', [CentralController::class, 'editRbac'])->name('tenants.rbac.edit');
         Route::patch('/tenants/{tenant}/approve', [CentralController::class, 'approve'])->name('tenants.approve');
         Route::patch('/tenants/{tenant}', [CentralController::class, 'update'])->name('tenants.update');
         Route::patch('/tenants/{tenant}/rbac', [CentralController::class, 'updateRbac'])->name('tenants.rbac');

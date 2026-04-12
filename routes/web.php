@@ -6,6 +6,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OtaUpdateController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TenantAccountSettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,10 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     Route::get('/dashboard', [HomeController::class, 'dashboard'])->name('dashboard');
     Route::get('/settings', [TenantAccountSettingsController::class, 'edit'])->name('tenant.settings.edit');
     Route::put('/settings', [TenantAccountSettingsController::class, 'update'])->name('tenant.settings.update');
+    Route::get('/support', [SupportChatController::class, 'tenantIndex'])->name('support.tenant.index');
+    Route::get('/support/snapshot', [SupportChatController::class, 'tenantSnapshot'])->name('support.tenant.snapshot');
+    Route::post('/support/threads', [SupportChatController::class, 'tenantStoreThread'])->name('support.tenant.threads.store');
+    Route::post('/support/threads/{thread}/messages', [SupportChatController::class, 'tenantStoreMessage'])->name('support.tenant.messages.store');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
