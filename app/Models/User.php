@@ -414,10 +414,23 @@ class User extends Authenticatable implements MustVerifyEmail
     public static function officeStaffPermissionStates(?Tenant $tenant): array
     {
         $states = [];
+        $legacyOfficeServe = $tenant?->getSetting('rbac.office_staff.office.serve');
 
         foreach (self::officeStaffPermissionDefinitions() as $slug => $definition) {
             $default = $definition['default'] ?? false;
             $states[$slug] = (bool) ($tenant?->getSetting($definition['setting'], $default) ?? $default);
+        }
+
+        if ($legacyOfficeServe === false) {
+            foreach ([
+                'office.dashboard',
+                'office.qr',
+                'office.queue.manage',
+                'office.appointments.manage',
+                'office.activity.view',
+            ] as $slug) {
+                $states[$slug] = false;
+            }
         }
 
         return $states;

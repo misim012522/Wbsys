@@ -11,7 +11,7 @@
 
 @include('admin._workspace-nav', [
     'title' => 'Daily reports',
-    'description' => 'Review tenant-wide queue and appointment activity for a selected date.',
+    'description' => 'Check queue totals and appointments for a selected date.',
 ])
 
 <form method="GET" action="{{ route('admin.reports') }}" class="mb-8 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -40,20 +40,20 @@
 
 <div class="mb-8 flex flex-wrap gap-3">
     <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'csv']) }}" class="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-        Download CSV
+        CSV
     </a>
     <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'print']) }}" class="inline-flex items-center rounded-2xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-900">
-        Open print view
+        Print
     </a>
 </div>
 
 <div class="grid gap-4 md:grid-cols-3 mb-8">
     <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 shadow-sm">
-        <p class="text-sm text-slate-500">Queue records</p>
+        <p class="text-sm text-slate-500">Queues</p>
         <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $queueTotal }}</p>
     </div>
     <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-sky-50/60 p-5 shadow-sm">
-        <p class="text-sm text-slate-500">Appointment records</p>
+        <p class="text-sm text-slate-500">Appointments</p>
         <p class="mt-2 text-3xl font-bold text-blue-600">{{ $appointmentTotal }}</p>
     </div>
     <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
@@ -62,7 +62,7 @@
     </div>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-800 mb-2">Queue entries ({{ $date }})</h2>
+<h2 class="text-lg font-semibold text-slate-800 mb-2">Queue list</h2>
 <div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
@@ -94,7 +94,7 @@
     </table>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-800 mb-2">Appointments ({{ $date }})</h2>
+<h2 class="text-lg font-semibold text-slate-800 mb-2">Appointment list</h2>
 <div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">

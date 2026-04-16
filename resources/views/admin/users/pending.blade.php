@@ -25,14 +25,14 @@
 @enderror
 
 <div class="mb-6 rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-amber-50/60 p-5 shadow-sm">
-    <p class="text-slate-600">These office staff accounts are waiting for approval. When you confirm an account, the user will receive an email letting them know they can sign in to their office workspace.</p>
+    <p class="text-slate-600">Approve new staff so they can use the queue dashboard.</p>
 </div>
 
 <form method="GET" action="{{ route('admin.users.pending') }}" class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
         <div class="flex-1">
-            <label for="search" class="mb-1 block text-sm font-medium text-slate-700">Search pending staff</label>
-            <input type="text" name="search" id="search" value="{{ $search }}" placeholder="Search by name, username, or email" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500">
+            <label for="search" class="mb-1 block text-sm font-medium text-slate-700">Search staff</label>
+            <input type="text" name="search" id="search" value="{{ $search }}" placeholder="Name, username, or email" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-500">
         </div>
         <div class="w-full lg:w-56">
             <label for="office_id" class="mb-1 block text-sm font-medium text-slate-700">Office</label>
@@ -44,7 +44,7 @@
             </select>
         </div>
         <div class="flex gap-2">
-            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply filters</button>
+            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
             @if($search !== '' || $officeId > 0)
                 <a href="{{ route('admin.users.pending') }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear</a>
             @endif
@@ -54,7 +54,7 @@
 
 <div class="mb-4 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
     <p>
-        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} pending office staff accounts.
+        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} pending staff.
     </p>
     @if($search !== '' || $officeId > 0)
         <p>Filtered results for the current search.</p>
@@ -65,10 +65,7 @@
     <table class="w-full">
         <thead class="bg-slate-50 border-b border-slate-200">
             <tr>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Name</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Role</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Username</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Email</th>
+                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Staff</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Office</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Registered</th>
                 <th class="text-right px-4 py-3 text-sm font-medium text-slate-700">Action</th>
@@ -77,10 +74,11 @@
         <tbody>
             @forelse($users as $user)
                 <tr class="border-b border-slate-100">
-                    <td class="px-4 py-3 text-slate-800 font-medium">{{ $user->name }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ $user->roleLabel() }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ $user->username }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
+                    <td class="px-4 py-3">
+                        <p class="font-medium text-slate-800">{{ $user->name }}</p>
+                        <p class="text-sm text-slate-500">{{ $user->username }}</p>
+                        <p class="text-sm text-slate-500">{{ $user->email }}</p>
+                    </td>
                     <td class="px-4 py-3 text-slate-600">{{ $user->office?->name ?? '-' }}</td>
                     <td class="px-4 py-3 text-slate-600 text-sm">{{ $user->created_at->format('M j, Y g:i A') }}</td>
                     <td class="px-4 py-3 text-right">
@@ -92,7 +90,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="px-4 py-8 text-slate-500 text-center">No pending office staff accounts. New registrations will appear here.</td>
+                    <td colspan="4" class="px-4 py-8 text-slate-500 text-center">No pending staff.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -108,15 +106,26 @@
 <script>
 (function() {
     document.querySelectorAll('[data-admin-action-form]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
+        form.addEventListener('submit', async function (event) {
             var message = form.getAttribute('data-confirm-message');
-            if (message && ! window.confirm(message)) {
-                event.preventDefault();
+            if (event.defaultPrevented) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var confirmed = true;
+            if (message && window.showConfirm) {
+                confirmed = await window.showConfirm(message, { title: 'Confirm action' });
+            }
+
+            if (!confirmed) {
                 return;
             }
 
             var button = form.querySelector('button[type="submit"]');
             if (! button) {
+                form.submit();
                 return;
             }
 
@@ -127,6 +136,8 @@
             if (loadingLabel) {
                 button.textContent = loadingLabel;
             }
+
+            form.submit();
         });
     });
 

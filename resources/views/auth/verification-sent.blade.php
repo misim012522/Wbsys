@@ -3,7 +3,7 @@
 @section('title', 'Verify your email')
 
 @section('content')
-<div class="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 px-4 py-16 sm:px-6">
+<div class="auth-stage flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50">
     <div class="w-full max-w-[480px]">
         {{-- Modal-style popup card --}}
         <div id="verification-modal" class="animate-fade-in rounded-2xl border border-emerald-200 bg-white p-8 shadow-2xl ring-1 ring-emerald-100 sm:p-10 text-center">

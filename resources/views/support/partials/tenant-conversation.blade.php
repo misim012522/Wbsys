@@ -14,13 +14,13 @@
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-50/80">Central support</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-50/80">Support team</p>
                         @if($activeThread->isAnnouncement())
                             <span class="rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white">Announcement</span>
                         @endif
                     </div>
                     <h2 class="mt-1 text-lg font-semibold sm:text-xl">{{ $activeThread->subject }}</h2>
-                    <p class="text-sm text-cyan-50/90">Direct conversation with the central team.</p>
+                    <p class="text-sm text-cyan-50/90">Direct conversation with the support team.</p>
                 </div>
             </div>
             <div class="flex items-center gap-2">
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <div data-chat-scroll class="max-h-[38rem] overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_22%,#ecfeff_100%)] px-4 py-5 sm:px-6">
+    <div data-chat-scroll class="scroll-region max-h-[38rem] overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_22%,#ecfeff_100%)] px-4 py-5 sm:px-6">
         <div class="mx-auto flex max-w-4xl flex-col gap-4">
             <div class="flex justify-center">
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">

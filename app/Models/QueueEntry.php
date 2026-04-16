@@ -33,7 +33,7 @@ class QueueEntry extends Model
     public static function serviceTypeOptions(): array
     {
         return [
-            '' => '— Select —',
+            '' => '- Select -',
             'Transcript' => 'Transcript / Records',
             'Enrollment' => 'Enrollment',
             'Payment' => 'Payment / Fees',
@@ -52,7 +52,7 @@ class QueueEntry extends Model
             return $this->guest_phone;
         }
 
-        return $this->guest_contact ?? '—';
+        return $this->guest_contact ?? '-';
     }
 
     protected function casts(): array

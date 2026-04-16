@@ -3,18 +3,18 @@
 @section('title', ($tenant?->name ?? config('app.name')) . ' - Tenant Workspace')
 
 @section('content')
-<section class="mt-6 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
+<section class="panel mt-2 overflow-hidden">
     <div class="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
-        <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-8 py-10 text-white sm:px-10 sm:py-12">
-            <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">Tenant Workspace</p>
+        <div class="min-w-0 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 px-8 py-10 text-white sm:px-10 sm:py-12">
+            <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-200">Queueing workspace</p>
             <h1 class="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
                 {{ $tenant?->name ?? config('app.name') }}
             </h1>
-            <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+            <p class="mt-4 max-w-2xl text-sm leading-6 text-slate-200 sm:text-base">
                 @if($tenant)
-                    This tenant domain is the dedicated workspace for {{ $tenant->name }}. Tenant admins handle oversight and settings here, while office staff handle live queue and appointment operations from their own workspace pages.
+                    Manage line flow, queue settings, staff, and bookings here.
                 @else
-                    Open this page from a tenant domain to access that tenant's admin oversight pages, office staff workspace, and public service links.
+                    Open this page from a tenant domain.
                 @endif
             </p>
 
@@ -71,20 +71,20 @@
             </div>
         </div>
 
-        <div class="px-8 py-10 sm:px-10 sm:py-12">
+        <div class="min-w-0 px-8 py-10 sm:px-10 sm:py-12">
             <h2 class="text-lg font-semibold text-slate-900">How this tenant is used</h2>
             <div class="mt-6 space-y-4 text-sm leading-7 text-slate-600">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Tenant admin pages</p>
-                    <p class="mt-1">Admin login, dashboard, reports, user management, public access setup, and settings all live inside the tenant workspace domain.</p>
+                    <p class="font-semibold text-slate-900">Admin</p>
+                    <p class="mt-1">Manage settings, reports, and staff.</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Office staff dashboard</p>
-                    <p class="mt-1">Logged-in office staff use the office dashboard inside the same tenant workspace to manage queue calls, appointments, office QR access, reports, and activity.</p>
+                    <p class="font-semibold text-slate-900">Office staff</p>
+                    <p class="mt-1">Call numbers and update the queue.</p>
                 </div>
                 @if($tenant)
                     <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                        <p class="font-semibold text-emerald-900">Dedicated tenant URLs</p>
+                        <p class="font-semibold text-emerald-900">Links</p>
                         <p class="mt-1 text-emerald-800">
                             Dashboard: {{ \App\Support\TenantUrl::dashboard($tenant) }}<br>
                             Settings: {{ \App\Support\TenantUrl::forPath($tenant, '/settings') }}
@@ -92,8 +92,8 @@
                     </div>
                 @endif
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Public external users</p>
-                    <p class="mt-1">Visitors continue using the public QR, queue, and appointment pages without creating or signing in to a tenant workspace account.</p>
+                    <p class="font-semibold text-slate-900">Public users</p>
+                    <p class="mt-1">Get a number, book, and track status.</p>
                 </div>
             </div>
         </div>

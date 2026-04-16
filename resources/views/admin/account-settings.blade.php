@@ -42,13 +42,13 @@
         <p class="mt-3 text-2xl font-bold text-slate-900">{{ $tenant?->plan?->name ?? 'N/A' }}</p>
         <p class="mt-2 text-sm text-slate-600">{{ $subscriptionStatus }}</p>
         <div class="mt-4 inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
-            {{ $subscription?->ends_at?->format('M j, Y') ? 'Ends '.$subscription->ends_at->format('M j, Y') : 'No end date set' }}
+            {{ $subscription?->ends_at?->format('M j, Y') ? 'Ends '.$subscription->ends_at->format('M j, Y') : 'No end date available' }}
         </div>
     </div>
 </div>
 
-<div class="grid gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
-    <div class="space-y-6 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto xl:pr-2">
+<div class="split-page">
+    <div class="min-w-0 space-y-6 xl:pr-2">
         <section class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_45%,_#eef6ff_100%)] p-6">
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Overview</p>
@@ -101,7 +101,7 @@
 
     </div>
 
-    <div class="space-y-6 xl:max-h-[calc(100vh-15rem)] xl:overflow-y-auto xl:pr-2">
+    <div class="min-w-0 space-y-6 xl:pr-2">
         <section class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-slate-50/80 p-6">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Identity</p>

@@ -19,7 +19,7 @@
 
 <div class="mb-8 grid gap-4 lg:grid-cols-2">
     @foreach(($dashboardProfile['admin_cards'] ?? []) as $card)
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="stat-card">
             <p class="text-base font-semibold text-slate-900">{{ $card['title'] }}</p>
             <p class="mt-2 text-sm leading-6 text-slate-600">{{ $card['body'] }}</p>
         </div>
@@ -27,15 +27,15 @@
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500 mb-1">{{ $queueLabel }} today</p>
         <p class="text-3xl font-bold text-emerald-600">{{ $todayQueues }}</p>
     </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500 mb-1">{{ $appointmentLabel }} today</p>
         <p class="text-3xl font-bold text-blue-600">{{ $todayAppointments }}</p>
     </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500 mb-1">Completed today</p>
         <p class="text-3xl font-bold text-slate-700">{{ $completedToday }}</p>
     </div>

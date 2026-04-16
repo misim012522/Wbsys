@@ -110,15 +110,26 @@
 <script>
 (function () {
     document.querySelectorAll('[data-admin-action-form]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
+        form.addEventListener('submit', async function (event) {
             var message = form.getAttribute('data-confirm-message');
-            if (message && ! window.confirm(message)) {
-                event.preventDefault();
+            if (event.defaultPrevented) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var confirmed = true;
+            if (message && window.showConfirm) {
+                confirmed = await window.showConfirm(message, { title: 'Confirm action' });
+            }
+
+            if (!confirmed) {
                 return;
             }
 
             var button = form.querySelector('button[type="submit"]');
             if (! button) {
+                form.submit();
                 return;
             }
 
@@ -129,6 +140,8 @@
             if (loadingLabel) {
                 button.textContent = loadingLabel;
             }
+
+            form.submit();
         });
     });
 })();

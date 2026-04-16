@@ -13,6 +13,7 @@ abstract class TestCase extends BaseTestCase
         if (config('database.default') === 'sqlite') {
             config([
                 'database.connections.central' => config('database.connections.sqlite'),
+                'database.connections.tenant' => config('database.connections.sqlite'),
             ]);
         }
 

@@ -3,7 +3,7 @@
 @section('title', 'Account pending approval')
 
 @section('content')
-<div class="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 px-4 py-16 sm:px-6">
+<div class="auth-stage flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50">
     <div class="w-full max-w-[480px]">
         <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl ring-1 ring-slate-100 sm:p-10 text-center">
             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-6">

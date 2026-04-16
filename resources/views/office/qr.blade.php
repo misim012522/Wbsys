@@ -10,7 +10,7 @@
     $canViewActivity = $viewer?->hasPermission('office.activity.view');
     $canOpenDashboard = $viewer?->hasPermission('office.dashboard');
 @endphp
-<div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+<div class="panel mb-8 overflow-hidden">
     <div class="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_42%,_#eef6ff_100%)] p-6">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
@@ -31,8 +31,8 @@
     </div>
 </div>
 
-<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-    <div class="rounded-[1.75rem] border border-slate-200 bg-white p-8 text-center shadow-sm">
+<div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div class="panel p-6 text-center sm:p-8">
         <div class="inline-block rounded-[1.5rem] border-2 border-slate-200 bg-white p-4 shadow-inner">
             <img id="qr-image" src="{{ $qrImageUrl }}" alt="QR code for {{ $office->name }}" class="h-64 w-64" width="256" height="256">
         </div>
@@ -68,7 +68,7 @@
     </div>
 
     <div class="space-y-5">
-        <div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+        <div class="panel overflow-hidden">
             <div class="border-b border-slate-200 bg-slate-50/80 p-5">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">QR workflow</p>
                 <h2 class="mt-2 text-xl font-bold text-slate-900">How office staff uses this</h2>
@@ -90,7 +90,7 @@
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+        <div class="panel overflow-hidden">
             <div class="border-b border-slate-200 bg-slate-50/80 p-5">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Connected links</p>
                 <h2 class="mt-2 text-xl font-bold text-slate-900">Office QR tools</h2>

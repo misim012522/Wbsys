@@ -22,16 +22,17 @@
     </style>
 </head>
 <body
-    class="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased"
+    class="min-h-screen overflow-x-clip bg-slate-100 text-slate-900 font-sans antialiased"
     @if(session('success')) data-success-message="{{ session('success') }}" @endif
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
     @if(session('status')) data-status-message="{{ session('status') }}" @endif
+    @if(auth()->check() && app()->bound('current_tenant') && ! request()->routeIs('login')) data-tenant-session-monitor-url="{{ route('api.session.tenant-status') }}" @endif
 >
     <div id="toast-container"></div>
 
-    <header class="bg-white border-b border-slate-200 shadow-sm">
-        <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <header class="border-b border-slate-200/90 bg-white/95 shadow-sm backdrop-blur">
+        <nav class="app-header-shell">
             @php
                 $brandName = $tenantTheme['app_name'];
                 $brandLogo = $tenantTheme['logo_url'];
@@ -40,17 +41,17 @@
 
             @if($showAuthenticatedHeader)
                 <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
-                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-9 w-auto shrink-0">@endif
                     {{ $brandName }}
                 </a>
             @else
                 <a href="{{ app()->bound('current_tenant') ? route('tenant.home') : route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
-                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-8">@endif
+                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-9 w-auto shrink-0">@endif
                     {{ $brandName }}
                 </a>
             @endif
 
-            <div class="flex items-center gap-4">
+            <div class="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
                 @if($showAuthenticatedHeader)
                     @unless($tenantWorkspace && auth()->user()->isAdmin())
                         <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-sm text-slate-600 hover:text-slate-900">
@@ -84,7 +85,7 @@
                 @else
                     @if(app()->bound('current_tenant') && ! request()->routeIs('login'))
                         <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>
-                        <a href="{{ route('tenant.home') }}" class="text-sm font-medium text-white tenant-primary-bg px-4 py-2 rounded-lg">Tenant workspace</a>
+                        <a href="{{ route('tenant.home') }}" class="rounded-full px-4 py-2 text-sm font-medium text-white tenant-primary-bg">Tenant workspace</a>
                     @endif
                 @endif
             </div>
@@ -106,7 +107,7 @@
         @endif
     </div>
 
-    <div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="app-shell">
         @yield('content')
     </div>
 

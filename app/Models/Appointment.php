@@ -32,7 +32,7 @@ class Appointment extends Model
     public static function appointmentTypeOptions(): array
     {
         return [
-            '' => '— Select —',
+            '' => '- Select -',
             'Transcript' => 'Transcript / Records',
             'Enrollment' => 'Enrollment',
             'Payment' => 'Payment / Fees',
@@ -51,7 +51,7 @@ class Appointment extends Model
             return $this->guest_phone;
         }
 
-        return $this->guest_contact ?? '—';
+        return $this->guest_contact ?? '-';
     }
 
     protected function casts(): array

@@ -3,7 +3,7 @@
 @section('title', 'Log in')
 
 @section('content')
-<div class="-mx-4 -my-8 min-h-[calc(100vh-4rem)] bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_24%),linear-gradient(180deg,_#f7faf9_0%,_#eef4f2_100%)] px-4 py-10 sm:px-6 sm:py-14">
+<div class="auth-stage bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_24%),linear-gradient(180deg,_#f7faf9_0%,_#eef4f2_100%)]">
     <div class="mx-auto w-full max-w-xl">
         <section class="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
             <div class="mx-auto max-w-[450px]">

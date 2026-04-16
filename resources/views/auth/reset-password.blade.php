@@ -3,7 +3,7 @@
 @section('title', 'Reset password')
 
 @section('content')
-<div class="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 px-4 py-16 sm:px-6">
+<div class="auth-stage flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50">
     <div class="w-full max-w-[420px]">
         <div class="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 sm:p-10">
             <div class="mb-6 text-center">

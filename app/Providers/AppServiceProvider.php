@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\SupportThread;
+use App\Models\TenantSubscription;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -22,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        try {
+            TenantSubscription::backfillMissingMonthlyEndDates();
+            TenantSubscription::expirePastDue();
+        } catch (\Throwable) {
+            // Ignore expiry sync failures during boot so the app can still render.
+        }
+
         View::composer('*', function ($view) {
             if (array_key_exists('tenantTheme', $view->getData())) {
                 return;

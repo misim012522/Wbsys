@@ -20,24 +20,20 @@
     $supportUnreadCount = \App\Models\SupportThread::unreadCountForTenant($tenant?->id);
 @endphp
 
-<div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-    <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Workspace dashboard</p>
-        <h1 class="mt-2 text-3xl font-bold text-slate-900">{{ $workspaceName }}</h1>
-        <p class="mt-3 max-w-2xl text-sm text-slate-600">
-            Signed in as {{ $roleLabel }}.
-            @if($workspaceHost)
-                This dashboard belongs to <span class="font-semibold text-slate-800">{{ $workspaceHost }}</span>.
-            @endif
-        </p>
-        <p class="mt-2 text-sm text-slate-500">{{ $dashboardProfile['headline'] }}</p>
-    </div>
+<div class="panel mb-8 overflow-hidden">
+    <div class="panel-section">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Queueing workspace</p>
+                <h1 class="mt-2 text-3xl font-bold text-slate-900">{{ $workspaceName }}</h1>
+                <p class="mt-3 max-w-2xl text-sm text-slate-600">See today’s line, bookings, and queue tools.</p>
+            </div>
 
-    <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2">
         @if($user->isAdmin())
             <a href="{{ route('admin.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open admin dashboard</a>
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             <a href="{{ route('admin.users.pending') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Pending office staff</a>
             @if($appointmentsEnabled || $queueEnabled)
                 <a href="{{ route('admin.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Reports</a>
@@ -47,7 +43,7 @@
                 <a href="{{ route('office.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open office dashboard</a>
             @endif
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             @if($queueEnabled && $canUseOfficeQr)
                 <a href="{{ route('office.qr') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Office QR access</a>
             @endif
@@ -57,25 +53,27 @@
         @else
             <a href="{{ route('tenant.home') }}" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Workspace home</a>
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
-            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support and updates{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
+            <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
         @endif
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+<div class="stats-grid">
+    <div class="stat-card">
         <p class="text-sm text-slate-500">{{ $queueLabel }} today</p>
         <p class="mt-3 text-3xl font-bold text-emerald-600">{{ $summary['active_queue'] }}</p>
     </div>
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500">{{ $appointmentLabel }} today</p>
         <p class="mt-3 text-3xl font-bold text-blue-600">{{ $summary['today_appointments'] }}</p>
     </div>
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500">Completed today</p>
         <p class="mt-3 text-3xl font-bold text-slate-800">{{ $summary['completed_today'] }}</p>
     </div>
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="stat-card">
         <p class="text-sm text-slate-500">{{ $user->isAdmin() ? 'Pending office staff' : 'Now serving' }}</p>
         <p class="mt-3 text-2xl font-bold text-slate-800">
             @if($user->isAdmin())
@@ -93,60 +91,43 @@
 </div>
 
 <div class="mt-8 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
-    <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold text-slate-900">{{ $dashboardProfile['name'] }}</h2>
-        <p class="mt-2 text-sm text-slate-600">
-            This workspace follows the settings configured for {{ $workspaceName }}. Labels, branding, and enabled sections can differ per tenant.
-        </p>
-        <p class="mt-2 text-sm text-slate-500">
-            {{ $user->isAdmin() ? $dashboardProfile['admin_focus'] : $dashboardProfile['office_focus'] }}
-        </p>
+    <section class="panel panel-section">
+        <h2 class="text-lg font-semibold text-slate-900">Quick access</h2>
+        <p class="mt-2 text-sm text-slate-500">Open the page you need.</p>
 
         <div class="mt-5 grid gap-3 sm:grid-cols-2">
             @if($user->isAdmin())
                 <a href="{{ route('admin.dashboard') }}" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 hover:bg-emerald-100">
                     <p class="font-semibold">Admin controls</p>
-                    <p class="mt-1 text-emerald-800">Approvals, reports, customization, and {{ strtolower($officeLabel) }} staff management.</p>
+                    <p class="mt-1 text-emerald-800">Manage queue settings, reports, and staff.</p>
                 </a>
                 <a href="{{ route('admin.users.index') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 hover:bg-slate-100">
                     <p class="font-semibold">Office staff accounts</p>
-                    <p class="mt-1 text-slate-600">Review approved, pending, and archived internal users.</p>
+                    <p class="mt-1 text-slate-600">Approve or manage staff.</p>
                 </a>
-                @foreach($dashboardProfile['admin_cards'] as $card)
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-                        <p class="font-semibold">{{ $card['title'] }}</p>
-                        <p class="mt-1 text-slate-600">{{ $card['body'] }}</p>
-                    </div>
-                @endforeach
             @elseif($user->isOfficeStaff())
                 @if($canOpenOfficeDashboard)
                     <a href="{{ route('office.dashboard') }}" class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 hover:bg-emerald-100">
-                        <p class="font-semibold">{{ $officeLabel }} operations</p>
-                        <p class="mt-1 text-emerald-800">Manage {{ strtolower($queueLabel) }}, {{ strtolower($appointmentLabel) }} schedules, and status updates for this tenant.</p>
+                        <p class="font-semibold">Live queue</p>
+                        <p class="mt-1 text-emerald-800">Call, serve, complete, and update the line.</p>
                     </a>
                 @endif
                 @if($canViewOfficeReports && ($appointmentsEnabled || $queueEnabled))
                     <a href="{{ route('office.reports') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 hover:bg-slate-100">
-                        <p class="font-semibold">Reports and activity</p>
-                        <p class="mt-1 text-slate-600">Open reports and review daily {{ strtolower($officeLabel) }} activity for this tenant.</p>
+                        <p class="font-semibold">Reports</p>
+                        <p class="mt-1 text-slate-600">Check queue and booking totals.</p>
                     </a>
                 @endif
-                @foreach($dashboardProfile['office_cards'] as $card)
-                    <div class="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-                        <p class="font-semibold">{{ $card['title'] }}</p>
-                        <p class="mt-1 text-slate-600">{{ $card['body'] }}</p>
-                    </div>
-                @endforeach
             @else
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 sm:col-span-2">
-                    This account no longer maps to an active internal dashboard. Return to the tenant workspace home for guidance.
+                    Return to the workspace home page.
                 </div>
             @endif
         </div>
     </section>
 
-    <aside class="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-sm">
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Tenant context</p>
+    <aside class="rounded-[1.75rem] border border-slate-800 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">Workspace</p>
         <h2 class="mt-2 text-xl font-semibold">{{ $workspaceName }}</h2>
         <dl class="mt-5 space-y-3 text-sm text-slate-200">
             <div>

@@ -25,7 +25,7 @@
             </div>
         </div>
 
-        <div class="h-[30rem] overflow-y-auto bg-slate-50/60 px-6 py-5">
+        <div class="scroll-region h-[30rem] overflow-y-auto bg-slate-50/60 px-6 py-5">
             <div class="space-y-4">
                 @foreach($activeThread->messages as $message)
                     @php

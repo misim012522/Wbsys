@@ -26,42 +26,18 @@
         </div>
     @endif
 
-    <section class="space-y-5">
-        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Send announcement</p>
-            <form method="POST" action="{{ route('central.support.announcements.store') }}" class="mt-4 space-y-4">
-                @csrf
-                <div>
-                    <label for="announcement_tenant_id" class="block text-sm font-medium text-slate-700">Tenant</label>
-                    <select id="announcement_tenant_id" name="tenant_id" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20">
-                        @foreach($tenants as $tenant)
-                            <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label for="announcement_subject" class="block text-sm font-medium text-slate-700">Subject</label>
-                    <input id="announcement_subject" name="subject" type="text" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20" placeholder="Example: Scheduled update tonight">
-                </div>
-                <div>
-                    <label for="announcement_message" class="block text-sm font-medium text-slate-700">Announcement message</label>
-                    <textarea id="announcement_message" name="message" rows="4" class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 focus:border-sky-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20" placeholder="Send an update or important announcement to a tenant."></textarea>
-                </div>
-                <button type="submit" class="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60" {{ ($supportReady ?? true) ? '' : 'disabled' }}>Send announcement</button>
-            </form>
-        </div>
-
+    <section class="min-w-0">
         <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 px-6 py-4">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">All tenant threads</p>
         </div>
-        <div id="central-support-thread-list" class="max-h-[42rem] overflow-y-auto p-4">
+        <div id="central-support-thread-list" class="scroll-region max-h-[42rem] overflow-y-auto p-4">
             @include('support.partials.central-thread-list', ['threads' => $threads, 'activeThread' => $activeThread])
         </div>
         </section>
     </section>
 
-    <section class="flex min-h-[46rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section class="min-w-0 flex min-h-[36rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm xl:min-h-[46rem]">
         <div id="central-support-conversation" class="min-h-0 flex-1">
             @include('support.partials.central-conversation', ['activeThread' => $activeThread])
         </div>

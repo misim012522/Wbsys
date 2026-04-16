@@ -21,6 +21,7 @@ use App\Support\CentralPricing;
 use App\Support\TenantDashboardProfile;
 use App\Support\TenantDatabaseName;
 use App\Support\TenantWorkspaceUrlValidator;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -225,7 +226,6 @@ class CentralController extends Controller
                 TenantSubscription::STATUS_TRIALING,
             ])],
             'starts_at' => ['required', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
 
         if ($validator->fails()) {
@@ -236,6 +236,7 @@ class CentralController extends Controller
         }
 
         $validated = $validator->validated();
+        $startsAt = Carbon::parse($validated['starts_at']);
 
         $plan = Plan::active()->findOrFail($validated['plan_id']);
         $subscription = $tenant->subscriptions()->latest('id')->first() ?? new TenantSubscription(['tenant_id' => $tenant->id]);
@@ -243,8 +244,8 @@ class CentralController extends Controller
         $subscription->fill([
             'plan_id' => $plan->id,
             'status' => $validated['status'],
-            'starts_at' => $validated['starts_at'],
-            'ends_at' => $validated['ends_at'] ?: null,
+            'starts_at' => $startsAt,
+            'ends_at' => TenantSubscription::calculateMonthlyEndAt($startsAt),
         ]);
         $subscription->save();
 
@@ -387,6 +388,7 @@ class CentralController extends Controller
                     'tenant_id' => $tenant->id,
                     'plan_id' => $plan->id,
                     'starts_at' => $tenant->created_at ?? now(),
+                    'ends_at' => TenantSubscription::calculateMonthlyEndAt(($tenant->created_at ?? now())->copy()),
                     'status' => TenantSubscription::STATUS_ACTIVE,
                 ]);
             });

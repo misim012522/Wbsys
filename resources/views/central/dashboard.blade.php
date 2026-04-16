@@ -11,16 +11,14 @@
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                    Central App
+                    Queueing system
                 </span>
-                <h1 class="mt-4 text-3xl font-bold text-slate-900">Central dashboard</h1>
-                <p class="mt-2 max-w-3xl text-sm text-slate-600">
-                    View all registered tenants, confirm each tenant domain, and monitor subscription details from the central system.
-                </p>
+                <h1 class="mt-4 text-3xl font-bold text-slate-900">Tenant queue workspaces</h1>
+                <p class="mt-2 max-w-3xl text-sm text-slate-600">Approve tenants, check workspace status, and manage access.</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <a href="{{ route('central.support.index') }}" class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-semibold text-sky-700 transition hover:bg-sky-100">
-                    Support inbox{{ $centralSupportUnreadCount ? ' ('.$centralSupportUnreadCount.')' : '' }}
+                    Support{{ $centralSupportUnreadCount ? ' ('.$centralSupportUnreadCount.')' : '' }}
                 </a>
             </div>
         </div>
@@ -28,27 +26,30 @@
 
     <div class="grid gap-4 md:grid-cols-3">
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p class="text-sm text-slate-500">Tenants</p>
+            <p class="text-sm text-slate-500">Workspaces</p>
             <p class="mt-2 text-3xl font-bold text-slate-900">{{ $tenantCount }}</p>
             <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">{{ $activeTenantCount }} active</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p class="text-sm text-slate-500">Plans</p>
             <p class="mt-2 text-3xl font-bold text-slate-900">{{ $planCount }}</p>
-            <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Available for onboarding</p>
+            <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Subscription plans</p>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <p class="text-sm text-slate-500">Subscriptions</p>
             <p class="mt-2 text-3xl font-bold text-slate-900">{{ $subscriptionCount }}</p>
-            <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Tracked centrally</p>
+            <p class="mt-1 text-xs uppercase tracking-wide text-slate-400">Active records</p>
         </div>
     </div>
 
     <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
-        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            New tenant registrations stay pending until approved in this dashboard. Approving a tenant activates their workspace and sends credentials by email.
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Approve new workspaces before they can run their queue.
+            </div>
+            <p class="text-sm text-slate-500">{{ $tenants->count() }} workspaces listed</p>
         </div>
-        <div class="overflow-x-auto rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#ffffff_12%)] p-3">
+        <div class="scroll-region-x overflow-x-auto rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#ffffff_12%)] p-3">
             <table class="min-w-[112rem] border-separate border-spacing-y-3 text-sm">
                 <thead>
                     <tr class="text-left text-slate-500">
@@ -404,7 +405,7 @@
         </div>
     </div>
 
-    <div id="tenant-rbac-modal-{{ $tenant->id }}" data-dashboard-modal class="fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-6">
+    <div id="tenant-rbac-modal-{{ $tenant->id }}" data-dashboard-modal class="scroll-region fixed inset-0 z-50 hidden items-start justify-center overflow-y-auto bg-slate-950/60 px-3 py-4 sm:px-4 sm:py-6">
         <div class="w-full max-w-[56rem] rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-2xl sm:p-5 lg:p-6">
             <div class="flex items-start justify-between gap-4">
                 <div>
@@ -507,7 +508,7 @@
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Step 3</p>
                     <h2 class="mt-2 text-2xl font-bold text-slate-900">Update subscription</h2>
-                    <p class="mt-2 text-sm text-slate-500">Change the tenant plan, lifecycle status, and effective dates from the central dashboard.</p>
+                    <p class="mt-2 text-sm text-slate-500">Change the tenant plan, lifecycle status, and monthly billing start date from the central dashboard.</p>
                 </div>
                 <button type="button" data-modal-close class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Close dialog">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18 18 6M6 6l12 12" /></svg>
@@ -552,17 +553,10 @@
                             <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('starts_at') }}</p>
                         @endif
                     </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Ends at</label>
-                        <input type="datetime-local" name="ends_at" value="{{ $isTenantSubscriptionModalOpen ? old('ends_at', optional($latestSubscription?->ends_at)->format('Y-m-d\\TH:i')) : optional($latestSubscription?->ends_at)->format('Y-m-d\\TH:i') }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantSubscriptionErrorBag}->has('ends_at') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
-                        @if($errors->{$tenantSubscriptionErrorBag}->has('ends_at'))
-                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantSubscriptionErrorBag}->first('ends_at') }}</p>
-                        @endif
-                    </div>
                 </div>
 
                 <div class="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-800">
-                    Saving this also syncs the tenant's current assigned plan and sends a tenant admin notification when email delivery is available.
+                    End date is automatic for monthly plans and will be set to one month after the selected start date. Saving this also syncs the tenant's current assigned plan and sends a tenant admin notification when email delivery is available.
                 </div>
 
                 <div class="mt-6 flex items-center justify-between gap-3">

@@ -14,13 +14,13 @@
     >
         <div
             id="tenant-chat-panel"
-            class="hidden absolute bottom-20 right-0 w-[min(92vw,24rem)] overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)]"
+            class="hidden absolute bottom-20 right-0 flex h-[min(42rem,calc(100vh-7.5rem))] w-[min(92vw,24rem)] flex-col overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)]"
         >
             <div class="bg-gradient-to-r from-cyan-500 via-sky-500 to-teal-400 px-5 py-4 text-white">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-50/80">Central chat</p>
-                        <h2 class="mt-1 text-lg font-semibold">Message central</h2>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-50/80">Support chat</p>
+                        <h2 class="mt-1 text-lg font-semibold">Message support</h2>
                         <p class="mt-1 text-xs leading-5 text-cyan-50/90">Quick support chat for your tenant workspace.</p>
                     </div>
                     <button
@@ -40,7 +40,7 @@
                 </div>
             @else
                 <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                    <div class="flex gap-2 overflow-x-auto pb-1">
+                    <div class="scroll-region-x flex gap-2 overflow-x-auto pb-1">
                         @forelse($widgetThreads->take(6) as $thread)
                             <a
                                 href="{{ request()->fullUrlWithQuery(['support_thread' => $thread->id, 'support_open' => 1]) }}"
@@ -55,7 +55,7 @@
                 </div>
 
                 @if($activeThread)
-                    <div class="max-h-[22rem] overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_35%,#ecfeff_100%)] px-4 py-4">
+                    <div class="scroll-region min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_35%,#ecfeff_100%)] px-4 py-4">
                         <div class="space-y-3">
                             @foreach($activeThread->messages as $message)
                                 @php($isTenantSender = $message->sender_type === \App\Models\SupportMessage::SENDER_TENANT)
@@ -77,10 +77,10 @@
                     </div>
 
                     <div class="border-t border-slate-200 bg-white px-4 py-3">
-                        <form method="POST" action="{{ route('support.tenant.messages.store', $activeThread) }}" class="flex items-end gap-2">
+                        <form method="POST" action="{{ route('support.tenant.messages.store', $activeThread) }}" class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
                             @csrf
                             <input type="hidden" name="_support_widget" value="1">
-                            <textarea name="message" rows="2" class="w-full resize-none rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20" placeholder="Write a message to central..."></textarea>
+                            <textarea name="message" rows="2" class="min-w-0 w-full resize-none rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20" placeholder="Write a message to central..."></textarea>
                             <button type="submit" class="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-cyan-500 px-4 text-sm font-semibold text-white transition hover:bg-cyan-600">Send</button>
                         </form>
                     </div>

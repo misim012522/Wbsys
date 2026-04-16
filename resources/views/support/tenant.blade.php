@@ -27,7 +27,7 @@
         </div>
     @endif
 
-    <section class="overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_20px_60px_rgba(14,116,144,0.08)]">
+    <section class="min-w-0 overflow-hidden rounded-[2rem] border border-cyan-100 bg-white shadow-[0_20px_60px_rgba(14,116,144,0.08)]">
         <div class="bg-gradient-to-r from-cyan-500 via-sky-500 to-teal-400 px-6 py-6 text-white">
             <p class="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-50/80">New conversation</p>
             <h2 class="mt-2 text-xl font-semibold">Message the central team</h2>
@@ -60,14 +60,14 @@
                 <div class="border-b border-slate-200 px-5 py-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your threads</p>
                 </div>
-                <div id="tenant-support-thread-list" class="max-h-[34rem] overflow-y-auto p-4">
+                <div id="tenant-support-thread-list" class="scroll-region max-h-[34rem] overflow-y-auto p-4">
                     @include('support.partials.tenant-thread-list', ['threads' => $threads, 'activeThread' => $activeThread])
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
+    <section class="min-w-0 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.10)]">
         <div id="tenant-support-conversation">
             @include('support.partials.tenant-conversation', ['activeThread' => $activeThread])
         </div>

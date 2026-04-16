@@ -14,7 +14,7 @@
     @stack('styles')
 </head>
 <body
-    class="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased"
+    class="min-h-screen overflow-x-clip bg-slate-100 text-slate-900 font-sans antialiased"
     @if(session('success')) data-success-message="{{ session('success') }}" @endif
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
@@ -25,8 +25,8 @@
     @hasSection('public_full_width')
         @yield('content')
     @else
-        <div class="max-w-lg mx-auto px-4 py-8">
-            <a href="{{ url('/') }}" class="text-sm text-slate-500 hover:text-slate-700">&#8592; {{ isset($custom) ? $custom['app_name'] : config('app.name') }}</a>
+        <div class="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            <a href="{{ url('/') }}" class="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-700">&#8592; {{ isset($custom) ? $custom['app_name'] : config('app.name') }}</a>
             <div style="display: none;">
                 @if (session('success'))
                     <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{{ session('success') }}</div>
@@ -35,7 +35,9 @@
                     <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{{ session('error') }}</div>
                 @endif
             </div>
-            @yield('content')
+            <div class="mt-4">
+                @yield('content')
+            </div>
         </div>
     @endif
 </body>

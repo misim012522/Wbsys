@@ -485,12 +485,16 @@ test('office staff login still lands on an allowed tenant page when live operati
 
     expect($location)->toStartWith('http://acme.localhost/auth/continue?token=');
 
+    $continuePath = parse_url($location, PHP_URL_PATH) ?: '/auth/continue';
+    $continueQuery = parse_url($location, PHP_URL_QUERY);
+
     $this->withHeader('Host', 'acme.localhost')
-        ->get($location)
+        ->withServerVariables(loginTenantHost())
+        ->get($continuePath.($continueQuery ? '?'.$continueQuery : ''))
         ->assertRedirect(route('tenant.settings.edit'));
 });
 
-test('authenticated office staff visiting the tenant login page gets a direct handoff to the office dashboard', function () {
+test('authenticated office staff visiting the tenant login page still sees the workspace login form', function () {
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
@@ -532,8 +536,9 @@ test('authenticated office staff visiting the tenant login page gets a direct ha
         ->get('/login');
 
     $response->assertOk()
-        ->assertSee(route('office.dashboard'), false)
-        ->assertSee('Redirecting...');
+        ->assertSee('Sign in to continue')
+        ->assertSee('Log in')
+        ->assertDontSee('Redirecting...');
 
     $this->assertAuthenticated();
     $this->assertAuthenticatedAs($staff);

@@ -5,8 +5,8 @@
     $supportUnreadCount = \App\Models\SupportThread::unreadCountForTenant($tenant?->id);
 @endphp
 
-<div class="mb-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-    <div class="p-6">
+<div class="panel mb-6 overflow-hidden">
+    <div class="panel-section">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Tenant admin workspace</p>
@@ -33,7 +33,7 @@
         </div>
     </div>
 
-    <div class="border-t border-slate-200 bg-slate-50/60 px-6 py-4">
+    <div class="border-t border-slate-200 bg-slate-50/70 px-5 py-4 sm:px-6">
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('admin.dashboard') }}" class="rounded-lg px-3.5 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' }}">Dashboard</a>
             @if($viewer?->hasPermission('users.manage'))

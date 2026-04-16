@@ -3,7 +3,7 @@
 @section('title', 'Create your account')
 
 @section('content')
-<div class="-mx-4 -my-8 flex min-h-[calc(100vh-4rem)] items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50 px-4 py-12 sm:px-6">
+<div class="auth-stage flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-sky-50">
     <div class="w-full max-w-[440px]">
         <div class="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-100 sm:p-10">
             <div class="mb-6 text-center">
@@ -17,7 +17,14 @@
             </div>
 
             <h1 class="text-2xl font-bold text-slate-800">Create your account</h1>
-            <p class="mt-1 text-sm text-slate-500">For tenant staff. Select your office to manage queues, QR codes, and appointments.</p>
+            <p class="mt-1 text-sm text-slate-500">
+                For tenant staff.
+                @if(isset($tenant) && $tenant)
+                    This account will be created inside the <span class="font-medium text-slate-700">{{ $tenant->name }}</span> workspace.
+                @else
+                    Select your office to manage queues, QR codes, and appointments.
+                @endif
+            </p>
 
             <form method="POST" action="{{ route('register') }}" class="mt-6 space-y-4">
                 @csrf
@@ -64,20 +71,32 @@
                             placeholder="Confirm password">
                     </div>
                 </div>
-                <div>
-                    <label for="office_id" class="block text-sm font-medium text-slate-700 mb-1.5">Your office <span class="text-red-500">*</span></label>
-                    <select name="office_id" id="office_id" required
-                        class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
-                        <option value="">Select your office</option>
-                        @foreach($offices as $office)
-                            <option value="{{ $office->id }}" {{ old('office_id') == $office->id ? 'selected' : '' }}>{{ $office->name }}</option>
-                        @endforeach
-                    </select>
-                    @if($offices->isEmpty())
-                        <p class="mt-1.5 text-sm text-amber-600">No offices available yet. Ask your administrator to add offices first.</p>
-                    @endif
-                    @error('office_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
-                </div>
+                @if(isset($selectedOffice) && $selectedOffice)
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1.5">Assigned office</label>
+                        <input type="hidden" name="office_id" value="{{ $selectedOffice->id }}">
+                        <div class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900">
+                            {{ $selectedOffice->name }}
+                        </div>
+                        <p class="mt-1.5 text-xs text-slate-500">This is automatically assigned from the current workspace domain.</p>
+                        @error('office_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                @else
+                    <div>
+                        <label for="office_id" class="block text-sm font-medium text-slate-700 mb-1.5">Your office <span class="text-red-500">*</span></label>
+                        <select name="office_id" id="office_id" required
+                            class="w-full rounded-xl border border-slate-300 bg-slate-50/50 px-4 py-3 text-slate-900 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                            <option value="">Select your office</option>
+                            @foreach($offices as $office)
+                                <option value="{{ $office->id }}" {{ old('office_id') == $office->id ? 'selected' : '' }}>{{ $office->name }}</option>
+                            @endforeach
+                        </select>
+                        @if($offices->isEmpty())
+                            <p class="mt-1.5 text-sm text-amber-600">No offices available yet. Ask your administrator to add offices first.</p>
+                        @endif
+                        @error('office_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                @endif
                 <button type="submit"
                     class="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-700 hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-[0.99]">
                     Create account

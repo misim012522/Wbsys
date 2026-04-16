@@ -47,7 +47,8 @@
         <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tenant summary</p>
             <h2 class="mt-2 text-xl font-bold text-slate-900">{{ $tenant?->name ?? 'Workspace' }}</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Each tenant keeps a separate RBAC setup, so changes on this page stay scoped to this workspace only.</p>
+            <p class="mt-2 text-sm leading-6 text-slate-600">Any changes saved here only affect this tenant.</p>
+            <p class="mt-1 text-sm leading-6 text-slate-600">Each tenant keeps a separate RBAC setup, so changes on this page stay scoped to this workspace only.</p>
             <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace host</p>
@@ -117,7 +118,7 @@
                             <p class="mt-2 text-sm leading-6 text-slate-600">Choose which admin workspace features remain available for tenant administrators.</p>
                         </div>
 
-                        <div class="max-h-[32rem] space-y-4 overflow-y-auto p-5 pr-3">
+                        <div class="scroll-region max-h-[32rem] space-y-4 overflow-y-auto p-5 pr-3">
                             @foreach($tenantAdminPermissionDefinitions as $slug => $definition)
                                 @php
                                     $enabled = $tenantAdminPermissions[$slug] ?? false;
@@ -150,7 +151,7 @@
                             <p class="mt-2 text-sm leading-6 text-slate-600">Choose what office staff can access in their workspace.</p>
                         </div>
 
-                        <div class="max-h-[32rem] space-y-4 overflow-y-auto p-5 pr-3">
+                        <div class="scroll-region max-h-[32rem] space-y-4 overflow-y-auto p-5 pr-3">
                             @foreach($permissionDefinitions as $slug => $definition)
                                 @php
                                     $enabled = $officeStaffPermissions[$slug] ?? false;

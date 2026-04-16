@@ -396,7 +396,7 @@ test('office staff qr page includes the full office qr toolkit', function () {
         ->withServerVariables(tenantHost())
         ->get(route('office.qr.image'))
         ->assertOk()
-        ->assertHeader('Content-Type', 'image/svg+xml');
+        ->assertHeader('Content-Type', 'image/png');
 
     $this->actingAs($staff)
         ->withServerVariables(tenantHost())

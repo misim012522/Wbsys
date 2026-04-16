@@ -8,6 +8,7 @@ use App\Models\Office;
 use App\Models\OfficeSchedule;
 use App\Models\QueueEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PublicController extends Controller
@@ -50,6 +51,10 @@ class PublicController extends Controller
             return back()->with('error', 'This office is not accepting queue numbers.');
         }
 
+        if (! $this->guestQueueEnabled($office)) {
+            return back()->with('error', 'This office is not accepting queue numbers right now.');
+        }
+
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
             'guest_email' => ['nullable', 'email', 'max:255'],
@@ -65,41 +70,50 @@ class PublicController extends Controller
         }
 
         $today = today();
-        $count = $office->queueEntries()
-            ->where('queue_date', $today)
-            ->count();
-        $nextNumber = $count + 1;
+        $entry = DB::transaction(function () use ($office, $today, $validated) {
+            $currentMax = QueueEntry::query()
+                ->where('office_id', $office->id)
+                ->where('queue_date', $today)
+                ->lockForUpdate()
+                ->max('queue_number') ?? 0;
 
-        if ($nextNumber > $office->max_daily_queue) {
+            $nextNumber = $currentMax + 1;
+
+            if ($nextNumber > $office->max_daily_queue) {
+                return null;
+            }
+
+            return QueueEntry::create([
+                'tenant_id' => $office->tenant_id,
+                'office_id' => $office->id,
+                'user_id' => null,
+                'guest_name' => $validated['guest_name'],
+                'guest_email' => $validated['guest_email'] ?? null,
+                'guest_phone' => $validated['guest_phone'] ?? null,
+                'service_type' => $validated['service_type'] ?? null,
+                'queue_number' => $nextNumber,
+                'queue_date' => $today,
+                'status' => QueueEntry::STATUS_WAITING,
+                'reference_code' => $this->generateUniqueReferenceCode(QueueEntry::class),
+            ]);
+        });
+
+        if (! $entry) {
             return back()->with('error', 'Daily queue limit reached for this office.');
         }
-
-        $entry = QueueEntry::create([
-            'tenant_id' => $office->tenant_id,
-            'office_id' => $office->id,
-            'user_id' => null,
-            'guest_name' => $validated['guest_name'],
-            'guest_email' => $validated['guest_email'] ?? null,
-            'guest_phone' => $validated['guest_phone'] ?? null,
-            'service_type' => $validated['service_type'] ?? null,
-            'queue_number' => $nextNumber,
-            'queue_date' => $today,
-            'status' => QueueEntry::STATUS_WAITING,
-            'reference_code' => strtoupper(Str::random(8)),
-        ]);
 
         ActivityLog::log(
             $office->id,
             'queue_joined',
-            $validated['guest_name'].' joined the queue as #'.$nextNumber,
+            $validated['guest_name'].' joined the queue as #'.$entry->queue_number,
             null,
             QueueEntry::class,
             $entry->id,
-            ['queue_number' => $nextNumber, 'guest_name' => $validated['guest_name'], 'service_type' => $validated['service_type'] ?? null]
+            ['queue_number' => $entry->queue_number, 'guest_name' => $validated['guest_name'], 'service_type' => $validated['service_type'] ?? null]
         );
 
         return redirect()->route('queue.track', ['referenceCode' => $entry->reference_code])
-            ->with('success', "You are #{$nextNumber} in line. Save your reference code to track your position.");
+            ->with('success', "You are #{$entry->queue_number} in line. Save your reference code to track your position.");
     }
 
     /** Public queue tracker by reference code (no login). */
@@ -152,6 +166,10 @@ class PublicController extends Controller
             return back()->with('error', 'This office is not accepting appointments.');
         }
 
+        if (! $this->appointmentsEnabled($office)) {
+            return back()->with('error', 'This office is not accepting appointments right now.');
+        }
+
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
             'guest_email' => ['nullable', 'email', 'max:255'],
@@ -182,6 +200,10 @@ class PublicController extends Controller
             return back()->with('error', 'Office is closed on the selected date.');
         }
 
+        if (! $this->timeFallsWithinSchedule($time, $schedule)) {
+            return back()->with('error', 'The selected time is outside office hours.');
+        }
+
         $existing = Appointment::where('office_id', $office->id)
             ->where('appointment_date', $date)
             ->where('appointment_time', $time)
@@ -204,7 +226,7 @@ class PublicController extends Controller
             'appointment_time' => $time,
             'status' => Appointment::STATUS_PENDING,
             'purpose' => $validated['purpose'] ?? null,
-            'reference_code' => strtoupper(Str::random(8)),
+            'reference_code' => $this->generateUniqueReferenceCode(Appointment::class),
         ]);
 
         ActivityLog::log(
@@ -218,6 +240,34 @@ class PublicController extends Controller
         );
 
         return redirect()->route('queue.office', ['slug' => $office->slug])
-            ->with('success', 'Appointment requested. Reference: '.$appointment->reference_code.' — we will confirm soon.');
+            ->with('success', 'Appointment requested. Reference: '.$appointment->reference_code.' - we will confirm soon.');
+    }
+
+    private function guestQueueEnabled(Office $office): bool
+    {
+        return (bool) optional($office->tenant)->getSetting('customization.guest_queue', true);
+    }
+
+    private function appointmentsEnabled(Office $office): bool
+    {
+        return (bool) optional($office->tenant)->getSetting('customization.appointments', true);
+    }
+
+    private function timeFallsWithinSchedule(string $time, OfficeSchedule $schedule): bool
+    {
+        $selected = substr($time, 0, 5);
+        $opensAt = substr((string) $schedule->open_time, 0, 5);
+        $closesAt = substr((string) $schedule->close_time, 0, 5);
+
+        return $selected >= $opensAt && $selected <= $closesAt;
+    }
+
+    private function generateUniqueReferenceCode(string $modelClass): string
+    {
+        do {
+            $referenceCode = strtoupper(Str::random(8));
+        } while ($modelClass::query()->where('reference_code', $referenceCode)->exists());
+
+        return $referenceCode;
     }
 }

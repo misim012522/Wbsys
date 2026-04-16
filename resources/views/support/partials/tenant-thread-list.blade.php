@@ -12,7 +12,7 @@
                     @endif
                 </div>
                 <p class="mt-1 text-xs text-slate-500">
-                    {{ $thread->isAnnouncement() ? 'Central announcement' : 'Central support chat' }} - {{ $thread->created_at?->diffForHumans() }}
+                    {{ $thread->isAnnouncement() ? 'Support announcement' : 'Support chat' }} - {{ $thread->created_at?->diffForHumans() }}
                 </p>
                 <div class="mt-3 flex items-center gap-2">
                     @if($thread->hasUnreadForTenant())

@@ -58,7 +58,105 @@ document.addEventListener('DOMContentLoaded', () => {
 // Expose utilities globally for use in data-attributes and inline scripts
 import { showToast } from './toastNotifications';
 
+function createConfirmDialog() {
+    if (document.getElementById('app-confirm-overlay')) {
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'app-confirm-overlay';
+    overlay.hidden = true;
+
+    Object.assign(overlay.style, {
+        position: 'fixed',
+        inset: '0',
+        zIndex: '10000',
+        background: 'rgba(15, 23, 42, 0.45)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+    });
+
+    overlay.innerHTML = `
+        <div id="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title" style="width:min(100%,28rem);border:1px solid #e2e8f0;border-radius:1.5rem;background:#ffffff;box-shadow:0 24px 80px rgba(15,23,42,.24);overflow:hidden;">
+            <div style="padding:1.25rem 1.25rem .75rem;">
+                <p id="app-confirm-title" style="margin:0;font-size:.75rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#0f766e;">Please confirm</p>
+                <p id="app-confirm-message" style="margin:.75rem 0 0;color:#0f172a;font-size:.95rem;line-height:1.6;"></p>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:.75rem;padding:0 1.25rem 1.25rem;">
+                <button type="button" id="app-confirm-cancel" style="border:1px solid #cbd5e1;background:#ffffff;color:#334155;border-radius:.9rem;padding:.7rem 1rem;font-size:.875rem;font-weight:600;cursor:pointer;">Cancel</button>
+                <button type="button" id="app-confirm-ok" style="border:1px solid #059669;background:#059669;color:#ffffff;border-radius:.9rem;padding:.7rem 1rem;font-size:.875rem;font-weight:600;cursor:pointer;">Confirm</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+function showConfirm(message, options = {}) {
+    createConfirmDialog();
+
+    const overlay = document.getElementById('app-confirm-overlay');
+    const messageNode = document.getElementById('app-confirm-message');
+    const okButton = document.getElementById('app-confirm-ok');
+    const cancelButton = document.getElementById('app-confirm-cancel');
+    const titleNode = document.getElementById('app-confirm-title');
+
+    if (!overlay || !messageNode || !okButton || !cancelButton || !titleNode) {
+        return Promise.resolve(window.confirm(message));
+    }
+
+    messageNode.textContent = message || 'Are you sure?';
+    titleNode.textContent = options.title || 'Please confirm';
+    okButton.textContent = options.confirmLabel || 'Confirm';
+    cancelButton.textContent = options.cancelLabel || 'Cancel';
+
+    overlay.hidden = false;
+    document.body.classList.add('overflow-hidden');
+
+    return new Promise((resolve) => {
+        let settled = false;
+
+        const cleanup = (result) => {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            overlay.hidden = true;
+            document.body.classList.remove('overflow-hidden');
+            okButton.removeEventListener('click', onConfirm);
+            cancelButton.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlayClick);
+            document.removeEventListener('keydown', onKeydown);
+            resolve(result);
+        };
+
+        const onConfirm = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onOverlayClick = (event) => {
+            if (event.target === overlay) {
+                cleanup(false);
+            }
+        };
+        const onKeydown = (event) => {
+            if (event.key === 'Escape') {
+                cleanup(false);
+            }
+        };
+
+        okButton.addEventListener('click', onConfirm);
+        cancelButton.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeydown);
+
+        window.setTimeout(() => okButton.focus(), 0);
+    });
+}
+
 window.showToast = showToast;
+window.showConfirm = showConfirm;
 window.realtimeRefresh = realtimeRefresh;
 window.setupQueueRefresh = setupQueueRefresh;
 window.setupAppointmentsRefresh = setupAppointmentsRefresh;
