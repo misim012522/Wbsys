@@ -9,15 +9,15 @@
         'description' => 'Role-based access for this workspace. Permissions are saved separately for the current tenant.',
     ])
 @else
-    <div class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Central RBAC</p>
-                <h1 class="mt-2 text-2xl font-bold text-slate-900">{{ $pageTitle ?? 'Access Control' }}</h1>
-                <p class="mt-2 text-sm leading-6 text-slate-600">{{ $pageDescription ?? 'Configure RBAC for this specific registered tenant.' }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Central RBAC</p>
+                <h1 class="mt-1 text-xl md:text-2xl font-extrabold text-slate-900">{{ $pageTitle ?? 'Access Control' }}</h1>
+                <p class="mt-1 text-sm leading-6 text-slate-600">{{ $pageDescription ?? 'Configure RBAC for this specific registered tenant.' }}</p>
             </div>
             @if(!empty($backUrl))
-                <a href="{{ $backUrl }}" class="inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                <a href="{{ $backUrl }}" class="inline-flex items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
                     {{ $backLabel ?? 'Back' }}
                 </a>
             @endif
@@ -43,41 +43,7 @@
 @endphp
 
 <div class="space-y-6">
-    <section class="grid gap-4 lg:grid-cols-4">
-        <div class="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Tenant summary</p>
-            <h2 class="mt-2 text-xl font-bold text-slate-900">{{ $tenant?->name ?? 'Workspace' }}</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">Any changes saved here only affect this tenant.</p>
-            <p class="mt-1 text-sm leading-6 text-slate-600">Each tenant keeps a separate RBAC setup, so changes on this page stay scoped to this workspace only.</p>
-            <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Workspace host</p>
-                    <p class="mt-2 break-all text-sm font-semibold text-slate-900">{{ $workspaceHost }}</p>
-                </div>
-                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Permission model</p>
-                    <p class="mt-2 text-sm font-semibold text-slate-900">2 built-in roles</p>
-                    <p class="mt-1 text-xs leading-5 text-slate-500">Tenant admin and office staff stay simple, but their allowed actions are saved per tenant.</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="rounded-[1.5rem] border border-emerald-200 bg-[linear-gradient(135deg,_rgba(236,253,245,0.95)_0%,_rgba(255,255,255,0.98)_100%)] p-5 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Tenant admin</p>
-            <p class="mt-3 text-3xl font-bold text-slate-900">{{ $tenantAdminEnabledCount }}/{{ $tenantAdminTotal }}</p>
-            <p class="mt-1 text-sm text-slate-700">enabled permissions</p>
-            <p class="mt-4 text-xs leading-5 text-slate-600">{{ $lockedTenantAdminCount }} recovery permissions stay locked on to avoid accidental lockout.</p>
-        </div>
-
-        <div class="rounded-[1.5rem] border border-sky-200 bg-[linear-gradient(135deg,_rgba(239,246,255,0.98)_0%,_rgba(255,255,255,1)_100%)] p-5 shadow-sm">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Office staff</p>
-            <p class="mt-3 text-3xl font-bold text-slate-900">{{ $enabledCount }}/{{ $officeStaffTotal }}</p>
-            <p class="mt-1 text-sm text-slate-700">enabled permissions</p>
-            <p class="mt-4 text-xs leading-5 text-slate-600">Use these toggles to decide which staff tools stay available inside the office workspace.</p>
-        </div>
-    </section>
-
-    <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+    <div class="grid gap-6">
     <section class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
         <div class="border-b border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.10),_transparent_24%),linear-gradient(135deg,_#ffffff_0%,_#f8fbff_48%,_#f1fdf7_100%)] p-6">
             <div>
@@ -106,7 +72,7 @@
                 </div>
             </div>
 
-            <form id="tenant-rbac-form" method="POST" action="{{ $saveAction ?? route('admin.rbac.update') }}" class="space-y-5">
+                <form id="tenant-rbac-form" method="POST" action="{{ $saveAction ?? route('admin.rbac.update') }}" class="space-y-5">
                 @csrf
                 @method($saveMethod ?? 'PUT')
 
@@ -178,6 +144,7 @@
         </div>
     </section>
 
+    @if(($pageMode ?? 'tenant') !== 'central')
     <section class="space-y-5">
         <div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
             <div class="border-b border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-6">
@@ -231,16 +198,17 @@
             </div>
         </div>
     </section>
+    @endif
     </div>
     
-    <section class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <section class="rounded-[1.75rem] border border-slate-200 bg-white p-4 md:p-6 shadow-sm">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Save changes</p>
                 <h2 class="mt-2 text-lg font-semibold text-slate-900">Apply this tenant's access configuration</h2>
                 <p class="mt-1 text-sm leading-6 text-slate-600">After saving, the selected tenant will use these updated permissions immediately on its workspace routes.</p>
             </div>
-            <button type="submit" form="tenant-rbac-form" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">{{ $saveButtonLabel ?? 'Save access' }}</button>
+            <button type="submit" form="tenant-rbac-form" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition">{{ $saveButtonLabel ?? 'Save access' }}</button>
         </div>
     </section>
 </div>

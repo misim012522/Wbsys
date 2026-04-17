@@ -81,4 +81,12 @@
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
     }
+
+    /* Ensure important action buttons in tables are clickable above overlays */
+    .central-access-control-button,
+    button[aria-label="Open access control for tenant"] {
+        position: relative !important;
+        z-index: 20002 !important;
+        pointer-events: auto !important;
+    }
 }

@@ -475,4 +475,43 @@ class AdminController extends Controller
 
         return back()->with('success', "Office staff account for {$user->name} has been confirmed. A confirmation email has been sent to {$user->email}.");
     }
+
+    /**
+     * Show a small confirmation page for approving a pending account.
+     */
+    public function approveUserConfirm($user)
+    {
+        $user = $this->findTenantUserOrFail($user);
+
+        if ($user->approved_at !== null) {
+            return redirect()->route('admin.users.pending')->with('info', 'That office staff account is already approved.');
+        }
+
+        return view('admin.users.approve-confirm', compact('user'));
+    }
+
+    /**
+     * Approve user via a signed one-click link. The route is protected by the 'signed' middleware
+     * and the existing tenant + permission middleware in routes/admin.php.
+     */
+    public function approveUserSigned($user, \Illuminate\Http\Request $request)
+    {
+        // The 'signed' middleware already validated signature; double-check user exists and tenant scoping.
+        $user = $this->findTenantUserOrFail($user);
+
+        if ($user->approved_at !== null) {
+            return redirect()->route('admin.users.pending')->with('info', 'That office staff account is already approved.');
+        }
+
+        if ($user->role === User::ROLE_TENANT_ADMIN) {
+            return redirect()->route('admin.users.pending')->withErrors(['user' => 'Administrator accounts cannot be approved through this flow.']);
+        }
+
+        $user->approved_at = now();
+        $user->email_verified_at = $user->email_verified_at ?? now();
+        $user->save();
+        $user->notify(new AccountConfirmedNotification);
+
+        return redirect()->route('admin.users.pending')->with('success', "Office staff account for {$user->name} has been confirmed.");
+    }
 }

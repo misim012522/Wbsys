@@ -29,14 +29,14 @@ Route::prefix('central')->name('central.')->middleware('central.public')->group(
         Route::post('/support/announcements', [SupportChatController::class, 'centralStoreAnnouncement'])->name('support.announcements.store');
         Route::post('/support/threads/{thread}/messages', [SupportChatController::class, 'centralStoreMessage'])->name('support.messages.store');
         Route::patch('/support/threads/{thread}/status', [SupportChatController::class, 'centralUpdateStatus'])->name('support.status.update');
-        Route::get('/tenants/{tenant}/rbac', [CentralController::class, 'editRbac'])->name('tenants.rbac.edit');
         Route::patch('/tenants/{tenant}/approve', [CentralController::class, 'approve'])->name('tenants.approve');
         Route::patch('/tenants/{tenant}', [CentralController::class, 'update'])->name('tenants.update');
-        Route::patch('/tenants/{tenant}/rbac', [CentralController::class, 'updateRbac'])->name('tenants.rbac');
         Route::patch('/tenants/{tenant}/activation', [CentralController::class, 'toggleActivation'])->name('tenants.activation');
         Route::patch('/tenants/{tenant}/subscription', [CentralController::class, 'updateSubscription'])->name('tenants.subscription');
         Route::post('/tenants/{tenant}/reset-password', [CentralController::class, 'resetTenantPassword'])->name('tenants.reset-password');
         Route::post('/tenants/{tenant}/workspace-access', [CentralController::class, 'sendWorkspaceAccess'])->name('tenants.workspace-access');
+        Route::get('/tenants/{tenant}/rbac', [CentralController::class, 'editRbac'])->name('tenants.rbac.edit');
+        Route::patch('/tenants/{tenant}/rbac', [CentralController::class, 'updateRbac'])->name('tenants.rbac');
         Route::delete('/tenants/{tenant}', [CentralController::class, 'destroy'])->name('tenants.destroy');
     });
 });

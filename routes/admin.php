@@ -39,6 +39,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index')->middleware(['role:tenant_admin', 'permission:users.manage']);
     Route::get('/users/pending', [AdminController::class, 'pendingAccounts'])->name('users.pending')->middleware(['role:tenant_admin', 'permission:users.manage']);
     Route::get('/users/archived', [AdminController::class, 'archivedAccounts'])->name('users.archived')->middleware(['role:tenant_admin', 'permission:users.manage']);
+    // Show a confirmation page for approving a pending user (GET) to avoid 419 when the URL is visited directly.
+    Route::get('/users/{user}/approve', [AdminController::class, 'approveUserConfirm'])->name('users.approve.confirm')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    // Signed one-click approval link (suitable for email or one-click workflows)
+    Route::get('/users/{user}/approve/signed', [AdminController::class, 'approveUserSigned'])
+        ->name('users.approve.signed')
+        ->middleware(['signed', 'role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
     Route::post('/users/{user}/approve', [AdminController::class, 'approveUser'])->name('users.approve')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
     Route::post('/users/{user}/archive', [AdminController::class, 'archiveUser'])->name('users.archive')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
     Route::post('/users/{user}/recover', [AdminController::class, 'recoverUser'])->name('users.recover')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
