@@ -34,68 +34,13 @@
                 </div>
             </div>
 
-            @if(! $widgetReady)
-                <div class="px-5 py-6 text-sm leading-6 text-slate-600">
-                    Support chat is not ready yet. Run the support migrations first, then refresh this page.
-                </div>
-            @else
-                <div class="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                    <div class="scroll-region-x flex gap-2 overflow-x-auto pb-1">
-                        @forelse($widgetThreads->take(6) as $thread)
-                            <a
-                                href="{{ request()->fullUrlWithQuery(['support_thread' => $thread->id, 'support_open' => 1]) }}"
-                                class="shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition {{ $activeThread?->id === $thread->id ? 'border-cyan-200 bg-cyan-50 text-cyan-700' : 'border-slate-200 bg-white text-slate-600 hover:border-cyan-100 hover:text-slate-900' }}"
-                            >
-                                {{ \Illuminate\Support\Str::limit($thread->subject, 18) }}
-                            </a>
-                        @empty
-                            <span class="text-xs text-slate-500">No threads yet</span>
-                        @endforelse
-                    </div>
-                </div>
-
-                @if($activeThread)
-                    <div class="scroll-region min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_35%,#ecfeff_100%)] px-4 py-4">
-                        <div class="space-y-3">
-                            @foreach($activeThread->messages as $message)
-                                @php($isTenantSender = $message->sender_type === \App\Models\SupportMessage::SENDER_TENANT)
-                                <div class="flex items-end gap-2 {{ $isTenantSender ? 'justify-end' : 'justify-start' }}">
-                                    @unless($isTenantSender)
-                                        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-[11px] font-semibold text-cyan-700">C</div>
-                                    @endunless
-                                    <div class="max-w-[82%]">
-                                        <div class="rounded-[1.3rem] px-3.5 py-2.5 text-sm shadow-sm {{ $isTenantSender ? 'rounded-br-md bg-cyan-500 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-900' }}">
-                                            <p class="whitespace-pre-line leading-6">{{ $message->message }}</p>
-                                        </div>
-                                        <div class="mt-1 text-[11px] {{ $isTenantSender ? 'text-right text-slate-400' : 'text-slate-500' }}">
-                                            {{ $message->created_at?->format('h:i A') }}
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div class="border-t border-slate-200 bg-white px-4 py-3">
-                        <form method="POST" action="{{ route('support.tenant.messages.store', $activeThread) }}" class="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
-                            @csrf
-                            <input type="hidden" name="_support_widget" value="1">
-                            <textarea name="message" rows="2" class="min-w-0 w-full resize-none rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20" placeholder="Write a message to central..."></textarea>
-                            <button type="submit" class="inline-flex h-11 shrink-0 items-center justify-center rounded-full bg-cyan-500 px-4 text-sm font-semibold text-white transition hover:bg-cyan-600">Send</button>
-                        </form>
-                    </div>
-                @else
-                    <div class="px-4 py-4">
-                        <form method="POST" action="{{ route('support.tenant.threads.store') }}" class="space-y-3">
-                            @csrf
-                            <input type="hidden" name="_support_widget" value="1">
-                            <input name="subject" type="text" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20" placeholder="Subject">
-                            <textarea name="message" rows="3" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20" placeholder="Start your first message to central..."></textarea>
-                            <button type="submit" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Start chat</button>
-                        </form>
-                    </div>
-                @endif
-            @endif
+            <div id="tenant-chat-live-region" class="min-h-0 flex flex-1 flex-col overflow-hidden">
+                @include('support.partials.tenant-widget-live', [
+                    'widgetReady' => $widgetReady,
+                    'widgetThreads' => $widgetThreads,
+                    'activeThread' => $activeThread,
+                ])
+            </div>
         </div>
 
         <button
@@ -109,11 +54,9 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
             </svg>
-            @if($widgetUnreadCount > 0)
-                <span class="absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-slate-900 px-1.5 text-[11px] font-bold text-white">
-                    {{ $widgetUnreadCount }}
-                </span>
-            @endif
+            <span class="absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-slate-900 px-1.5 text-[11px] font-bold text-white {{ $widgetUnreadCount > 0 ? '' : 'hidden' }}">
+                {{ $widgetUnreadCount }}
+            </span>
         </button>
     </div>
 
@@ -121,10 +64,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             const widget = document.getElementById('tenant-chat-widget');
             const panel = document.getElementById('tenant-chat-panel');
+            const liveRegion = document.getElementById('tenant-chat-live-region');
             const toggle = document.getElementById('tenant-chat-toggle');
             const closeButton = document.getElementById('tenant-chat-close');
+            const unreadBadge = toggle?.querySelector('span');
+            const snapshotUrl = @json($activeThread
+                ? route('support.tenant.snapshot', ['thread' => $activeThread->id])
+                : route('support.tenant.snapshot'));
 
-            if (!widget || !panel || !toggle) {
+            if (!widget || !panel || !toggle || !liveRegion) {
                 return;
             }
 
@@ -140,6 +88,142 @@
             });
 
             closeButton?.addEventListener('click', () => setOpen(false));
+
+            const sendSupportRequest = async (formElement) => {
+                const formData = new FormData(formElement);
+                const formToken = formElement.querySelector('input[name="_token"]')?.value || '';
+                const csrfToken = formToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                if (csrfToken && !formData.has('_token')) {
+                    formData.append('_token', csrfToken);
+                }
+
+                const response = await fetch(formElement.action, {
+                    method: formElement.method || 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'text/html,application/xhtml+xml',
+                    },
+                });
+
+                if (response.status === 419) {
+                    formElement.submit();
+                    return null;
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Support request failed:', response.status, errorText);
+                    window.showToast?.error?.('Unable to send the message right now.');
+                    return null;
+                }
+
+                return response;
+            };
+
+            const refreshWidget = () => {
+                if (!window.realtimeRefresh) {
+                    return;
+                }
+
+                window.realtimeRefresh.refresh('tenant-chat-live-region', snapshotUrl, (_element, data) => {
+                    const previousViewport = liveRegion.querySelector('[data-widget-chat-scroll]');
+                    const wasNearBottom = previousViewport
+                        ? (previousViewport.scrollHeight - previousViewport.scrollTop - previousViewport.clientHeight) < 80
+                        : false;
+
+                    if (data.widget_html) {
+                        liveRegion.innerHTML = data.widget_html;
+                    }
+
+                    if (unreadBadge) {
+                        const unreadCount = Number(data.unread_count || 0);
+                        unreadBadge.textContent = `${unreadCount}`;
+                        unreadBadge.classList.toggle('hidden', unreadCount < 1);
+                    }
+
+                    if (wasNearBottom) {
+                        const nextViewport = liveRegion.querySelector('[data-widget-chat-scroll]');
+                        if (nextViewport) {
+                            nextViewport.scrollTop = nextViewport.scrollHeight;
+                        }
+                    }
+
+                    bindWidgetForms();
+                });
+            };
+
+            const bindWidgetForms = () => {
+                const replyForm = document.getElementById('tenant-widget-reply-form');
+                if (replyForm && !replyForm.dataset.boundSupportSubmit) {
+                    replyForm.dataset.boundSupportSubmit = 'true';
+                    replyForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const messageInput = replyForm.querySelector('textarea[name="message"]');
+                    const message = messageInput.value.trim();
+                    
+                    if (!message) return;
+
+                    try {
+                        const response = await sendSupportRequest(replyForm);
+                        
+                        if (response) {
+                            messageInput.value = '';
+                            refreshWidget();
+                        }
+                    } catch (error) {
+                        console.error('Error sending message:', error);
+                    }
+                });
+                }
+
+                const createThreadForm = document.getElementById('tenant-widget-create-thread-form');
+                if (createThreadForm && !createThreadForm.dataset.boundSupportSubmit) {
+                    createThreadForm.dataset.boundSupportSubmit = 'true';
+                    createThreadForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const subjectInput = createThreadForm.querySelector('input[name="subject"]');
+                    const messageInput = createThreadForm.querySelector('textarea[name="message"]');
+                    const subject = subjectInput.value.trim();
+                    const message = messageInput.value.trim();
+                    
+                    if (!subject || !message) return;
+
+                    try {
+                        const response = await sendSupportRequest(createThreadForm);
+                        
+                        if (response) {
+                            subjectInput.value = '';
+                            messageInput.value = '';
+                            refreshWidget();
+                        }
+                    } catch (error) {
+                        console.error('Error creating thread:', error);
+                    }
+                });
+                }
+            };
+
+            bindWidgetForms();
+
+            if (window.realtimeRefresh) {
+                window.realtimeRefresh.register('tenant-chat-live-region', snapshotUrl, (_element, data) => {
+                    if (data.widget_html) {
+                        liveRegion.innerHTML = data.widget_html;
+                    }
+
+                    if (unreadBadge) {
+                        const unreadCount = Number(data.unread_count || 0);
+                        unreadBadge.textContent = `${unreadCount}`;
+                        unreadBadge.classList.toggle('hidden', unreadCount < 1);
+                    }
+
+                    bindWidgetForms();
+                }, 5000);
+            }
         });
     </script>
 @endif

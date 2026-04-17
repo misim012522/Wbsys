@@ -43,7 +43,7 @@
         </div>
         @if(($supportReady ?? true) && $activeThread)
             <div class="px-3 py-3">
-                <form id="central-reply-form" method="POST" action="{{ route('central.support.messages.store', $activeThread) }}" class="space-y-2">
+                <form id="central-reply-form" method="POST" action="{{ url('/central/support/threads/' . $activeThread->id . '/messages') }}" class="space-y-2">
                     @csrf
                     <div>
                         <label for="central_reply_message" class="block text-xs font-medium text-slate-700">Reply to tenant</label>
@@ -98,6 +98,41 @@
         restoreScroll();
 
         // Handle form submission with AJAX to prevent page reload
+        const sendSupportRequest = async (formElement) => {
+            const formData = new FormData(formElement);
+            const formToken = formElement.querySelector('input[name="_token"]')?.value || '';
+            const csrfToken = formToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            if (csrfToken && !formData.has('_token')) {
+                formData.append('_token', csrfToken);
+            }
+
+            const response = await fetch(formElement.action, {
+                method: formElement.method || 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'text/html,application/xhtml+xml',
+                },
+            });
+
+            if (response.status === 419) {
+                formElement.submit();
+                return null;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Support request failed:', response.status, errorText);
+                window.showToast?.error?.('Unable to send the message right now.');
+                return null;
+            }
+
+            return response;
+        };
+
         if (replyForm) {
             replyForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -109,16 +144,9 @@
                 if (!message) return;
 
                 try {
-                    const formData = new FormData(replyForm);
-                    const response = await fetch(replyForm.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
+                    const response = await sendSupportRequest(replyForm);
 
-                    if (response.ok) {
+                    if (response) {
                         messageInput.value = '';
                         // Keep scroll position steady
                         if (scrollContainer) {

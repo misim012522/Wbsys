@@ -67,7 +67,7 @@
                     </div>
                     <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                         <p class="text-sm font-semibold text-slate-900">3. Save per tenant</p>
-                        <p class="mt-1 text-xs leading-5 text-slate-500">Only this tenant is affected when you save the form below.</p>
+                        <p class="mt-1 text-xs leading-5 text-slate-500">Any changes saved here only affect this tenant.</p>
                     </div>
                 </div>
             </div>

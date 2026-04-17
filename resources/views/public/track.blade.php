@@ -10,7 +10,7 @@
 <div class="mt-2 text-center">
     <p class="info-kicker">{{ $mode === 'appointment' ? 'Appointment' : 'Queue' }}</p>
     <h1 class="mt-3 text-2xl font-bold text-slate-800 sm:text-3xl">{{ $office->name }}</h1>
-    <p class="mt-1 text-sm text-slate-600">{{ $mode === 'appointment' ? 'Check your booking.' : 'Check your place in line.' }}</p>
+    <p class="mt-1 text-sm text-slate-600">{{ $mode === 'appointment' ? 'Your appointment status' : 'Check your place in line.' }}</p>
 </div>
 
 <div class="panel mt-8 border-2 border-emerald-200 p-8 text-center shadow-lg">

@@ -25,7 +25,7 @@
 @enderror
 
 <div class="mb-6 rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-amber-50/60 p-5 shadow-sm">
-    <p class="text-slate-600">Approve new staff so they can use the queue dashboard.</p>
+    <p class="text-slate-600">Approve new staff so they can use the office workspace.</p>
 </div>
 
 <form method="GET" action="{{ route('admin.users.pending') }}" class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -44,7 +44,7 @@
             </select>
         </div>
         <div class="flex gap-2">
-            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
+            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply filters</button>
             @if($search !== '' || $officeId > 0)
                 <a href="{{ route('admin.users.pending') }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear</a>
             @endif
@@ -54,7 +54,7 @@
 
 <div class="mb-4 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
     <p>
-        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} pending staff.
+        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} pending office staff accounts.
     </p>
     @if($search !== '' || $officeId > 0)
         <p>Filtered results for the current search.</p>

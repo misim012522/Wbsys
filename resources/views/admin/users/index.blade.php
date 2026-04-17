@@ -5,7 +5,7 @@
 @section('content')
 @include('admin._workspace-nav', [
     'title' => 'Office staff accounts',
-    'description' => 'Review active office staff accounts that can already access the tenant workspace.',
+    'description' => 'Approved office staff accounts can already access the office workspace.',
     'actions' => [
         ['label' => 'Pending staff', 'href' => route('admin.users.pending'), 'variant' => 'primary'],
         ['label' => 'Archived staff', 'href' => route('admin.users.archived')],
@@ -32,7 +32,7 @@
             </select>
         </div>
         <div class="flex gap-2">
-            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
+            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply filters</button>
             @if($search !== '' || $officeId > 0)
                 <a href="{{ route('admin.users.index') }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear</a>
             @endif
@@ -42,7 +42,7 @@
 
 <div class="mb-4 flex flex-col gap-2 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
     <p>
-        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} staff accounts.
+        Showing {{ $users->firstItem() ?? 0 }}-{{ $users->lastItem() ?? 0 }} of {{ $users->total() }} approved office staff accounts.
     </p>
     @if($search !== '' || $officeId > 0)
         <p>Filtered results for the current search.</p>

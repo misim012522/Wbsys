@@ -462,10 +462,10 @@ class AdminController extends Controller
         $user = $this->findTenantUserOrFail($user);
 
         if ($user->approved_at !== null) {
-            return back()->with('info', 'That office staff account is already approved.');
+            return redirect()->route('admin.users.pending')->with('info', 'That office staff account is already approved.');
         }
         if ($user->role === User::ROLE_TENANT_ADMIN) {
-            return back()->withErrors(['user' => 'Administrator accounts cannot be approved through the office staff screen.']);
+            return redirect()->route('admin.users.pending')->withErrors(['user' => 'Administrator accounts cannot be approved through the office staff screen.']);
         }
 
         $user->approved_at = now();
@@ -473,7 +473,9 @@ class AdminController extends Controller
         $user->save();
         $user->notify(new AccountConfirmedNotification);
 
-        return back()->with('success', "Office staff account for {$user->name} has been confirmed. A confirmation email has been sent to {$user->email}.");
+        return redirect()
+            ->route('admin.users.pending')
+            ->with('success', 'Office staff approved successfully.');
     }
 
     /**

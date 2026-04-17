@@ -923,7 +923,7 @@ test('tenant admin can approve a pending office staff account', function () {
         ->withServerVariables(tenantHost())
         ->post(route('admin.users.approve', $staff))
         ->assertRedirect()
-        ->assertSessionHas('success', "Office staff account for {$staff->name} has been confirmed. A confirmation email has been sent to {$staff->email}.");
+        ->assertSessionHas('success', 'Office staff approved successfully.');
 
     $staff->refresh();
 

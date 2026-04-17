@@ -88,6 +88,11 @@ class SupportChatController extends Controller
             'conversation_html' => view('support.partials.tenant-conversation', [
                 'activeThread' => $thread,
             ])->render(),
+            'widget_html' => view('support.partials.tenant-widget-live', [
+                'widgetReady' => true,
+                'widgetThreads' => $threads,
+                'activeThread' => $thread,
+            ])->render(),
             'unread_count' => $threads->filter(fn (SupportThread $thread) => $thread->hasUnreadForTenant())->count(),
         ]);
     }

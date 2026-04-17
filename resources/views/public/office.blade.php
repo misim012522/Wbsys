@@ -28,7 +28,7 @@
 <div class="panel mt-6 p-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-            <h2 class="text-lg font-semibold text-slate-800">Track status</h2>
+            <h2 class="text-lg font-semibold text-slate-800">Track an existing reference</h2>
             <p class="mt-1 text-sm text-slate-500">Enter your reference code.</p>
         </div>
         <form method="GET" action="{{ route('tenant.track.lookup') }}" class="flex w-full flex-col gap-3 sm:flex-row lg:max-w-xl">

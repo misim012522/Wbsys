@@ -13,8 +13,8 @@
                 <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
                     Queueing system
                 </span>
-                <h1 class="mt-2 text-lg md:text-xl font-extrabold text-slate-900">Tenant Queue Workspaces</h1>
-                <p class="mt-1 max-w-3xl text-xs text-slate-600">Approve tenants, check workspace status, and manage access.</p>
+                <h1 class="mt-2 text-lg md:text-xl font-extrabold text-slate-900">Central dashboard</h1>
+                <p class="mt-1 max-w-3xl text-xs text-slate-600">New tenant registrations stay pending until approved in this dashboard.</p>
             </div>
             <div class="flex items-center gap-3">
                 <a href="{{ route('central.support.index') }}" class="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 transition">
@@ -27,7 +27,7 @@
 
     <div class="grid gap-2 md:grid-cols-3">
         <div class="rounded-xl border border-slate-200 bg-white p-2 md:p-3 shadow-sm">
-            <p class="text-xs text-slate-500">Workspaces</p>
+            <p class="text-xs text-slate-500">Tenants</p>
             <p class="mt-1 text-xl md:text-2xl font-extrabold text-slate-900">{{ $tenantCount }}</p>
             <p class="mt-0.5 text-xs text-slate-500">{{ $activeTenantCount }} active</p>
         </div>
@@ -103,6 +103,10 @@
                                     <p class="text-[9px] font-semibold uppercase tracking-[0.15em] text-sky-700">Tenant domain</p>
                                     <div class="mt-1 break-all text-xs font-semibold text-slate-900">
                                         {{ $workspaceHost }}
+                                    </div>
+                                    <div class="mt-2 space-y-1 text-[10px] text-slate-500">
+                                        <div class="break-all">{{ $workspaceUrl }}</div>
+                                        <div class="break-all">{{ $loginUrl }}</div>
                                     </div>
                                 </div>
                             </td>
@@ -244,8 +248,8 @@
                                             <form method="POST" action="{{ route('central.tenants.activation', $tenant) }}" data-row-action-form>
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate' : 'Activate' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-50">
-                                                    {{ $tenant->is_active ? 'Deactivate' : 'Activate' }}
+                                                <button type="submit" data-row-action-button data-default-label="{{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}" data-loading-label="{{ $tenant->is_active ? 'Deactivating...' : 'Activating...' }}" class="w-full rounded-lg border border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-700 transition hover:bg-slate-50">
+                                                    {{ $tenant->is_active ? 'Deactivate tenant' : 'Activate tenant' }}
                                                 </button>
                                             </form>
                                         @endif

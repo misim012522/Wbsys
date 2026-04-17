@@ -66,7 +66,7 @@
                     @endif
                 @endauth
                 <span class="inline-flex items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/90">
-                    End users continue through QR/public links
+                    Public external users continue through QR/public links
                 </span>
             </div>
         </div>
@@ -75,11 +75,11 @@
             <h2 class="text-lg font-semibold text-slate-900">How this tenant is used</h2>
             <div class="mt-6 space-y-4 text-sm leading-7 text-slate-600">
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Admin</p>
+                    <p class="font-semibold text-slate-900">Tenant admin pages</p>
                     <p class="mt-1">Manage settings, reports, and staff.</p>
                 </div>
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Office staff</p>
+                    <p class="font-semibold text-slate-900">Office staff dashboard</p>
                     <p class="mt-1">Call numbers and update the queue.</p>
                 </div>
                 @if($tenant)
@@ -92,7 +92,7 @@
                     </div>
                 @endif
                 <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <p class="font-semibold text-slate-900">Public users</p>
+                    <p class="font-semibold text-slate-900">Public external users</p>
                     <p class="mt-1">Get a number, book, and track status.</p>
                 </div>
             </div>

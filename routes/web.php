@@ -77,6 +77,9 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     Route::put('/settings', [TenantAccountSettingsController::class, 'update'])->name('tenant.settings.update');
     Route::get('/support', [SupportChatController::class, 'tenantIndex'])->name('support.tenant.index');
     Route::get('/support/snapshot', [SupportChatController::class, 'tenantSnapshot'])->name('support.tenant.snapshot');
+    Route::get('/support/threads/{thread}/messages', function () {
+        return redirect('/support');
+    });
     Route::post('/support/threads', [SupportChatController::class, 'tenantStoreThread'])->name('support.tenant.threads.store');
     Route::post('/support/threads/{thread}/messages', [SupportChatController::class, 'tenantStoreMessage'])->name('support.tenant.messages.store');
 

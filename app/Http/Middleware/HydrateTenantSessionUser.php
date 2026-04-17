@@ -35,7 +35,10 @@ class HydrateTenantSessionUser
 
                 if ($user && (int) $user->tenant_id === (int) $tenant->id) {
                     $user->setConnection('tenant');
-                    Auth::login($user);
+                    // Hydrate the tenant user for this request without migrating the session
+                    // on every tenant page refresh / poll, which would rotate the CSRF token.
+                    Auth::setUser($user);
+                    $request->setUserResolver(static fn () => $user);
                     $request->session()->put('tenant_auth', [
                         'tenant_id' => $tenant->id,
                         'user_id' => $user->id,

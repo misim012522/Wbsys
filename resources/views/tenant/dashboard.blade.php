@@ -26,7 +26,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Queueing workspace</p>
                 <h1 class="mt-2 text-3xl font-bold text-slate-900">{{ $workspaceName }}</h1>
-                <p class="mt-3 max-w-2xl text-sm text-slate-600">See today’s line, bookings, and queue tools.</p>
+                <p class="mt-3 max-w-2xl text-sm text-slate-600">Workspace dashboard for today's line, bookings, and queue tools.</p>
             </div>
 
             <div class="flex flex-wrap gap-2">
@@ -102,7 +102,7 @@
                     <p class="mt-1 text-emerald-800">Manage queue settings, reports, and staff.</p>
                 </a>
                 <a href="{{ route('admin.users.index') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 hover:bg-slate-100">
-                    <p class="font-semibold">Office staff accounts</p>
+                    <p class="font-semibold">Approved office staff accounts</p>
                     <p class="mt-1 text-slate-600">Approve or manage staff.</p>
                 </a>
             @elseif($user->isOfficeStaff())

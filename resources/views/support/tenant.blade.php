@@ -73,7 +73,7 @@
         </div>
         @if(($supportReady ?? true) && $activeThread)
             <div class="border-t border-slate-200 bg-white px-4 py-4 sm:px-6">
-                <form method="POST" action="{{ route('support.tenant.messages.store', $activeThread) }}" class="flex items-end gap-3">
+                <form id="tenant-reply-form" method="POST" action="{{ route('support.tenant.messages.store', $activeThread) }}" class="flex items-end gap-3">
                     @csrf
                     <div class="flex-1">
                         <label for="reply_message" class="sr-only">Reply</label>
@@ -86,7 +86,7 @@
     </section>
 </div>
 
-@if(($supportReady ?? true) && $activeThread)
+@if($supportReady ?? true)
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const threadList = document.getElementById('tenant-support-thread-list');
@@ -99,13 +99,101 @@
                 viewport.scrollTop = viewport.scrollHeight;
             }
         };
-        const snapshotUrl = @json(route('support.tenant.snapshot', ['thread' => $activeThread->id]));
+        const snapshotUrl = @json($activeThread
+            ? route('support.tenant.snapshot', ['thread' => $activeThread->id])
+            : route('support.tenant.snapshot'));
 
         if (!threadList || !conversation || !window.realtimeRefresh) {
             return;
         }
 
+        const sendSupportRequest = async (formElement) => {
+            const formData = new FormData(formElement);
+            const formToken = formElement.querySelector('input[name="_token"]')?.value || '';
+            const csrfToken = formToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            if (csrfToken && !formData.has('_token')) {
+                formData.append('_token', csrfToken);
+            }
+
+            const response = await fetch(formElement.action, {
+                method: formElement.method || 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'text/html,application/xhtml+xml',
+                },
+            });
+
+            if (response.status === 419) {
+                formElement.submit();
+                return null;
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Support request failed:', response.status, errorText);
+                window.showToast?.error?.('Unable to send the message right now.');
+                return null;
+            }
+
+            return response;
+        };
+
+        const refreshSupportPanel = () => {
+            window.realtimeRefresh.refresh('tenant-support-thread-list', snapshotUrl, (_element, data) => {
+                if (data.thread_list_html) {
+                    threadList.innerHTML = data.thread_list_html;
+                }
+
+                if (data.conversation_html) {
+                    conversation.innerHTML = data.conversation_html;
+                    scrollMessagesToBottom();
+                }
+
+                if (unreadBadge) {
+                    const unreadCount = Number(data.unread_count || 0);
+                    unreadBadge.textContent = `${unreadCount} unread`;
+                    unreadBadge.classList.toggle('hidden', unreadCount < 1);
+                }
+
+                bindReplyForm();
+            });
+        };
+
+        const bindReplyForm = () => {
+            const replyForm = document.getElementById('tenant-reply-form');
+            const messageInput = document.getElementById('reply_message');
+
+            if (!replyForm || !messageInput || replyForm.dataset.boundSupportSubmit) {
+                return;
+            }
+
+            replyForm.dataset.boundSupportSubmit = 'true';
+            replyForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const message = messageInput.value.trim();
+
+                if (!message) return;
+
+                try {
+                    const response = await sendSupportRequest(replyForm);
+
+                    if (response) {
+                        messageInput.value = '';
+                        refreshSupportPanel();
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                }
+            });
+        };
+
         scrollMessagesToBottom();
+        bindReplyForm();
 
         window.realtimeRefresh.register('tenant-support-thread-list', snapshotUrl, (_element, data) => {
             if (data.thread_list_html) {
@@ -122,6 +210,8 @@
                 unreadBadge.textContent = `${unreadCount} unread`;
                 unreadBadge.classList.toggle('hidden', unreadCount < 1);
             }
+
+            bindReplyForm();
         }, 5000);
     });
 </script>
