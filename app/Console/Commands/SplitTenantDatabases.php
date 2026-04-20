@@ -50,8 +50,7 @@ class SplitTenantDatabases extends Command
 
             $existingTenantData = DB::connection('tenant')->table('users')->count()
                 + DB::connection('tenant')->table('offices')->count()
-                + DB::connection('tenant')->table('queue_entries')->count()
-                + DB::connection('tenant')->table('appointments')->count();
+                + DB::connection('tenant')->table('queue_entries')->count();
 
             if ($existingTenantData > 0) {
                 $this->warn('  Skipped import: tenant database already has data.');
@@ -103,13 +102,6 @@ class SplitTenantDatabases extends Command
             ->map(fn ($row) => (array) $row)
             ->all();
 
-        $appointments = DB::connection('central')->table('appointments')
-            ->where('tenant_id', $tenant->id)
-            ->orderBy('id')
-            ->get()
-            ->map(fn ($row) => (array) $row)
-            ->all();
-
         $activityLogs = DB::connection('central')->table('activity_logs')
             ->where('tenant_id', $tenant->id)
             ->orderBy('id')
@@ -117,7 +109,7 @@ class SplitTenantDatabases extends Command
             ->map(fn ($row) => (array) $row)
             ->all();
 
-        DB::connection('tenant')->transaction(function () use ($offices, $users, $schedules, $queueEntries, $appointments, $activityLogs): void {
+        DB::connection('tenant')->transaction(function () use ($offices, $users, $schedules, $queueEntries, $activityLogs): void {
             if (! empty($offices)) {
                 DB::connection('tenant')->table('offices')->insert($offices);
             }
@@ -134,10 +126,6 @@ class SplitTenantDatabases extends Command
                 DB::connection('tenant')->table('queue_entries')->insert($queueEntries);
             }
 
-            if (! empty($appointments)) {
-                DB::connection('tenant')->table('appointments')->insert($appointments);
-            }
-
             if (! empty($activityLogs)) {
                 DB::connection('tenant')->table('activity_logs')->insert($activityLogs);
             }
@@ -148,12 +136,11 @@ class SplitTenantDatabases extends Command
         }
 
         $this->line(sprintf(
-            '  Copied %d offices, %d users, %d schedules, %d queue entries, %d appointments, and %d activity logs.',
+            '  Copied %d offices, %d users, %d schedules, %d queue entries, and %d activity logs.',
             count($offices),
             count($users),
             count($schedules),
             count($queueEntries),
-            count($appointments),
             count($activityLogs),
         ));
     }

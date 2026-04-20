@@ -28,9 +28,9 @@ Route::get('/api/ota/check', [OtaUpdateController::class, 'check'])->name('ota.c
 
 // Public: end users scan QR and land here (no login)
 Route::get('/o/{slug}', [PublicController::class, 'office'])->name('queue.office');
+Route::get('/o/{slug}/staff/{userId}', [PublicController::class, 'officeForStaff'])->middleware('signed:relative')->name('queue.office.staff');
 Route::post('/o/{slug}/queue', [PublicController::class, 'getQueue'])->name('queue.get');
 Route::get('/t/{referenceCode}', [PublicController::class, 'track'])->name('queue.track');
-Route::post('/o/{slug}/book', [PublicController::class, 'bookAppointment'])->name('queue.book');
 
 // Central and tenant app entry points
 require __DIR__.'/central.php';

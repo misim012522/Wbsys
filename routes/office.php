@@ -15,9 +15,6 @@ Route::prefix('office')->name('office.')->group(function () {
     Route::get('/qr/image', [OfficeController::class, 'qrCodeImage'])->name('qr.image')->middleware(['role:office_staff', 'permission:office.qr']);
     Route::post('/call-next', [OfficeController::class, 'callNext'])->name('call-next')->middleware(['role:office_staff', 'permission:office.queue.manage']);
     Route::patch('/queue/{queueEntry}', [OfficeController::class, 'updateQueueStatus'])->name('queue.update')->middleware(['role:office_staff', 'permission:office.queue.manage']);
-    Route::post('/appointments/{appointment}/accept', [OfficeController::class, 'acceptAppointment'])->name('appointments.accept')->middleware(['role:office_staff', 'permission:office.appointments.manage']);
-    Route::post('/appointments/{appointment}/complete', [OfficeController::class, 'completeAppointment'])->name('appointments.complete')->middleware(['role:office_staff', 'permission:office.appointments.manage']);
-    Route::post('/appointments/{appointment}/cancel', [OfficeController::class, 'cancelAppointment'])->name('appointments.cancel')->middleware(['role:office_staff', 'permission:office.appointments.manage']);
     Route::get('/reports', [OfficeController::class, 'reports'])->name('reports')->middleware(['role:office_staff', 'permission:reports.view']);
     Route::get('/reports/download', [OfficeController::class, 'downloadReport'])->name('reports.download')->middleware(['role:office_staff', 'permission:reports.view']);
     Route::get('/activity', [OfficeController::class, 'activity'])->name('activity')->middleware(['role:office_staff', 'permission:office.activity.view']);

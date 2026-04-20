@@ -8,7 +8,6 @@ if (! extension_loaded('pdo_sqlite')) {
     return;
 }
 
-use App\Models\Appointment;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -17,6 +16,7 @@ use App\Support\ReservedUsernames;
 use App\Support\TenantDashboardProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
@@ -60,7 +60,7 @@ test('tenant home shows tenant workspace onboarding for administrators and staff
         ->assertDontSee('Create account');
 });
 
-test('tenant workspace login page is shown instead of reusing an active staff session', function () {
+test('tenant workspace login redirects authenticated staff to their dashboard', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
         'name' => 'Acme Office',
@@ -84,10 +84,7 @@ test('tenant workspace login page is shown instead of reusing an active staff se
     $this->actingAs($staff)
         ->withServerVariables(tenantHost())
         ->get('/login')
-        ->assertOk()
-        ->assertSee('Sign in to continue')
-        ->assertSee('Log in')
-        ->assertDontSee('Office Staff Dashboard');
+        ->assertRedirect(route($staff->dashboardRouteName()));
 });
 
 test('opening tenant login in a new tab does not log out the current workspace session', function () {
@@ -112,8 +109,7 @@ test('opening tenant login in a new tab does not log out the current workspace s
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())
         ->get('/login')
-        ->assertOk()
-        ->assertSee('Sign in to continue');
+        ->assertRedirect(route($admin->dashboardRouteName()));
 
     $this->withServerVariables(tenantHost())
         ->get('/admin')
@@ -142,7 +138,7 @@ test('tenant admin can still open admin routes after visiting the tenant login p
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())
         ->get('/login')
-        ->assertOk();
+        ->assertRedirect(route($admin->dashboardRouteName()));
 
     $this->withServerVariables(tenantHost())
         ->get(route('admin.dashboard'))
@@ -153,7 +149,7 @@ test('tenant admin can still open admin routes after visiting the tenant login p
         ->assertOk();
 });
 
-test('tenant login page hides authenticated admin header controls', function () {
+test('tenant login route redirects authenticated admin and preserves session UI on admin pages', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
         'name' => 'Acme Office',
@@ -175,11 +171,7 @@ test('tenant login page hides authenticated admin header controls', function () 
     $this->actingAs($admin)
         ->withServerVariables(tenantHost())
         ->get('/login')
-        ->assertOk()
-        ->assertDontSee('Admin settings')
-        ->assertDontSee('Log out')
-        ->assertSee('Enter your workspace credentials below.')
-        ->assertDontSee('data-tenant-session-monitor-url', false);
+        ->assertRedirect(route($admin->dashboardRouteName()));
 
     $this->withServerVariables(tenantHost())
         ->get(route('admin.dashboard'))
@@ -214,9 +206,7 @@ test('tenant admin header navigation still works after another tab opens tenant 
 
     $this->withServerVariables(tenantHost())
         ->get('/login')
-        ->assertOk()
-        ->assertDontSee('Admin settings')
-        ->assertDontSee('Log out');
+        ->assertRedirect(route($admin->dashboardRouteName()));
 
     $this->withServerVariables(tenantHost())
         ->get(route('admin.settings.edit'))
@@ -338,7 +328,6 @@ test('office staff dashboard shows QR code access even when guest queue is disab
         'settings' => [
             'theme' => [
                 'guest_queue_enabled' => false,
-                'appointments_enabled' => true,
             ],
         ],
     ]);
@@ -390,7 +379,8 @@ test('office staff qr page includes the full office qr toolkit', function () {
         ->assertSee('Open public page')
         ->assertSee('Open QR image')
         ->assertSee('Download QR image')
-        ->assertSee(\App\Support\TenantUrl::forPath($tenant, route('queue.office', ['slug' => $office->slug], false)), false);
+        ->assertSee('/o/'.$office->slug.'/staff/'.$staff->id, false)
+        ->assertSee('signature=', false);
 
     $this->actingAs($staff)
         ->withServerVariables(tenantHost())
@@ -403,6 +393,118 @@ test('office staff qr page includes the full office qr toolkit', function () {
         ->get(route('office.qr.image', ['download' => 1]))
         ->assertOk()
         ->assertHeader('Content-Disposition');
+});
+
+test('signed office staff qr route renders and assigns queue to that staff', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    $staff = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'approved_at' => now(),
+    ]);
+
+    $signedPath = URL::signedRoute('queue.office.staff', [
+        'slug' => $office->slug,
+        'userId' => $staff->id,
+    ], null, false);
+
+    $this->withServerVariables(tenantHost())
+        ->get($signedPath)
+        ->assertOk()
+        ->assertSee('Assigned staff: '.$staff->name)
+        ->assertSee('name="preferred_staff_user_id" value="'.$staff->id.'"', false);
+
+    $this->withServerVariables(tenantHost())
+        ->post(route('queue.get', ['slug' => $office->slug]), [
+            'guest_name' => 'Queue Visitor',
+            'guest_email' => 'visitor@example.test',
+            'guest_phone' => '09123456789',
+            'preferred_staff_user_id' => $staff->id,
+        ])
+        ->assertRedirect();
+
+    $entry = \App\Models\QueueEntry::query()->latest('id')->first();
+    expect($entry)->not->toBeNull();
+    expect($entry->assigned_staff_user_id)->toBe($staff->id);
+});
+
+test('office staff call next skips queues assigned to other staff', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    provisionTenantWorkspace($tenant);
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $office = \App\Models\Office::query()->firstOrFail();
+
+    $staffA = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'approved_at' => now(),
+    ]);
+
+    $staffB = User::factory()->create([
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'approved_at' => now(),
+    ]);
+
+    \App\Models\QueueEntry::create([
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'user_id' => null,
+        'assigned_staff_user_id' => $staffB->id,
+        'guest_name' => 'For Staff B',
+        'guest_email' => 'b@example.test',
+        'queue_number' => 1,
+        'queue_date' => today(),
+        'status' => \App\Models\QueueEntry::STATUS_WAITING,
+        'reference_code' => strtoupper(Str::random(8)),
+    ]);
+
+    $target = \App\Models\QueueEntry::create([
+        'tenant_id' => $tenant->id,
+        'office_id' => $office->id,
+        'user_id' => null,
+        'assigned_staff_user_id' => $staffA->id,
+        'guest_name' => 'For Staff A',
+        'guest_email' => 'a@example.test',
+        'queue_number' => 2,
+        'queue_date' => today(),
+        'status' => \App\Models\QueueEntry::STATUS_WAITING,
+        'reference_code' => strtoupper(Str::random(8)),
+    ]);
+
+    $this->actingAs($staffA)
+        ->withServerVariables(tenantHost())
+        ->post(route('office.call-next'))
+        ->assertRedirect();
+
+    expect($target->fresh()->status)->toBe(\App\Models\QueueEntry::STATUS_CALLED);
 });
 
 test('simple tenant rbac keeps office staff and admin in separate workspaces', function () {
@@ -465,7 +567,6 @@ test('simple rbac settings can block office staff reports without affecting admi
                           'dashboard' => true,
                           'qr' => true,
                           'queue' => ['manage' => true],
-                          'appointments' => ['manage' => true],
                           'activity' => ['view' => true],
                       ],
                       'reports' => ['view' => false],
@@ -518,7 +619,6 @@ test('simple rbac settings can block office staff reports without affecting admi
                           'dashboard' => true,
                           'qr' => true,
                           'queue' => ['manage' => false],
-                          'appointments' => ['manage' => true],
                           'activity' => ['view' => true],
                       ],
                       'reports' => ['view' => true],
@@ -600,7 +700,7 @@ test('legacy student accounts can still open the tenant dashboard entry page', f
         ->assertSee('Workspace home');
 });
 
-test('public tracker can show appointment references for the current tenant', function () {
+test('public tracker can show queue references for the current tenant', function () {
     $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
     $tenant = Tenant::create([
         'name' => 'Acme Office',
@@ -616,25 +716,24 @@ test('public tracker can show appointment references for the current tenant', fu
 
     $office = \App\Models\Office::query()->firstOrFail();
 
-    $appointment = Appointment::create([
+    $queueEntry = \App\Models\QueueEntry::create([
         'tenant_id' => $tenant->id,
         'office_id' => $office->id,
-        'guest_name' => 'Maria Santos',
+        'display_name' => 'Maria Santos',
         'guest_email' => 'maria@example.test',
-        'appointment_type' => 'consultation',
-        'appointment_date' => today()->addDay()->toDateString(),
-        'appointment_time' => '09:00:00',
-        'status' => Appointment::STATUS_PENDING,
-        'reference_code' => 'APPT1234',
+        'queue_number' => 12,
+        'status' => 'waiting',
+        'queue_date' => today()->toDateString(),
+        'reference_code' => 'QREF1234',
     ]);
 
     $this->withServerVariables(tenantHost())
-        ->get('/t/'.$appointment->reference_code)
+        ->get('/t/'.$queueEntry->reference_code)
         ->assertOk()
-        ->assertSee('Your appointment status')
-        ->assertSee($appointment->reference_code)
-        ->assertSee('Maria Santos')
-        ->assertSee('pending');
+        ->assertSee('Queue number')
+        ->assertSee($queueEntry->reference_code)
+        ->assertSee('#12')
+        ->assertSee('waiting');
 });
 
 test('public office page includes a tracker form for existing references', function () {
@@ -705,10 +804,8 @@ test('tenant dashboards reflect tenant-specific labels and enabled modules', fun
                 'labels' => [
                     'queue' => 'Applications',
                     'office' => 'Registrar',
-                    'appointment' => 'Reservations',
                 ],
                 'guest_queue' => false,
-                'appointments' => true,
             ],
         ],
     ]);
@@ -726,7 +823,6 @@ test('tenant dashboards reflect tenant-specific labels and enabled modules', fun
         ->get(route('admin.dashboard'))
         ->assertOk()
         ->assertSee('Applications today')
-        ->assertSee('Reservations today')
         ->assertSee('Registrar Portal')
         ->assertSee('Registrar dashboard')
         ->assertSee('Application review')
@@ -775,13 +871,10 @@ test('tenant admin can update the dashboard profile from customization', functio
             'support_url' => '',
             'app_name' => 'Acme Office',
             'guest_queue' => 1,
-            'appointments' => 1,
             'show_service_type' => 1,
-            'show_purpose_field' => 1,
             'dashboard_profile' => 'cashier',
             'label_queue' => 'Queue',
             'label_office' => 'Office',
-            'label_appointment' => 'Appointment',
         ])
         ->assertRedirect(route('admin.customization.index'))
         ->assertSessionHas('success', 'Customization saved.');
@@ -896,7 +989,7 @@ test('basic plan tenant cannot access reports', function () {
         'name' => 'Basic',
         'slug' => 'basic',
         'is_active' => true,
-        'features' => ['queue', 'appointments', 'email_notifications'],
+        'features' => ['queue', 'email_notifications'],
         'max_offices' => 1,
         'max_users_per_tenant' => 10,
     ]);
@@ -929,7 +1022,7 @@ test('tenant office management routes redirect back to the dashboard', function 
         'name' => 'Basic',
         'slug' => 'basic',
         'is_active' => true,
-        'features' => ['queue', 'appointments', 'email_notifications'],
+        'features' => ['queue', 'email_notifications'],
         'max_offices' => 1,
         'max_users_per_tenant' => 10,
     ]);
@@ -1334,7 +1427,7 @@ test('tenant admin can download tenant reports in csv and print formats', functi
         'name' => 'Pro',
         'slug' => 'pro',
         'is_active' => true,
-        'features' => ['queue', 'appointments', 'reports'],
+        'features' => ['queue', 'reports'],
     ]);
 
     $tenant = Tenant::create([
@@ -1367,17 +1460,6 @@ test('tenant admin can download tenant reports in csv and print formats', functi
         'reference_code' => 'Q-1001',
         'status' => 'completed',
         'queue_date' => today()->toDateString(),
-    ]);
-
-    \App\Models\Appointment::create([
-        'tenant_id' => $tenant->id,
-        'office_id' => $office->id,
-        'display_name' => 'Appointment Guest',
-        'appointment_type' => 'Advising',
-        'reference_code' => 'A-1001',
-        'status' => 'confirmed',
-        'appointment_date' => today()->toDateString(),
-        'appointment_time' => '10:00:00',
     ]);
 
     $this->actingAs($admin)

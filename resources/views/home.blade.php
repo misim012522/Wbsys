@@ -8,11 +8,11 @@
         <p class="info-kicker">Queue management platform</p>
         <h1 class="mx-auto mt-3 max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">QueueLess</h1>
         <p class="mx-auto mt-4 max-w-3xl text-base leading-7 text-slate-600 sm:text-lg">
-            Central management and tenant workspaces for queues and appointments.
+            Central management and tenant workspaces for queue operations.
         </p>
         <p class="mx-auto mt-6 max-w-2xl text-sm leading-7 text-slate-500 sm:text-[15px]">
             The sysadmin manages tenant registration from the central app. Tenant admins and staff run daily operations,
-            while approved tenant users can sign in within their workspace to request queue numbers and appointments.
+            while approved tenant users can sign in within their workspace to request queue numbers.
         </p>
         @guest
             <div class="mx-auto mt-8 max-w-2xl rounded-[1.5rem] border border-slate-200 bg-slate-50 px-6 py-5 text-sm leading-7 text-slate-500">

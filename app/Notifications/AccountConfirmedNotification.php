@@ -43,8 +43,8 @@ class AccountConfirmedNotification extends Notification
         };
 
         $usageLine = match ($notifiable->role) {
-            User::ROLE_OFFICE_STAFF => 'You can now log in to your office dashboard and manage queue and appointment work for your assigned office.',
-            default => 'You can now log in and manage your office queue and appointments.',
+            User::ROLE_OFFICE_STAFF => 'You can now log in to your office dashboard and manage queue work for your assigned office.',
+            default => 'You can now log in and manage your office queue.',
         };
 
         $mail = (new MailMessage)

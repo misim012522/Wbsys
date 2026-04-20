@@ -14,7 +14,7 @@
 
 <div class="mb-6 rounded-[1.5rem] border border-amber-200 bg-amber-50 p-5 shadow-sm">
     <p class="text-sm font-semibold text-amber-900">Office staff first</p>
-    <p class="mt-2 text-sm text-amber-800">Use the office staff workspace as the primary live serving screen for QR, queue calls, and appointment handling. This admin page is best kept for monitoring, supervision, or backup intervention.</p>
+    <p class="mt-2 text-sm text-amber-800">Use the office staff workspace as the primary live serving screen for QR and queue calls. This admin page is best kept for monitoring, supervision, or backup intervention.</p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -110,48 +110,5 @@
         </div>
     </div>
 
-    <div>
-        <h2 class="text-lg font-semibold text-slate-800 mb-4">Appointments - Today</h2>
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <ul class="divide-y divide-slate-100">
-                @forelse($todayAppointments as $a)
-                    <li class="px-4 py-3 flex items-center justify-between">
-                        <div class="min-w-0">
-                            <span class="font-medium text-slate-800">{{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</span>
-                            <span class="text-slate-600 ml-2">{{ $a->display_name }}</span>
-                            @if($a->appointment_type)<span class="ml-2 text-xs text-slate-500">({{ $a->appointment_type }})</span>@endif
-                            @if($a->purpose)<p class="text-xs text-slate-500 mt-0.5">{{ $a->purpose }}</p>@endif
-                            <p class="text-xs text-slate-500 mt-0.5">Contact to remind:
-                                @if($a->guest_email)<a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>@endif
-                                @if($a->guest_email && $a->guest_phone) · @endif
-                                @if($a->guest_phone)<a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>@endif
-                                @if(!$a->guest_email && !$a->guest_phone)-@endif
-                            </p>
-                        </div>
-                        <div class="flex gap-2">
-                            @if($a->status === 'pending')
-                                <form method="POST" action="{{ route('admin.appointments.accept', $a) }}" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-800">Accept</button>
-                                </form>
-                            @endif
-                            @if(in_array($a->status, ['pending', 'confirmed']))
-                                <form method="POST" action="{{ route('admin.appointments.complete', $a) }}" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-700">Complete</button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.appointments.cancel', $a) }}" class="inline">
-                                    @csrf
-                                    <button type="submit" class="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Cancel</button>
-                                </form>
-                            @endif
-                        </div>
-                    </li>
-                @empty
-                    <li class="px-4 py-8 text-slate-500 text-center">No appointments today.</li>
-                @endforelse
-            </ul>
-        </div>
-    </div>
 </div>
 @include('admin._workspace-nav-footer')

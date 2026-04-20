@@ -77,12 +77,11 @@ class MergeTenantIntoSharedDatabase extends Command
             $tenant->save();
 
             $this->line(sprintf(
-                '  Copied %d offices, %d users, %d schedules, %d queue entries, %d appointments, and %d activity logs into %s.',
+                '  Copied %d offices, %d users, %d schedules, %d queue entries, and %d activity logs into %s.',
                 $copiedCounts['offices'],
                 $copiedCounts['users'],
                 $copiedCounts['office_schedules'],
                 $copiedCounts['queue_entries'],
-                $copiedCounts['appointments'],
                 $copiedCounts['activity_logs'],
                 (string) config("database.connections.{$sharedConnection}.database", 'shared database'),
             ));
@@ -113,7 +112,7 @@ class MergeTenantIntoSharedDatabase extends Command
     {
         $counts = [];
 
-        foreach (['offices', 'users', 'office_schedules', 'queue_entries', 'appointments', 'activity_logs'] as $table) {
+        foreach (['offices', 'users', 'office_schedules', 'queue_entries', 'activity_logs'] as $table) {
             $rows = $this->rowsForTable($tenant, $table);
             $inserted = 0;
 
@@ -142,7 +141,7 @@ class MergeTenantIntoSharedDatabase extends Command
     private function rowsForTable(Tenant $tenant, string $table): array
     {
         return match ($table) {
-            'offices', 'users', 'queue_entries', 'appointments', 'activity_logs' => DB::connection('tenant')
+            'offices', 'users', 'queue_entries', 'activity_logs' => DB::connection('tenant')
                 ->table($table)
                 ->where('tenant_id', $tenant->id)
                 ->orderBy('id')

@@ -59,6 +59,12 @@
     .admin-sidebar a:not(:first-child) {
         border-top: none;
     }
+    .tenant-themed .admin-sidebar a.bg-white:hover,
+    .tenant-themed .admin-sidebar button.bg-white:hover {
+        background-color: color-mix(in srgb, var(--tenant-primary) 16%, white) !important;
+        border-color: color-mix(in srgb, var(--tenant-primary) 45%, white) !important;
+        color: color-mix(in srgb, var(--tenant-primary) 85%, black) !important;
+    }
     .admin-content {
         flex: 1;
         overflow-y: auto;

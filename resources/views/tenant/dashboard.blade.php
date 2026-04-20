@@ -9,10 +9,8 @@
     $roleLabel = $user->isAdmin() ? 'Tenant administrator' : ($user->isOfficeStaff() ? 'Office staff' : 'Workspace account');
     $dashboardProfile = \App\Support\TenantDashboardProfile::for($tenant);
     $queueLabel = $tenantTheme['queue_label'] ?? 'Queue';
-    $appointmentLabel = $tenantTheme['appointment_label'] ?? 'Appointment';
     $officeLabel = $tenantTheme['office_label'] ?? 'Office';
     $queueEnabled = (bool) ($tenantTheme['guest_queue_enabled'] ?? true);
-    $appointmentsEnabled = (bool) ($tenantTheme['appointments_enabled'] ?? true);
     $canOpenOfficeDashboard = $user->hasPermission('office.dashboard');
     $canUseOfficeQr = $user->hasPermission('office.qr');
     $canViewOfficeActivity = $user->hasPermission('office.activity.view');
@@ -35,7 +33,7 @@
             <a href="{{ route('tenant.settings.edit') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Workspace settings</a>
             <a href="{{ route('support.tenant.index') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Support{{ $supportUnreadCount ? ' ('.$supportUnreadCount.')' : '' }}</a>
             <a href="{{ route('admin.users.pending') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Pending office staff</a>
-            @if($appointmentsEnabled || $queueEnabled)
+            @if($queueEnabled)
                 <a href="{{ route('admin.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Reports</a>
             @endif
         @elseif($user->isOfficeStaff())
@@ -64,10 +62,6 @@
     <div class="stat-card">
         <p class="text-sm text-slate-500">{{ $queueLabel }} today</p>
         <p class="mt-3 text-3xl font-bold text-emerald-600">{{ $summary['active_queue'] }}</p>
-    </div>
-    <div class="stat-card">
-        <p class="text-sm text-slate-500">{{ $appointmentLabel }} today</p>
-        <p class="mt-3 text-3xl font-bold text-blue-600">{{ $summary['today_appointments'] }}</p>
     </div>
     <div class="stat-card">
         <p class="text-sm text-slate-500">Completed today</p>
@@ -112,10 +106,10 @@
                         <p class="mt-1 text-emerald-800">Call, serve, complete, and update the line.</p>
                     </a>
                 @endif
-                @if($canViewOfficeReports && ($appointmentsEnabled || $queueEnabled))
+                @if($canViewOfficeReports && $queueEnabled)
                     <a href="{{ route('office.reports') }}" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800 hover:bg-slate-100">
                         <p class="font-semibold">Reports</p>
-                        <p class="mt-1 text-slate-600">Check queue and booking totals.</p>
+                        <p class="mt-1 text-slate-600">Check queue totals.</p>
                     </a>
                 @endif
             @else

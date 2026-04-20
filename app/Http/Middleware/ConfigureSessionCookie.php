@@ -17,8 +17,9 @@ class ConfigureSessionCookie
         $tenantBaseDomain = trim((string) env('LOCAL_TENANT_BASE_DOMAIN', 'lvh.me'));
 
         if ($host !== '' && $tenantBaseDomain !== '' && str_ends_with($host, '.'.$tenantBaseDomain)) {
+            $tenantCookie = $baseCookie.'-'.Str::slug($host);
             config([
-                'session.cookie' => $baseCookie,
+                'session.cookie' => $tenantCookie,
                 // Keep local tenant sessions host-only so each subdomain gets an isolated cookie jar.
                 'session.domain' => null,
             ]);

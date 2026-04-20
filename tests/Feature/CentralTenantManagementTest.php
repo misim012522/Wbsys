@@ -562,7 +562,6 @@ test('central admin can update tenant rbac settings from the dashboard', functio
     expect($tenant->getSetting('rbac.office_staff.office.qr', true))->toBeTrue();
     expect($tenant->getSetting('rbac.office_staff.office.activity.view', true))->toBeTrue();
     expect($tenant->getSetting('rbac.office_staff.office.queue.manage', true))->toBeFalse();
-    expect($tenant->getSetting('rbac.office_staff.office.appointments.manage', true))->toBeFalse();
     expect($tenant->getSetting('rbac.office_staff.reports.view', true))->toBeFalse();
 });
 

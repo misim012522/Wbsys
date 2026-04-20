@@ -1,12 +1,13 @@
 import './bootstrap';
 import { displaySessionToasts, setupAxiosToastInterceptor } from './toastNotifications';
-import { setupFocusHandling, realtimeRefresh, setupQueueRefresh, setupAppointmentsRefresh, setupListRefresh } from './realtimeRefresh';
+import { setupFocusHandling, realtimeRefresh, setupQueueRefresh, setupListRefresh } from './realtimeRefresh';
 
 // Setup axios interceptor for automatic toast notifications
 setupAxiosToastInterceptor(window.axios);
 
-// Display any session messages as toasts on page load
-document.addEventListener('DOMContentLoaded', () => {
+// Display any session messages as toasts on page load.
+// Run immediately when DOM is already ready to avoid missing the event.
+const initializeAppUi = () => {
     displaySessionToasts();
     setupFocusHandling();
 
@@ -53,7 +54,13 @@ document.addEventListener('DOMContentLoaded', () => {
         checkTenantSessionStatus();
         window.setInterval(checkTenantSessionStatus, 5000);
     }
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAppUi);
+} else {
+    initializeAppUi();
+}
 
 // Expose utilities globally for use in data-attributes and inline scripts
 import { showToast } from './toastNotifications';
@@ -159,5 +166,4 @@ window.showToast = showToast;
 window.showConfirm = showConfirm;
 window.realtimeRefresh = realtimeRefresh;
 window.setupQueueRefresh = setupQueueRefresh;
-window.setupAppointmentsRefresh = setupAppointmentsRefresh;
 window.setupListRefresh = setupListRefresh;

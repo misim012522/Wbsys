@@ -91,19 +91,9 @@
                         <span class="text-slate-700">Allow "Get queue number" (walk-in)</span>
                     </label>
                     <label class="flex items-center gap-2">
-                        <input type="hidden" name="appointments" value="0">
-                        <input type="checkbox" name="appointments" value="1" {{ $appointmentsEnabled ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
-                        <span class="text-slate-700">Allow "Book appointment"</span>
-                    </label>
-                    <label class="flex items-center gap-2">
                         <input type="hidden" name="show_service_type" value="0">
                         <input type="checkbox" name="show_service_type" value="1" {{ $showServiceType ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
                         <span class="text-slate-700">Show "What do you need?" service type in queue form</span>
-                    </label>
-                    <label class="flex items-center gap-2">
-                        <input type="hidden" name="show_purpose_field" value="0">
-                        <input type="checkbox" name="show_purpose_field" value="1" {{ $showPurposeField ? 'checked' : '' }} class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
-                        <span class="text-slate-700">Show "Purpose" field in appointment form</span>
                     </label>
                 </div>
             </div>
@@ -150,17 +140,6 @@
                             value="{{ old('label_office', $officeLabel) }}"
                             class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
                             placeholder="Office"
-                        >
-                    </div>
-                    <div>
-                        <label for="label_appointment" class="mb-1 block text-sm font-medium text-slate-700">Appointment</label>
-                        <input
-                            type="text"
-                            name="label_appointment"
-                            id="label_appointment"
-                            value="{{ old('label_appointment', $appointmentLabel) }}"
-                            class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
-                            placeholder="Appointment"
                         >
                     </div>
                 </div>

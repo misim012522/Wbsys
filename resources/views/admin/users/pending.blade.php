@@ -143,8 +143,26 @@
         });
     });
 
-    if (window.showToast && typeof window.showToast.success === 'function' && @json((bool) session('success'))) {
-        window.showToast.success(@json(session('success')));
+    var successMessage = @json(session('success'));
+    if (successMessage) {
+        var tryShowSuccessToast = function () {
+            if (window.showToast && typeof window.showToast.success === 'function') {
+                window.showToast.success(successMessage);
+                return true;
+            }
+
+            return false;
+        };
+
+        if (!tryShowSuccessToast()) {
+            var retryCount = 0;
+            var retryTimer = setInterval(function () {
+                retryCount += 1;
+                if (tryShowSuccessToast() || retryCount >= 10) {
+                    clearInterval(retryTimer);
+                }
+            }, 120);
+        }
     }
 })();
 </script>

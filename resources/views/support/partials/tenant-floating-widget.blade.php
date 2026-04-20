@@ -46,7 +46,7 @@
         <button
             type="button"
             id="tenant-chat-toggle"
-            class="relative ml-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 via-sky-500 to-teal-400 text-white shadow-[0_18px_40px_rgba(14,165,233,0.45)] transition hover:scale-[1.03] focus:outline-none focus:ring-4 focus:ring-cyan-300/50"
+            class="tenant-primary-bg relative ml-auto inline-flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg shadow-emerald-500/30 transition hover:scale-[1.03] hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/50"
             aria-expanded="{{ $widgetOpen ? 'true' : 'false' }}"
             aria-controls="tenant-chat-panel"
             aria-label="Open support chat"

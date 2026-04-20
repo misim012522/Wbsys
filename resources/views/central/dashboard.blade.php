@@ -79,7 +79,6 @@
                                 'office_count' => 0,
                                 'office_staff_count' => 0,
                                 'today_queue_count' => 0,
-                                'today_appointment_count' => 0,
                                 'last_activity_label' => 'Unavailable',
                             ];
                         @endphp
@@ -150,7 +149,6 @@
                                     <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> staff</div>
                                     <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
                                     <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues</div>
-                                    <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_appointment_count'] }}</span> appt</div>
                                 </div>
                             </td>
                             <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">

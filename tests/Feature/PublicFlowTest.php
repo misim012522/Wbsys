@@ -9,7 +9,6 @@ if (! extension_loaded('pdo_sqlite')) {
 }
 
 use App\Models\Office;
-use App\Models\OfficeSchedule;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Services\TenantDatabaseManager;
@@ -66,60 +65,4 @@ test('public queue request is blocked when guest queue is disabled', function ()
         ])
         ->assertRedirect(route('queue.office', ['slug' => $office->slug]))
         ->assertSessionHas('error', 'This office is not accepting queue numbers right now.');
-});
-
-test('public appointment request is blocked when appointments are disabled', function () {
-    $tenant = provisionPublicFlowTenant([
-        'customization' => [
-            'appointments' => false,
-        ],
-    ]);
-
-    $office = Office::query()->where('tenant_id', $tenant->id)->firstOrFail();
-
-    OfficeSchedule::create([
-        'tenant_id' => $tenant->id,
-        'office_id' => $office->id,
-        'day_of_week' => now()->dayOfWeek,
-        'open_time' => '08:00:00',
-        'close_time' => '17:00:00',
-        'is_active' => true,
-    ]);
-
-    $this->withServerVariables(publicFlowTenantHost())
-        ->from(route('queue.office', ['slug' => $office->slug]))
-        ->post(route('queue.book', ['slug' => $office->slug]), [
-            'guest_name' => 'Appointment Guest',
-            'guest_email' => 'guest@example.test',
-            'appointment_date' => today()->toDateString(),
-            'appointment_time' => '10:00',
-        ])
-        ->assertRedirect(route('queue.office', ['slug' => $office->slug]))
-        ->assertSessionHas('error', 'This office is not accepting appointments right now.');
-});
-
-test('public appointment request must fall within office hours', function () {
-    $tenant = provisionPublicFlowTenant();
-
-    $office = Office::query()->where('tenant_id', $tenant->id)->firstOrFail();
-
-    OfficeSchedule::create([
-        'tenant_id' => $tenant->id,
-        'office_id' => $office->id,
-        'day_of_week' => now()->dayOfWeek,
-        'open_time' => '08:00:00',
-        'close_time' => '17:00:00',
-        'is_active' => true,
-    ]);
-
-    $this->withServerVariables(publicFlowTenantHost())
-        ->from(route('queue.office', ['slug' => $office->slug]))
-        ->post(route('queue.book', ['slug' => $office->slug]), [
-            'guest_name' => 'Appointment Guest',
-            'guest_email' => 'guest@example.test',
-            'appointment_date' => today()->toDateString(),
-            'appointment_time' => '18:30',
-        ])
-        ->assertRedirect(route('queue.office', ['slug' => $office->slug]))
-        ->assertSessionHas('error', 'The selected time is outside office hours.');
 });

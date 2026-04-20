@@ -13,7 +13,7 @@
                     </span>
                     <span class="text-xl font-bold tracking-tight">QueueLess</span>
                 </a>
-                <p class="mt-2 text-sm text-slate-500">Smart appointment & queue management</p>
+                <p class="mt-2 text-sm text-slate-500">Smart queue management</p>
             </div>
 
             <h1 class="text-2xl font-bold text-slate-800">Create your account</h1>
@@ -22,7 +22,7 @@
                 @if(isset($tenant) && $tenant)
                     This account will be created inside the <span class="font-medium text-slate-700">{{ $tenant->name }}</span> workspace.
                 @else
-                    Select your office to manage queues, QR codes, and appointments.
+                    Select your office to manage queues and QR codes.
                 @endif
             </p>
 
@@ -108,7 +108,7 @@
             </p>
         </div>
 
-        <p class="mt-6 text-center text-xs text-slate-400">QueueLess - Queue and appointment management</p>
+        <p class="mt-6 text-center text-xs text-slate-400">QueueLess - Queue management</p>
     </div>
 </div>
 @endsection

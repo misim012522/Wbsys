@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\User;
@@ -59,7 +58,6 @@ class HomeController extends Controller
 
         $summary = [
             'active_queue' => 0,
-            'today_appointments' => 0,
             'completed_today' => 0,
             'pending_staff' => 0,
             'current_serving' => null,
@@ -67,24 +65,15 @@ class HomeController extends Controller
 
         if ($user->isTenantAdmin()) {
             $queueQuery = QueueEntry::query()->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id));
-            $appointmentQuery = Appointment::query()->when($user->tenant_id, fn ($query) => $query->forTenant($user->tenant_id));
 
             $summary['active_queue'] = (clone $queueQuery)
                 ->where('queue_date', today())
                 ->whereIn('status', ['waiting', 'called', 'serving'])
                 ->count();
-            $summary['today_appointments'] = (clone $appointmentQuery)
-                ->where('appointment_date', today())
-                ->whereIn('status', ['pending', 'confirmed'])
-                ->count();
             $summary['completed_today'] = (clone $queueQuery)
                 ->where('queue_date', today())
                 ->where('status', 'completed')
-                ->count()
-                + (clone $appointmentQuery)
-                    ->where('appointment_date', today())
-                    ->where('status', 'completed')
-                    ->count();
+                ->count();
             $summary['pending_staff'] = User::query()
                 ->where('role', '!=', User::ROLE_TENANT_ADMIN)
                 ->whereNull('approved_at')
@@ -94,17 +83,10 @@ class HomeController extends Controller
             $summary['active_queue'] = $office->queueEntries()
                 ->activeToday()
                 ->count();
-            $summary['today_appointments'] = $office->appointments()
-                ->upcomingToday()
-                ->count();
             $summary['completed_today'] = $office->queueEntries()
                 ->today()
                 ->where('status', QueueEntry::STATUS_COMPLETED)
-                ->count()
-                + $office->appointments()
-                    ->where('appointment_date', today())
-                    ->where('status', Appointment::STATUS_COMPLETED)
-                    ->count();
+                ->count();
             $summary['current_serving'] = $office->queueEntries()
                 ->today()
                 ->whereIn('status', [QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])

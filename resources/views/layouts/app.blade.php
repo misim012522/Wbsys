@@ -20,10 +20,172 @@
         .tenant-primary { color: var(--tenant-primary); }
         .tenant-primary-bg { background-color: var(--tenant-primary); }
         .tenant-primary-bg:hover { filter: brightness(0.95); }
+
+        /* Tenant-wide accent overrides so customization primary color applies to highlights/buttons */
+        .tenant-themed {
+            --tenant-primary-strong: color-mix(in srgb, var(--tenant-primary) 90%, black);
+            --tenant-primary-soft-20: color-mix(in srgb, var(--tenant-primary) 20%, white);
+            --tenant-primary-soft-12: color-mix(in srgb, var(--tenant-primary) 12%, white);
+            --tenant-primary-soft-8: color-mix(in srgb, var(--tenant-primary) 8%, white);
+            --tenant-primary-ring-20: color-mix(in srgb, var(--tenant-primary) 20%, transparent);
+            --tenant-primary-ring-10: color-mix(in srgb, var(--tenant-primary) 10%, transparent);
+            --tenant-primary-shadow-25: color-mix(in srgb, var(--tenant-primary) 25%, transparent);
+            --tenant-primary-shadow-30: color-mix(in srgb, var(--tenant-primary) 30%, transparent);
+        }
+
+        .tenant-themed .bg-emerald-500,
+        .tenant-themed .bg-emerald-600,
+        .tenant-themed .bg-emerald-700,
+        .tenant-themed .bg-slate-900,
+        .tenant-themed a.bg-emerald-500,
+        .tenant-themed a.bg-emerald-600,
+        .tenant-themed a.bg-emerald-700,
+        .tenant-themed a.bg-slate-900,
+        .tenant-themed button.bg-emerald-500,
+        .tenant-themed button.bg-emerald-600,
+        .tenant-themed button.bg-emerald-700,
+        .tenant-themed button.bg-slate-900 {
+            background-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .bg-emerald-50,
+        .tenant-themed .bg-emerald-100,
+        .tenant-themed .bg-emerald-200 {
+            background-color: var(--tenant-primary-soft-12) !important;
+        }
+
+        .tenant-themed .border-emerald-200,
+        .tenant-themed .border-emerald-300,
+        .tenant-themed .border-emerald-500,
+        .tenant-themed .border-emerald-600,
+        .tenant-themed .border-slate-900,
+        .tenant-themed a.border-emerald-500,
+        .tenant-themed a.border-emerald-600,
+        .tenant-themed a.border-slate-900,
+        .tenant-themed button.border-emerald-500,
+        .tenant-themed button.border-emerald-600,
+        .tenant-themed button.border-slate-900 {
+            border-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .text-emerald-500,
+        .tenant-themed .text-emerald-600,
+        .tenant-themed .text-emerald-700,
+        .tenant-themed .text-emerald-800 {
+            color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .ring-emerald-100,
+        .tenant-themed .ring-emerald-200,
+        .tenant-themed .ring-emerald-300,
+        .tenant-themed .ring-emerald-400,
+        .tenant-themed .ring-emerald-500,
+        .tenant-themed .ring-emerald-600 {
+            --tw-ring-color: var(--tenant-primary-ring-20) !important;
+        }
+
+        .tenant-themed .ring-emerald-100\/50,
+        .tenant-themed .ring-emerald-200\/50,
+        .tenant-themed .ring-emerald-300\/50,
+        .tenant-themed .ring-emerald-400\/50,
+        .tenant-themed .ring-emerald-500\/50,
+        .tenant-themed .ring-emerald-600\/50 {
+            --tw-ring-color: var(--tenant-primary-ring-10) !important;
+        }
+
+        .tenant-themed .from-emerald-50,
+        .tenant-themed .from-emerald-100,
+        .tenant-themed .from-emerald-200,
+        .tenant-themed .from-emerald-300,
+        .tenant-themed .from-emerald-400,
+        .tenant-themed .from-emerald-500,
+        .tenant-themed .from-emerald-600,
+        .tenant-themed .from-emerald-700,
+        .tenant-themed .from-emerald-800,
+        .tenant-themed .from-emerald-900 {
+            --tw-gradient-from: var(--tenant-primary-soft-12) var(--tw-gradient-from-position) !important;
+            --tw-gradient-to: color-mix(in srgb, var(--tenant-primary-soft-12) 0%, transparent) var(--tw-gradient-to-position) !important;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+
+        .tenant-themed .via-emerald-50,
+        .tenant-themed .via-emerald-100,
+        .tenant-themed .via-emerald-200,
+        .tenant-themed .via-emerald-300,
+        .tenant-themed .via-emerald-400,
+        .tenant-themed .via-emerald-500,
+        .tenant-themed .via-emerald-600,
+        .tenant-themed .via-emerald-700,
+        .tenant-themed .via-emerald-800,
+        .tenant-themed .via-emerald-900 {
+            --tw-gradient-via: var(--tenant-primary-soft-20) var(--tw-gradient-via-position) !important;
+            --tw-gradient-to: color-mix(in srgb, var(--tenant-primary-soft-20) 0%, transparent) var(--tw-gradient-to-position) !important;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
+        }
+
+        .tenant-themed .to-emerald-50,
+        .tenant-themed .to-emerald-100,
+        .tenant-themed .to-emerald-200,
+        .tenant-themed .to-emerald-300,
+        .tenant-themed .to-emerald-400,
+        .tenant-themed .to-emerald-500,
+        .tenant-themed .to-emerald-600,
+        .tenant-themed .to-emerald-700,
+        .tenant-themed .to-emerald-800,
+        .tenant-themed .to-emerald-900 {
+            --tw-gradient-to: var(--tenant-primary-soft-20) var(--tw-gradient-to-position) !important;
+        }
+
+        .tenant-themed .to-emerald-50\/50,
+        .tenant-themed .to-emerald-100\/50,
+        .tenant-themed .to-emerald-200\/50,
+        .tenant-themed .to-emerald-300\/50,
+        .tenant-themed .to-emerald-400\/50,
+        .tenant-themed .to-emerald-500\/50,
+        .tenant-themed .to-emerald-600\/50,
+        .tenant-themed .to-emerald-700\/50,
+        .tenant-themed .to-emerald-800\/50,
+        .tenant-themed .to-emerald-900\/50 {
+            --tw-gradient-to: var(--tenant-primary-soft-8) var(--tw-gradient-to-position) !important;
+        }
+
+        .tenant-themed .focus\:ring-emerald-500:focus,
+        .tenant-themed .focus\:ring-emerald-500:focus-visible,
+        .tenant-themed .focus\:ring-emerald-500\/20:focus,
+        .tenant-themed .focus\:ring-emerald-500\/20:focus-visible,
+        .tenant-themed .focus\:ring-emerald-500\/10:focus,
+        .tenant-themed .focus\:ring-emerald-500\/10:focus-visible {
+            --tw-ring-color: var(--tenant-primary-ring-20) !important;
+        }
+
+        .tenant-themed .focus\:border-emerald-500:focus,
+        .tenant-themed .focus\:border-emerald-500:focus-visible {
+            border-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .hover\:bg-emerald-700:hover,
+        .tenant-themed .hover\:bg-emerald-600:hover,
+        .tenant-themed .hover\:bg-slate-800:hover,
+        .tenant-themed .hover\:bg-slate-900:hover {
+            background-color: var(--tenant-primary-strong) !important;
+        }
+
+        .tenant-themed .hover\:text-emerald-700:hover,
+        .tenant-themed .hover\:text-emerald-600:hover {
+            color: var(--tenant-primary-strong) !important;
+        }
+
+        .tenant-themed .shadow-emerald-500\/25 {
+            --tw-shadow-color: var(--tenant-primary-shadow-25) !important;
+        }
+
+        .tenant-themed .shadow-emerald-500\/30 {
+            --tw-shadow-color: var(--tenant-primary-shadow-30) !important;
+        }
     </style>
 </head>
 <body
-    class="min-h-screen overflow-x-clip bg-slate-100 text-slate-900 font-sans antialiased"
+    class="min-h-screen overflow-x-clip bg-slate-100 text-slate-900 font-sans antialiased {{ app()->bound('current_tenant') ? 'tenant-themed' : '' }}"
     @if(session('success')) data-success-message="{{ session('success') }}" @endif
     @if(session('error')) data-error-message="{{ session('error') }}" @endif
     @if(session('info')) data-info-message="{{ session('info') }}" @endif

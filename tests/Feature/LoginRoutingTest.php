@@ -494,7 +494,7 @@ test('office staff login still lands on an allowed tenant page when live operati
         ->assertRedirect(route('tenant.settings.edit'));
 });
 
-test('authenticated office staff visiting the tenant login page still sees the workspace login form', function () {
+test('authenticated office staff visiting the tenant login page are redirected to office dashboard', function () {
     config()->set('app.url', 'http://central.localhost');
 
     $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
@@ -535,10 +535,7 @@ test('authenticated office staff visiting the tenant login page still sees the w
         ->withServerVariables(loginTenantHost())
         ->get('/login');
 
-    $response->assertOk()
-        ->assertSee('Sign in to continue')
-        ->assertSee('Log in')
-        ->assertDontSee('Redirecting...');
+    $response->assertRedirect(route('office.dashboard'));
 
     $this->assertAuthenticated();
     $this->assertAuthenticatedAs($staff);

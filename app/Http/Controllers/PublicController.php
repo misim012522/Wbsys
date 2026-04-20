@@ -3,16 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\Appointment;
 use App\Models\Office;
-use App\Models\OfficeSchedule;
 use App\Models\QueueEntry;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class PublicController extends Controller
 {
+    private ?bool $hasAssignedStaffColumn = null;
+
+    private function assignedStaffColumnAvailable(): bool
+    {
+        if ($this->hasAssignedStaffColumn !== null) {
+            return $this->hasAssignedStaffColumn;
+        }
+
+        return $this->hasAssignedStaffColumn = Schema::connection('tenant')->hasColumn('queue_entries', 'assigned_staff_user_id');
+    }
+
     /** Public page when user scans QR for an office (no login). */
     public function office(string $slug)
     {
@@ -29,14 +40,50 @@ class PublicController extends Controller
             'logo_url' => $tenant ? $tenant->getSetting('theme.logo_url') : null,
             'queue_label' => $tenant ? $tenant->getSetting('customization.labels.queue', 'Queue') : 'Queue',
             'office_label' => $tenant ? $tenant->getSetting('customization.labels.office', 'Office') : 'Office',
-            'appointment_label' => $tenant ? $tenant->getSetting('customization.labels.appointment', 'Appointment') : 'Appointment',
             'guest_queue_enabled' => $tenant ? $tenant->getSetting('customization.guest_queue', true) : true,
-            'appointments_enabled' => $tenant ? $tenant->getSetting('customization.appointments', true) : true,
             'show_service_type' => $tenant ? $tenant->getSetting('customization.show_service_type', true) : true,
-            'show_purpose_field' => $tenant ? $tenant->getSetting('customization.show_purpose_field', true) : true,
         ];
 
-        return view('public.office', compact('office', 'custom'));
+        return view('public.office', [
+            'office' => $office,
+            'custom' => $custom,
+            'preferredStaff' => null,
+        ]);
+    }
+
+    /** Public page when user scans an office-staff-specific QR (signed URL). */
+    public function officeForStaff(string $slug, int $userId)
+    {
+        $office = Office::query()
+            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $user = User::query()
+            ->where('id', $userId)
+            ->where('role', User::ROLE_OFFICE_STAFF)
+            ->where('office_id', $office->id)
+            ->where('tenant_id', $office->tenant_id)
+            ->firstOrFail();
+
+        $office->load('schedules');
+        $tenant = $office->tenant;
+        $custom = [
+            'primary_color' => $tenant ? $tenant->getSetting('theme.primary_color', '#2563eb') : '#059669',
+            'app_name' => $tenant ? $tenant->getSetting('theme.app_name', config('app.name')) : config('app.name'),
+            'logo_url' => $tenant ? $tenant->getSetting('theme.logo_url') : null,
+            'queue_label' => $tenant ? $tenant->getSetting('customization.labels.queue', 'Queue') : 'Queue',
+            'office_label' => $tenant ? $tenant->getSetting('customization.labels.office', 'Office') : 'Office',
+            'guest_queue_enabled' => $tenant ? $tenant->getSetting('customization.guest_queue', true) : true,
+            'show_service_type' => $tenant ? $tenant->getSetting('customization.show_service_type', true) : true,
+        ];
+
+        return view('public.office', [
+            'office' => $office,
+            'custom' => $custom,
+            'preferredStaff' => $user,
+        ]);
     }
 
     /** Get a queue number (guest: name + optional contact). */
@@ -54,23 +101,39 @@ class PublicController extends Controller
         if (! $this->guestQueueEnabled($office)) {
             return back()->with('error', 'This office is not accepting queue numbers right now.');
         }
+        $canUseAssignedStaff = $this->assignedStaffColumnAvailable();
 
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
             'guest_email' => ['nullable', 'email', 'max:255'],
             'guest_phone' => ['nullable', 'string', 'max:50'],
             'service_type' => ['nullable', 'string', 'max:100'],
+            'preferred_staff_user_id' => ['nullable', 'integer'],
         ], [], [
             'guest_email' => 'email address',
             'guest_phone' => 'phone number',
         ]);
+
+        $preferredStaffId = isset($validated['preferred_staff_user_id'])
+            ? (int) $validated['preferred_staff_user_id']
+            : null;
+
+        $assignedStaff = null;
+        if ($canUseAssignedStaff && $preferredStaffId) {
+            $assignedStaff = User::query()
+                ->where('id', $preferredStaffId)
+                ->where('role', User::ROLE_OFFICE_STAFF)
+                ->where('tenant_id', $office->tenant_id)
+                ->where('office_id', $office->id)
+                ->first();
+        }
 
         if (empty($validated['guest_email']) && empty($validated['guest_phone'])) {
             return back()->withErrors(['guest_email' => 'Please provide at least an email or phone so we can contact or remind you.'])->withInput();
         }
 
         $today = today();
-        $entry = DB::transaction(function () use ($office, $today, $validated) {
+        $entry = DB::transaction(function () use ($office, $today, $validated, $assignedStaff, $canUseAssignedStaff) {
             $currentMax = QueueEntry::query()
                 ->where('office_id', $office->id)
                 ->where('queue_date', $today)
@@ -83,7 +146,7 @@ class PublicController extends Controller
                 return null;
             }
 
-            return QueueEntry::create([
+            $payload = [
                 'tenant_id' => $office->tenant_id,
                 'office_id' => $office->id,
                 'user_id' => null,
@@ -95,7 +158,13 @@ class PublicController extends Controller
                 'queue_date' => $today,
                 'status' => QueueEntry::STATUS_WAITING,
                 'reference_code' => $this->generateUniqueReferenceCode(QueueEntry::class),
-            ]);
+            ];
+
+            if ($canUseAssignedStaff) {
+                $payload['assigned_staff_user_id'] = $assignedStaff?->id;
+            }
+
+            return QueueEntry::create($payload);
         });
 
         if (! $entry) {
@@ -109,7 +178,12 @@ class PublicController extends Controller
             null,
             QueueEntry::class,
             $entry->id,
-            ['queue_number' => $entry->queue_number, 'guest_name' => $validated['guest_name'], 'service_type' => $validated['service_type'] ?? null]
+            [
+                'queue_number' => $entry->queue_number,
+                'guest_name' => $validated['guest_name'],
+                'service_type' => $validated['service_type'] ?? null,
+                'assigned_staff_user_id' => $assignedStaff?->id,
+            ]
         );
 
         return redirect()->route('queue.track', ['referenceCode' => $entry->reference_code])
@@ -124,142 +198,24 @@ class PublicController extends Controller
             ->where('reference_code', $referenceCode)
             ->first();
 
-        if ($queueEntry) {
-            $position = $queueEntry->office->queueEntries()
-                ->where('queue_date', $queueEntry->queue_date)
-                ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
-                ->where('queue_number', '<=', $queueEntry->queue_number)
-                ->count();
+        abort_unless($queueEntry, 404);
 
-            return view('public.track', [
-                'mode' => 'queue',
-                'queueEntry' => $queueEntry,
-                'appointment' => null,
-                'position' => $position,
-                'ahead' => $position - 1,
-            ]);
-        }
-
-        $appointment = Appointment::with('office')
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
-            ->where('reference_code', $referenceCode)
-            ->firstOrFail();
+        $position = $queueEntry->office->queueEntries()
+            ->where('queue_date', $queueEntry->queue_date)
+            ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
+            ->where('queue_number', '<=', $queueEntry->queue_number)
+            ->count();
 
         return view('public.track', [
-            'mode' => 'appointment',
-            'queueEntry' => null,
-            'appointment' => $appointment,
-            'position' => null,
-            'ahead' => null,
+            'queueEntry' => $queueEntry,
+            'position' => $position,
+            'ahead' => $position - 1,
         ]);
-    }
-
-    /** Book an appointment (guest). */
-    public function bookAppointment(Request $request, string $slug)
-    {
-        $office = Office::query()
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
-            ->where('slug', $slug)
-            ->where('is_active', true)
-            ->firstOrFail();
-        if (! $office->is_active) {
-            return back()->with('error', 'This office is not accepting appointments.');
-        }
-
-        if (! $this->appointmentsEnabled($office)) {
-            return back()->with('error', 'This office is not accepting appointments right now.');
-        }
-
-        $validated = $request->validate([
-            'guest_name' => ['required', 'string', 'max:255'],
-            'guest_email' => ['nullable', 'email', 'max:255'],
-            'guest_phone' => ['nullable', 'string', 'max:50'],
-            'appointment_type' => ['nullable', 'string', 'max:100'],
-            'appointment_date' => ['required', 'date', 'after_or_equal:today'],
-            'appointment_time' => ['required'],
-            'purpose' => ['nullable', 'string', 'max:500'],
-        ], [], [
-            'guest_email' => 'email address',
-            'guest_phone' => 'phone number',
-        ]);
-
-        if (empty($validated['guest_email']) && empty($validated['guest_phone'])) {
-            return back()->withErrors(['guest_email' => 'Please provide at least an email or phone so we can remind you of your appointment.'])->withInput();
-        }
-
-        $date = $validated['appointment_date'];
-        $time = $validated['appointment_time'];
-
-        $dayOfWeek = (int) date('w', strtotime($date));
-        $schedule = OfficeSchedule::where('office_id', $office->id)
-            ->where('day_of_week', $dayOfWeek)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $schedule) {
-            return back()->with('error', 'Office is closed on the selected date.');
-        }
-
-        if (! $this->timeFallsWithinSchedule($time, $schedule)) {
-            return back()->with('error', 'The selected time is outside office hours.');
-        }
-
-        $existing = Appointment::where('office_id', $office->id)
-            ->where('appointment_date', $date)
-            ->where('appointment_time', $time)
-            ->whereIn('status', [Appointment::STATUS_PENDING, Appointment::STATUS_CONFIRMED])
-            ->exists();
-
-        if ($existing) {
-            return back()->with('error', 'That slot is already taken.');
-        }
-
-        $appointment = Appointment::create([
-            'tenant_id' => $office->tenant_id,
-            'office_id' => $office->id,
-            'user_id' => null,
-            'guest_name' => $validated['guest_name'],
-            'guest_email' => $validated['guest_email'] ?? null,
-            'guest_phone' => $validated['guest_phone'] ?? null,
-            'appointment_type' => $validated['appointment_type'] ?? null,
-            'appointment_date' => $date,
-            'appointment_time' => $time,
-            'status' => Appointment::STATUS_PENDING,
-            'purpose' => $validated['purpose'] ?? null,
-            'reference_code' => $this->generateUniqueReferenceCode(Appointment::class),
-        ]);
-
-        ActivityLog::log(
-            $office->id,
-            'appointment_booked',
-            $validated['guest_name'].' booked an appointment for '.$date.' at '.$time,
-            null,
-            Appointment::class,
-            $appointment->id,
-            ['guest_name' => $validated['guest_name'], 'appointment_date' => $date, 'appointment_time' => $time]
-        );
-
-        return redirect()->route('queue.office', ['slug' => $office->slug])
-            ->with('success', 'Appointment requested. Reference: '.$appointment->reference_code.' - we will confirm soon.');
     }
 
     private function guestQueueEnabled(Office $office): bool
     {
         return (bool) optional($office->tenant)->getSetting('customization.guest_queue', true);
-    }
-
-    private function appointmentsEnabled(Office $office): bool
-    {
-        return (bool) optional($office->tenant)->getSetting('customization.appointments', true);
-    }
-
-    private function timeFallsWithinSchedule(string $time, OfficeSchedule $schedule): bool
-    {
-        $selected = substr($time, 0, 5);
-        $opensAt = substr((string) $schedule->open_time, 0, 5);
-        $closesAt = substr((string) $schedule->close_time, 0, 5);
-
-        return $selected >= $opensAt && $selected <= $closesAt;
     }
 
     private function generateUniqueReferenceCode(string $modelClass): string

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CentralTenantSignupRequest;
 use App\Models\ActivityLog;
-use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\Plan;
 use App\Models\QueueEntry;
@@ -522,7 +521,7 @@ class CentralController extends Controller
     }
 
     /**
-     * @return array{office_count:int, office_staff_count:int, today_queue_count:int, today_appointment_count:int, last_activity_label:string}
+     * @return array{office_count:int, office_staff_count:int, today_queue_count:int, last_activity_label:string}
      */
     private function tenantInsightData(Tenant $tenant): array
     {
@@ -543,11 +542,6 @@ class CentralController extends Controller
                 ->whereDate('queue_date', today())
                 ->count();
 
-            $todayAppointmentCount = Appointment::query()
-                ->where('tenant_id', $tenant->id)
-                ->whereDate('appointment_date', today())
-                ->count();
-
             $lastActivity = ActivityLog::query()
                 ->where('tenant_id', $tenant->id)
                 ->latest('created_at')
@@ -561,7 +555,6 @@ class CentralController extends Controller
                 'office_count' => $officeCount,
                 'office_staff_count' => $officeStaffCount,
                 'today_queue_count' => $todayQueueCount,
-                'today_appointment_count' => $todayAppointmentCount,
                 'last_activity_label' => $lastActivityLabel,
             ];
         } catch (\Throwable) {
@@ -569,7 +562,6 @@ class CentralController extends Controller
                 'office_count' => 0,
                 'office_staff_count' => 0,
                 'today_queue_count' => 0,
-                'today_appointment_count' => 0,
                 'last_activity_label' => 'Unavailable',
             ];
         }

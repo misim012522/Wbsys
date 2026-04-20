@@ -222,7 +222,7 @@
                         <p id="selected-plan-summary-text" class="mt-4 text-sm leading-6 text-slate-600">
                             Balanced features and pricing for growing offices that need room to scale.
                         </p>
-                        <p id="selected-plan-features" class="mt-4 text-sm text-slate-700">Queue, Appointments, Email Notifications</p>
+                        <p id="selected-plan-features" class="mt-4 text-sm text-slate-700">Queue, Email Notifications</p>
                     </div>
 
                     <div class="register-reveal-soft rounded-[1.5rem] border border-slate-200 bg-slate-900 px-5 py-5 text-white shadow-sm" style="--reveal-delay: 460ms;">

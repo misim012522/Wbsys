@@ -4,7 +4,6 @@
 
 @section('content')
 @php
-    $queueUrl = \App\Support\TenantUrl::forPath($office->tenant, route('queue.office', ['slug' => $office->slug], false));
     $qrImageUrl = route('office.qr.image');
     $viewer = auth()->user();
     $canViewActivity = $viewer?->hasPermission('office.activity.view');
@@ -16,7 +15,7 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">Office QR access</p>
                 <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{{ $office->name }}</h1>
-                <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">Display or print this QR access point at your office. End users scan it to get a queue number or book an appointment, then you handle the live flow from the office staff workspace.</p>
+                <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">Display or print this QR access point at your office. End users scan it to get a queue number, then you handle the live flow from the office staff workspace.</p>
             </div>
 
             <div class="flex flex-wrap gap-2">
@@ -81,11 +80,11 @@
                 </div>
                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
                     <p class="text-sm font-semibold text-slate-900">2. Let visitors join</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Visitors can open the public office page to get a queue number or create an appointment without signing in.</p>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Visitors who scan this QR are automatically assigned to your queue lane for faster handling.</p>
                 </div>
                 <div class="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
                     <p class="text-sm font-semibold text-slate-900">3. Handle the live flow</p>
-                    <p class="mt-2 text-sm leading-6 text-slate-600">Use the office dashboard right after that to call the next queue, process appointments, and monitor activity.</p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600">Use the office dashboard right after that to call the next queue and monitor activity.</p>
                 </div>
             </div>
         </div>
@@ -150,8 +149,8 @@
     if (shareBtn && navigator.share) {
         shareBtn.addEventListener('click', function () {
             navigator.share({
-                title: officeName + ' - Queue and Appointments',
-                text: 'Get a queue number or book an appointment at ' + officeName + '. Scan the QR or open this link.',
+                title: officeName + ' - Queue Access',
+                text: 'Get a queue number at ' + officeName + '. Scan the QR or open this link.',
                 url: queueUrl
             }).catch(function (e) { if (e.name !== 'AbortError') console.error(e); });
         });

@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
-use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Services\QrCodeService;
 use App\Services\TenantPlanEnforcer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
 
 class OfficeController extends Controller
 {
+    private ?bool $hasAssignedStaffColumn = null;
+
     public function __construct(
         private QrCodeService $qrCodeService,
         private TenantPlanEnforcer $tenantPlanEnforcer,
@@ -23,33 +26,66 @@ class OfficeController extends Controller
         return app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
     }
 
+    private function assignedStaffColumnAvailable(): bool
+    {
+        if ($this->hasAssignedStaffColumn !== null) {
+            return $this->hasAssignedStaffColumn;
+        }
+
+        return $this->hasAssignedStaffColumn = Schema::connection('tenant')->hasColumn('queue_entries', 'assigned_staff_user_id');
+    }
+
     public function dashboard()
     {
-        $office = auth()->user()->office;
+        $staffUser = auth()->user();
+        $office = $staffUser->office;
         if (! $office) {
             return redirect()->route('dashboard')->with('error', 'No office assigned.');
         }
+        $canUseAssignedStaff = $this->assignedStaffColumnAvailable();
 
-        $todayQueue = $office->queueEntries()->activeToday()->orderBy('queue_number')->get();
-        $todayAppointments = $office->appointments()->upcomingToday()->orderBy('appointment_time')->get();
+        $todayQueue = $office->queueEntries()
+            ->activeToday()
+            ->when($canUseAssignedStaff, function ($query) use ($staffUser) {
+                $query->where(function ($inner) use ($staffUser) {
+                    $inner->where('assigned_staff_user_id', $staffUser->id)
+                        ->orWhereNull('assigned_staff_user_id');
+                });
+            })
+            ->orderBy('queue_number')
+            ->get();
         $currentServing = $office->queueEntries()
             ->today()
+            ->when($canUseAssignedStaff, function ($query) use ($staffUser) {
+                $query->where(function ($inner) use ($staffUser) {
+                    $inner->where('assigned_staff_user_id', $staffUser->id)
+                        ->orWhereNull('assigned_staff_user_id');
+                });
+            })
             ->whereIn('status', [QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
             ->orderBy('queue_number')
             ->first();
 
-        return view('office.dashboard', compact('office', 'todayQueue', 'todayAppointments', 'currentServing'));
+        return view('office.dashboard', compact('office', 'todayQueue', 'currentServing'));
     }
 
     public function callNext()
     {
-        $office = auth()->user()->office;
+        $staffUser = auth()->user();
+        $office = $staffUser->office;
         if (! $office) {
             return back()->with('error', 'No office assigned.');
         }
+        $canUseAssignedStaff = $this->assignedStaffColumnAvailable();
 
         $next = $office->queueEntries()
             ->today()
+            ->when($canUseAssignedStaff, function ($query) use ($staffUser) {
+                $query->where(function ($inner) use ($staffUser) {
+                    $inner->where('assigned_staff_user_id', $staffUser->id)
+                        ->orWhereNull('assigned_staff_user_id');
+                });
+            })
             ->where('status', QueueEntry::STATUS_WAITING)
             ->orderBy('queue_number')
             ->first();
@@ -79,6 +115,9 @@ class OfficeController extends Controller
     public function updateQueueStatus(Request $request, QueueEntry $queueEntry)
     {
         $this->authorizeOffice($queueEntry->office_id);
+        if ($this->assignedStaffColumnAvailable() && $queueEntry->assigned_staff_user_id !== null && $queueEntry->assigned_staff_user_id !== auth()->id()) {
+            abort(403);
+        }
 
         $validated = $request->validate([
             'status' => ['required', 'in:serving,completed,cancelled,no_show'],
@@ -107,79 +146,37 @@ class OfficeController extends Controller
         return back()->with('success', 'Queue status updated.');
     }
 
-    public function acceptAppointment(Appointment $appointment)
-    {
-        $this->authorizeOffice($appointment->office_id);
-        $appointment->update(['status' => Appointment::STATUS_CONFIRMED]);
-
-        ActivityLog::log(
-            $appointment->office_id,
-            'appointment_accepted',
-            auth()->user()->name.' accepted appointment for '.$appointment->display_name.' at '.\Carbon\Carbon::parse($appointment->appointment_time)->format('g:i A'),
-            auth()->id(),
-            Appointment::class,
-            $appointment->id,
-            ['display_name' => $appointment->display_name, 'appointment_time' => $appointment->appointment_time]
-        );
-
-        return back()->with('success', 'Appointment confirmed.');
-    }
-
-    public function completeAppointment(Appointment $appointment)
-    {
-        $this->authorizeOffice($appointment->office_id);
-        $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
-
-        ActivityLog::log(
-            $appointment->office_id,
-            'appointment_completed',
-            auth()->user()->name.' completed appointment for '.$appointment->display_name,
-            auth()->id(),
-            Appointment::class,
-            $appointment->id,
-            ['display_name' => $appointment->display_name]
-        );
-
-        return back()->with('success', 'Appointment completed.');
-    }
-
-    public function cancelAppointment(Appointment $appointment)
-    {
-        $this->authorizeOffice($appointment->office_id);
-        $appointment->update(['status' => Appointment::STATUS_CANCELLED]);
-
-        ActivityLog::log(
-            $appointment->office_id,
-            'appointment_cancelled',
-            auth()->user()->name.' cancelled appointment for '.$appointment->display_name,
-            auth()->id(),
-            Appointment::class,
-            $appointment->id,
-            ['display_name' => $appointment->display_name]
-        );
-
-        return back()->with('success', 'Appointment cancelled.');
-    }
-
     /** Show QR code for the officer's office (so end users can scan to get number or book). */
     public function qr()
     {
-        $office = auth()->user()->office;
+        $staffUser = auth()->user();
+        $office = $staffUser->office;
         if (! $office) {
             return redirect()->route('office.dashboard')->with('error', 'No office assigned.');
         }
 
-        return view('office.qr', compact('office'));
+        $queuePath = URL::signedRoute('queue.office.staff', [
+            'slug' => $office->slug,
+            'userId' => $staffUser->id,
+        ], null, false);
+        $queueUrl = \App\Support\TenantUrl::forPath($office->tenant, $queuePath);
+
+        return view('office.qr', compact('office', 'queueUrl'));
     }
 
     /** Generate QR code image for the officer's office. */
     public function qrCodeImage(Request $request): Response
     {
-        $office = auth()->user()->office;
+        $staffUser = auth()->user();
+        $office = $staffUser->office;
         if (! $office) {
             abort(403);
         }
-        $url = $this->qrCodeService->queueOfficeUrl($office->slug, $this->currentTenant());
+        $path = URL::signedRoute('queue.office.staff', [
+            'slug' => $office->slug,
+            'userId' => $staffUser->id,
+        ], null, false);
+        $url = \App\Support\TenantUrl::forPath($office->tenant, $path);
         $result = $this->qrCodeService->build($url);
         $response = response($result->getString())
             ->header('Content-Type', $result->getMimeType());
@@ -219,10 +216,6 @@ class OfficeController extends Controller
             'queue_joined' => 'Queue joined',
             'queue_called' => 'Queue called',
             'queue_updated' => 'Queue updated',
-            'appointment_booked' => 'Appointment booked',
-            'appointment_accepted' => 'Appointment accepted',
-            'appointment_completed' => 'Appointment completed',
-            'appointment_cancelled' => 'Appointment cancelled',
         ];
 
         return view('office.activity', compact('office', 'activities', 'actionOptions'));
@@ -241,9 +234,8 @@ class OfficeController extends Controller
         }
         $date = $request->get('date', today()->toDateString());
         $queueEntries = $office->queueEntries()->where('queue_date', $date)->orderBy('queue_number')->get();
-        $appointments = $office->appointments()->where('appointment_date', $date)->orderBy('appointment_time')->get();
 
-        return view('office.reports', compact('office', 'queueEntries', 'appointments', 'date'));
+        return view('office.reports', compact('office', 'queueEntries', 'date'));
     }
 
     /** Generate and download report (CSV or PDF). */
@@ -265,23 +257,21 @@ class OfficeController extends Controller
 
         $date = $request->date;
         $queueEntries = $office->queueEntries()->where('queue_date', $date)->orderBy('queue_number')->get();
-        $appointments = $office->appointments()->where('appointment_date', $date)->orderBy('appointment_time')->get();
 
         $queueByStatus = $queueEntries->groupBy('status')->map->count();
-        $appointmentsByStatus = $appointments->groupBy('status')->map->count();
 
         if ($request->format === 'csv') {
-            return $this->downloadReportCsv($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus);
+            return $this->downloadReportCsv($office, $date, $queueEntries, $queueByStatus);
         }
 
-        return $this->downloadReportPdf($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus);
+        return $this->downloadReportPdf($office, $date, $queueEntries, $queueByStatus);
     }
 
-    private function downloadReportCsv($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus): Response
+    private function downloadReportCsv($office, $date, $queueEntries, $queueByStatus): Response
     {
         $filename = 'report-'.\Illuminate\Support\Str::slug($office->name).'-'.$date.'.csv';
 
-        $callback = function () use ($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus) {
+        $callback = function () use ($office, $date, $queueEntries, $queueByStatus) {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['QueueLess — Office Report']);
             fputcsv($out, ['Office', $office->name]);
@@ -308,27 +298,6 @@ class OfficeController extends Controller
                     $e->status,
                 ]);
             }
-            fputcsv($out, []);
-
-            fputcsv($out, ['Appointments Summary']);
-            foreach ($appointmentsByStatus as $status => $count) {
-                fputcsv($out, [$status, $count]);
-            }
-            fputcsv($out, ['Total', $appointments->count()]);
-            fputcsv($out, []);
-
-            fputcsv($out, ['Appointments', 'Time', 'Name', 'Type', 'Email', 'Phone', 'Status']);
-            foreach ($appointments as $a) {
-                fputcsv($out, [
-                    '',
-                    \Carbon\Carbon::parse($a->appointment_time)->format('H:i'),
-                    $a->display_name,
-                    $a->appointment_type ?? '',
-                    $a->guest_email ?? '',
-                    $a->guest_phone ?? '',
-                    $a->status,
-                ]);
-            }
             fclose($out);
         };
 
@@ -338,9 +307,9 @@ class OfficeController extends Controller
         ]);
     }
 
-    private function downloadReportPdf($office, $date, $queueEntries, $appointments, $queueByStatus, $appointmentsByStatus): Response
+    private function downloadReportPdf($office, $date, $queueEntries, $queueByStatus): Response
     {
-        $html = view('office.report-print', compact('office', 'date', 'queueEntries', 'appointments', 'queueByStatus', 'appointmentsByStatus'))->render();
+        $html = view('office.report-print', compact('office', 'date', 'queueEntries', 'queueByStatus'))->render();
 
         $filename = 'report-'.\Illuminate\Support\Str::slug($office->name).'-'.$date.'.html';
 

@@ -32,12 +32,9 @@ class CustomizationController extends Controller
                 'guidance' => 'Guidance',
             ],
             'guestQueueEnabled' => $tenant->getSetting('customization.guest_queue', true),
-            'appointmentsEnabled' => $tenant->getSetting('customization.appointments', true),
             'showServiceType' => $tenant->getSetting('customization.show_service_type', true),
-            'showPurposeField' => $tenant->getSetting('customization.show_purpose_field', true),
             'queueLabel' => $tenant->getSetting('customization.labels.queue', 'Queue'),
             'officeLabel' => $tenant->getSetting('customization.labels.office', 'Office'),
-            'appointmentLabel' => $tenant->getSetting('customization.labels.appointment', 'Appointment'),
         ]);
     }
 
@@ -54,13 +51,10 @@ class CustomizationController extends Controller
             'support_url' => ['nullable', 'url', 'max:500'],
             'app_name' => ['nullable', 'string', 'max:64'],
             'guest_queue' => ['nullable', 'boolean'],
-            'appointments' => ['nullable', 'boolean'],
             'show_service_type' => ['nullable', 'boolean'],
-            'show_purpose_field' => ['nullable', 'boolean'],
             'dashboard_profile' => ['nullable', 'in:general,registrar,cashier,clinic,guidance'],
             'label_queue' => ['nullable', 'string', 'max:32'],
             'label_office' => ['nullable', 'string', 'max:32'],
-            'label_appointment' => ['nullable', 'string', 'max:32'],
         ]);
 
         if (! empty($validated['primary_color'])) {
@@ -71,15 +65,12 @@ class CustomizationController extends Controller
         $tenant->setSetting('theme.app_name', $validated['app_name'] ?? config('app.name'));
 
         $tenant->setSetting('customization.guest_queue', $request->boolean('guest_queue'));
-        $tenant->setSetting('customization.appointments', $request->boolean('appointments'));
         $tenant->setSetting('customization.show_service_type', $request->boolean('show_service_type'));
-        $tenant->setSetting('customization.show_purpose_field', $request->boolean('show_purpose_field'));
         $tenant->setSetting('dashboard.profile', $validated['dashboard_profile'] ?? TenantDashboardProfile::inferFromName($tenant->name));
 
         $labels = $tenant->getSetting('customization.labels', []);
         $labels['queue'] = $validated['label_queue'] ?? 'Queue';
         $labels['office'] = $validated['label_office'] ?? 'Office';
-        $labels['appointment'] = $validated['label_appointment'] ?? 'Appointment';
         $tenant->setSetting('customization.labels', $labels);
 
         return redirect()->route('admin.customization.index')->with('success', 'Customization saved.');

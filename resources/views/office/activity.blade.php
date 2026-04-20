@@ -14,7 +14,7 @@
     @endif
 </div>
 
-<p class="text-slate-600 mb-6">Recent activity for your office: logins, queue and appointment actions.</p>
+<p class="text-slate-600 mb-6">Recent activity for your office: logins and queue actions.</p>
 
 <form method="GET" action="{{ route('office.activity') }}" class="flex flex-wrap gap-4 mb-6 items-end">
     <div>

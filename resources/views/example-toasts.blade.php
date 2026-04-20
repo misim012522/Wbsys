@@ -50,16 +50,6 @@
             </div>
         </div>
 
-        <!-- Example: Appointments Count -->
-        <div class="mb-6 pb-6 border-b border-slate-200">
-            <h3 class="font-medium mb-3">Today's Appointments</h3>
-            <div class="bg-slate-50 rounded-lg p-4">
-                <p class="text-sm text-slate-600 mb-2">Appointments Today:</p>
-                <p class="text-3xl font-bold text-blue-600" id="example-appointments-count">0</p>
-                <p class="text-xs text-slate-500 mt-2">Updates every 5 seconds</p>
-            </div>
-        </div>
-
         <!-- Example: Custom Refresh -->
         <div>
             <h3 class="font-medium mb-3">Custom Data Refresh</h3>
@@ -102,11 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Option 1: Using helper function for queue count
     window.setupQueueRefresh('example-queue-count', 1, 5000);
-    
-    // Option 2: Using helper function for appointments
-    window.setupAppointmentsRefresh('example-appointments-count', 1, 5000);
-    
-    // Option 3: Using custom refresh logic
+
+    // Option 2: Using custom refresh logic
     window.realtimeRefresh.register(
         'example-completed-count',
         '/api/offices/1/completed-today',

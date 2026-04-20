@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\User;
@@ -11,6 +10,8 @@ use App\Services\QrCodeService;
 use App\Services\TenantPlanEnforcer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -18,6 +19,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AdminController extends Controller
 {
     private const OFFICE_STAFF_PAGE_SIZE = 10;
+
+    private ?bool $hasAssignedStaffColumn = null;
 
     public function __construct(
         private QrCodeService $qrCodeService,
@@ -62,6 +65,25 @@ class AdminController extends Controller
         return app()->bound('current_tenant') ? app('current_tenant') : auth()->user()?->tenant;
     }
 
+    private function staffQueueSignedUrl(Office $office, User $staff): string
+    {
+        $path = URL::signedRoute('queue.office.staff', [
+            'slug' => $office->slug,
+            'userId' => $staff->id,
+        ], null, false);
+
+        return \App\Support\TenantUrl::forPath($office->tenant, $path);
+    }
+
+    private function assignedStaffColumnAvailable(): bool
+    {
+        if ($this->hasAssignedStaffColumn !== null) {
+            return $this->hasAssignedStaffColumn;
+        }
+
+        return $this->hasAssignedStaffColumn = Schema::connection('tenant')->hasColumn('queue_entries', 'assigned_staff_user_id');
+    }
+
     private function applyOfficeStaffSearch($query, string $search)
     {
         return $query->when($search !== '', function ($builder) use ($search) {
@@ -91,22 +113,18 @@ class AdminController extends Controller
     private function reportData(string $date, int $officeId = 0): array
     {
         $queueQuery = QueueEntry::with(['office'])->where('queue_date', $date);
-        $appointmentQuery = Appointment::with(['office'])->where('appointment_date', $date);
 
         if ($tid = $this->tenantId()) {
             $queueQuery->forTenant($tid);
-            $appointmentQuery->forTenant($tid);
         }
 
         if ($officeId > 0) {
             $queueQuery->where('office_id', $officeId);
-            $appointmentQuery->where('office_id', $officeId);
         }
 
         $queueEntries = $queueQuery->orderBy('office_id')->orderBy('queue_number')->get();
-        $appointments = $appointmentQuery->orderBy('office_id')->orderBy('appointment_time')->get();
 
-        return compact('queueEntries', 'appointments');
+        return compact('queueEntries');
     }
 
     public function dashboard()
@@ -114,17 +132,49 @@ class AdminController extends Controller
         $office = $this->defaultOffice();
 
         $baseQueue = QueueEntry::query();
-        $baseAppt = Appointment::query();
         if ($tid = $this->tenantId()) {
             $baseQueue->forTenant($tid);
-            $baseAppt->forTenant($tid);
         }
         $todayQueues = (clone $baseQueue)->where('queue_date', today())->whereIn('status', ['waiting', 'called', 'serving'])->count();
-        $todayAppointments = (clone $baseAppt)->where('appointment_date', today())->whereIn('status', ['pending', 'confirmed'])->count();
-        $completedToday = (clone $baseQueue)->where('queue_date', today())->where('status', 'completed')->count()
-            + (clone $baseAppt)->where('appointment_date', today())->where('status', 'completed')->count();
+        $completedToday = (clone $baseQueue)->where('queue_date', today())->where('status', 'completed')->count();
+        $canUseAssignedStaff = $this->assignedStaffColumnAvailable();
 
-        return view('admin.dashboard', compact('office', 'todayQueues', 'todayAppointments', 'completedToday'));
+        $staffQueueStats = User::query()
+            ->when($this->tenantId(), fn ($query, $tenantId) => $query->where('tenant_id', $tenantId))
+            ->where('role', User::ROLE_OFFICE_STAFF)
+            ->whereNotNull('office_id')
+            ->with(['office'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (User $staff) use ($canUseAssignedStaff) {
+                $waitingCount = 0;
+                $completedCount = 0;
+
+                if ($canUseAssignedStaff) {
+                    $waitingCount = QueueEntry::query()
+                        ->where('office_id', $staff->office_id)
+                        ->where('queue_date', today())
+                        ->where('assigned_staff_user_id', $staff->id)
+                        ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
+                        ->count();
+
+                    $completedCount = QueueEntry::query()
+                        ->where('office_id', $staff->office_id)
+                        ->where('queue_date', today())
+                        ->where('assigned_staff_user_id', $staff->id)
+                        ->where('status', QueueEntry::STATUS_COMPLETED)
+                        ->count();
+                }
+
+                return [
+                    'name' => $staff->name,
+                    'office_name' => $staff->office?->name,
+                    'waiting_count' => $waitingCount,
+                    'completed_count' => $completedCount,
+                ];
+            });
+
+        return view('admin.dashboard', compact('office', 'todayQueues', 'completedToday', 'staffQueueStats'));
     }
 
     public function profile()
@@ -140,8 +190,29 @@ class AdminController extends Controller
         }
 
         $office = $this->defaultOffice();
+        $officeStaff = User::query()
+            ->when($this->tenantId(), fn ($query, $tenantId) => $query->where('tenant_id', $tenantId))
+            ->where('role', User::ROLE_OFFICE_STAFF)
+            ->where('office_id', $office?->id)
+            ->orderBy('name')
+            ->get();
 
-        return view('admin.qr', compact('office'));
+        $staffQrCards = collect();
+        if ($office) {
+            $staffQrCards = $officeStaff->map(function (User $staff) use ($office) {
+                $queueUrl = $this->staffQueueSignedUrl($office, $staff);
+
+                return [
+                    'id' => $staff->id,
+                    'name' => $staff->name,
+                    'email' => $staff->email,
+                    'queue_url' => $queueUrl,
+                    'qr_image_url' => route('admin.qr.image', ['office_staff_id' => $staff->id]),
+                ];
+            });
+        }
+
+        return view('admin.qr', compact('office', 'staffQrCards'));
     }
 
     /** Generate QR code image for the tenant's default office. Uses APP_URL so QR works from any device. */
@@ -152,85 +223,36 @@ class AdminController extends Controller
         $office = $this->defaultOffice();
         abort_unless($office, 404);
 
+        $staffId = request()->integer('office_staff_id');
         $url = $this->qrCodeService->queueOfficeUrl($office->slug, $this->currentTenant());
+        if ($staffId > 0) {
+            $staff = User::query()
+                ->when($this->tenantId(), fn ($query, $tenantId) => $query->where('tenant_id', $tenantId))
+                ->where('role', User::ROLE_OFFICE_STAFF)
+                ->where('office_id', $office->id)
+                ->findOrFail($staffId);
+            $url = $this->staffQueueSignedUrl($office, $staff);
+        }
         $result = $this->qrCodeService->build($url);
 
         return response($result->getString())
             ->header('Content-Type', $result->getMimeType());
     }
 
-    /** Admin office panel: serve queue and appointments for one office. */
+    /** Admin office panel: queue-only monitoring for one office. */
     public function serveOffice(Office $office)
     {
-        $todayQueue = $office->queueEntries()->activeToday()->orderBy('queue_number')->get();
-        $todayAppointments = $office->appointments()->upcomingToday()->orderBy('appointment_time')->get();
-        $currentServing = $office->queueEntries()
-            ->today()
-            ->whereIn('status', [QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
-            ->orderBy('queue_number')
-            ->first();
-
-        return view('admin.serve', compact('office', 'todayQueue', 'todayAppointments', 'currentServing'));
+        return redirect()->route('admin.dashboard')->with('info', 'Queue serving is now handled only by office staff dashboards.');
     }
 
     public function callNext(Office $office)
     {
-        $next = $office->queueEntries()
-            ->today()
-            ->where('status', QueueEntry::STATUS_WAITING)
-            ->orderBy('queue_number')
-            ->first();
-
-        if (! $next) {
-            return back()->with('info', 'No one waiting in queue.');
-        }
-
-        $next->update([
-            'status' => QueueEntry::STATUS_CALLED,
-            'called_at' => now(),
-        ]);
-
-        return back()->with('success', "Now serving #{$next->queue_number}");
+        return redirect()->route('admin.dashboard')->with('info', 'Queue serving is now handled only by office staff dashboards.');
     }
 
     public function updateQueueStatus(Request $request, QueueEntry $queueEntry)
     {
-        $validated = $request->validate([
-            'status' => ['required', 'in:serving,completed,cancelled,no_show'],
-        ]);
-
-        $data = ['status' => $validated['status']];
-        if ($validated['status'] === QueueEntry::STATUS_SERVING) {
-            $data['called_at'] = $queueEntry->called_at ?? now();
-        }
-        if ($validated['status'] === QueueEntry::STATUS_COMPLETED) {
-            $data['served_at'] = now();
-        }
-
-        $queueEntry->update($data);
-
-        return back()->with('success', 'Queue status updated.');
-    }
-
-    public function acceptAppointment(Appointment $appointment)
-    {
-        $appointment->update(['status' => Appointment::STATUS_CONFIRMED]);
-
-        return back()->with('success', 'Appointment confirmed.');
-    }
-
-    public function completeAppointment(Appointment $appointment)
-    {
-        $appointment->update(['status' => Appointment::STATUS_COMPLETED]);
-
-        return back()->with('success', 'Appointment completed.');
-    }
-
-    public function cancelAppointment(Appointment $appointment)
-    {
-        $appointment->update(['status' => Appointment::STATUS_CANCELLED]);
-
-        return back()->with('success', 'Appointment cancelled.');
+        return redirect()->route('admin.dashboard')->with('info', 'Queue serving is now handled only by office staff dashboards.');
     }
 
     public function offices()
@@ -271,10 +293,10 @@ class AdminController extends Controller
 
         $date = $request->get('date', today()->toDateString());
         $officeId = $request->integer('office_id');
-        ['queueEntries' => $queueEntries, 'appointments' => $appointments] = $this->reportData($date, $officeId);
+        ['queueEntries' => $queueEntries] = $this->reportData($date, $officeId);
         $offices = $this->officesQuery()->orderedByName()->get();
 
-        return view('admin.reports', compact('queueEntries', 'appointments', 'date', 'offices', 'officeId'));
+        return view('admin.reports', compact('queueEntries', 'date', 'offices', 'officeId'));
     }
 
     public function downloadReport(Request $request): StreamedResponse|RedirectResponse|Response
@@ -290,19 +312,16 @@ class AdminController extends Controller
         ]);
 
         $officeId = (int) ($validated['office_id'] ?? 0);
-        ['queueEntries' => $queueEntries, 'appointments' => $appointments] = $this->reportData($validated['date'], $officeId);
+        ['queueEntries' => $queueEntries] = $this->reportData($validated['date'], $officeId);
 
         if ($validated['format'] === 'print') {
             $office = $officeId > 0 ? $this->officesQuery()->find($officeId) : null;
             $queueByStatus = $queueEntries->groupBy('status')->map->count();
-            $appointmentsByStatus = $appointments->groupBy('status')->map->count();
             $html = view('office.report-print', [
                 'office' => $office ?? (object) ['name' => 'All workspace offices'],
                 'date' => $validated['date'],
                 'queueEntries' => $queueEntries,
-                'appointments' => $appointments,
                 'queueByStatus' => $queueByStatus,
-                'appointmentsByStatus' => $appointmentsByStatus,
             ])->render();
 
             $filename = 'tenant-report-'.$validated['date'].($officeId > 0 ? '-office-'.Str::slug($office?->name ?? (string) $officeId) : '-all-offices').'.html';
@@ -315,7 +334,7 @@ class AdminController extends Controller
 
         $filename = 'tenant-report-'.$validated['date'].($officeId > 0 ? '-office-'.$officeId : '').'.csv';
 
-        $callback = function () use ($validated, $queueEntries, $appointments): void {
+        $callback = function () use ($validated, $queueEntries): void {
             $out = fopen('php://output', 'w');
             fputcsv($out, ['Tenant Admin Report']);
             fputcsv($out, ['Date', $validated['date']]);
@@ -332,20 +351,6 @@ class AdminController extends Controller
                     $entry->service_type,
                     $entry->reference_code,
                     $entry->status,
-                ]);
-            }
-
-            fputcsv($out, []);
-            fputcsv($out, ['Appointments']);
-            fputcsv($out, ['Office', 'Time', 'Name', 'Type', 'Reference', 'Status']);
-            foreach ($appointments as $appointment) {
-                fputcsv($out, [
-                    $appointment->office?->name,
-                    optional($appointment->appointment_time)->format('H:i'),
-                    $appointment->display_name,
-                    $appointment->appointment_type,
-                    $appointment->reference_code,
-                    $appointment->status,
                 ]);
             }
 

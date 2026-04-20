@@ -15,6 +15,7 @@ class QueueEntry extends Model
         'tenant_id',
         'office_id',
         'user_id',
+        'assigned_staff_user_id',
         'guest_name',
         'guest_contact',
         'guest_email',
@@ -94,6 +95,11 @@ class QueueEntry extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function assignedStaff(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_staff_user_id');
     }
 
     public function getDisplayNameAttribute(): string

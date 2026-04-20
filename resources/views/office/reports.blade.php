@@ -68,31 +68,4 @@
     </table>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-800 mb-2">Appointments ({{ $date }})</h2>
-<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-    <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-200">
-            <tr>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Time</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Name</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Type</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Contact (remind)</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($appointments as $a)
-                <tr class="border-b border-slate-100">
-                    <td class="px-4 py-3 text-slate-600">{{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</td>
-                    <td class="px-4 py-3 text-slate-800">{{ $a->display_name }}</td>
-                    <td class="px-4 py-3 text-slate-600 text-sm">{{ $a->appointment_type ?? '—' }}</td>
-                    <td class="px-4 py-3 text-slate-600 text-sm">@if($a->guest_email)<a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>@endif @if($a->guest_email && $a->guest_phone)<br>@endif @if($a->guest_phone)<a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>@endif @if(!$a->guest_email && !$a->guest_phone)—@endif</td>
-                    <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{{ $a->status }}</span></td>
-                </tr>
-            @empty
-                <tr><td colspan="5" class="px-4 py-6 text-slate-500 text-center">No appointments for this date.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
 @endsection

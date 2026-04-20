@@ -19,9 +19,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/serve/{office}', [AdminController::class, 'serveOffice'])->name('serve')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
     Route::post('/serve/{office}/call-next', [AdminController::class, 'callNext'])->name('call-next')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
     Route::patch('/queue/{queueEntry}', [AdminController::class, 'updateQueueStatus'])->name('queue.update')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:queueEntry']);
-    Route::post('/appointments/{appointment}/accept', [AdminController::class, 'acceptAppointment'])->name('appointments.accept')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:appointment']);
-    Route::post('/appointments/{appointment}/complete', [AdminController::class, 'completeAppointment'])->name('appointments.complete')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:appointment']);
-    Route::post('/appointments/{appointment}/cancel', [AdminController::class, 'cancelAppointment'])->name('appointments.cancel')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:appointment']);
     Route::get('/offices', [AdminController::class, 'offices'])->name('offices')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);
     Route::get('/offices/create', [AdminController::class, 'createOffice'])->name('offices.create')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);
     Route::post('/offices', [AdminController::class, 'storeOffice'])->name('offices.store')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);

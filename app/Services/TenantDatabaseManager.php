@@ -209,7 +209,6 @@ class TenantDatabaseManager
         $permissions = [
             ['name' => 'Manage offices', 'slug' => 'offices.manage', 'module' => 'admin'],
             ['name' => 'Manage queue', 'slug' => 'queue.manage', 'module' => 'admin'],
-            ['name' => 'Manage appointments', 'slug' => 'appointments.manage', 'module' => 'admin'],
             ['name' => 'View reports', 'slug' => 'reports.view', 'module' => 'admin'],
             ['name' => 'Manage users', 'slug' => 'users.manage', 'module' => 'admin'],
             ['name' => 'Serve office (call next, update status)', 'slug' => 'office.serve', 'module' => 'office'],
@@ -226,13 +225,12 @@ class TenantDatabaseManager
 
         $officeStaff = Role::firstOrCreate(
             ['tenant_id' => null, 'slug' => User::ROLE_OFFICE_STAFF],
-            ['name' => 'Office Staff', 'description' => 'Serve queue and appointments']
+            ['name' => 'Office Staff', 'description' => 'Serve queue operations']
         );
 
         $adminPerms = Permission::whereIn('slug', [
             'offices.manage',
             'queue.manage',
-            'appointments.manage',
             'reports.view',
             'users.manage',
             'office.serve',

@@ -8,13 +8,10 @@
     $viewer = auth()->user();
     $dashboardProfile = \App\Support\TenantDashboardProfile::for($tenant);
     $queueLabel = $tenantTheme['queue_label'] ?? 'Queue';
-    $appointmentLabel = $tenantTheme['appointment_label'] ?? 'Appointment';
     $officeLabel = $tenantTheme['office_label'] ?? 'Office';
     $queueEnabled = (bool) ($tenantTheme['guest_queue_enabled'] ?? true);
-    $appointmentsEnabled = (bool) ($tenantTheme['appointments_enabled'] ?? true);
     $canUseQr = $viewer?->hasPermission('office.qr');
     $canManageQueue = $viewer?->hasPermission('office.queue.manage');
-    $canManageAppointments = $viewer?->hasPermission('office.appointments.manage');
     $canViewReports = $viewer?->hasPermission('reports.view');
     $canViewActivity = $viewer?->hasPermission('office.activity.view');
 @endphp
@@ -25,14 +22,14 @@
             <div>
                 <p class="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-600">Live queue</p>
                 <h1 class="mt-3 text-3xl font-bold tracking-tight text-slate-900">{{ $office->name }}</h1>
-                <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Call the next number. Update line status. Handle bookings.</p>
+                <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Call the next number and update live queue status.</p>
             </div>
 
             <div class="flex flex-wrap gap-2">
                 @if($canUseQr)
                     <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
                 @endif
-                @if($canViewReports && ($appointmentsEnabled || $queueEnabled))
+                @if($canViewReports && $queueEnabled)
                     <a href="{{ route('office.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Reports</a>
                 @endif
                 @if($canViewActivity)
@@ -60,14 +57,10 @@
     </div>
 </div>
 
-<div class="mb-8 grid gap-4 md:grid-cols-3">
+<div class="mb-8 grid gap-4 md:grid-cols-2">
     <div class="stat-card">
         <p class="text-sm text-slate-500">Waiting now</p>
         <p class="mt-3 text-3xl font-bold text-slate-900">{{ $todayQueue->count() }}</p>
-    </div>
-    <div class="stat-card">
-        <p class="text-sm text-slate-500">Appointments today</p>
-        <p class="mt-3 text-3xl font-bold text-slate-900">{{ $todayAppointments->count() }}</p>
     </div>
     <div class="stat-card">
         <p class="text-sm text-slate-500">Serving now</p>
@@ -75,7 +68,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+<div class="grid grid-cols-1 gap-8">
     <div>
         <div class="mb-4 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-slate-800">Queue today</h2>
@@ -184,63 +177,6 @@
                     </li>
                 @empty
                     <li class="px-4 py-8 text-center text-slate-500">No one in queue.</li>
-                @endforelse
-            </ul>
-        </div>
-    </div>
-
-    <div>
-        <h2 class="mb-4 text-lg font-semibold text-slate-800">Appointments today</h2>
-        <div class="panel overflow-hidden">
-            <ul class="divide-y divide-slate-100">
-                @forelse($todayAppointments as $a)
-                    <li class="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="min-w-0">
-                            <span class="font-medium text-slate-800">{{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</span>
-                            <span class="ml-2 text-slate-600">{{ $a->display_name }}</span>
-                            @if($a->appointment_type)
-                                <span class="ml-2 text-xs text-slate-500">({{ $a->appointment_type }})</span>
-                            @endif
-                            @if($a->purpose)
-                                <p class="mt-0.5 text-xs text-slate-500">{{ $a->purpose }}</p>
-                            @endif
-                            <p class="mt-0.5 text-xs text-slate-500">
-                                Contact:
-                                @if($a->guest_email)
-                                    <a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>
-                                @endif
-                                @if($a->guest_email && $a->guest_phone)
-                                    |
-                                @endif
-                                @if($a->guest_phone)
-                                    <a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>
-                                @endif
-                                @if(!$a->guest_email && !$a->guest_phone)
-                                    -
-                                @endif
-                            </p>
-                        </div>
-                        <div class="flex shrink-0 flex-wrap gap-2">
-                            @if($canManageAppointments && $a->status === 'pending')
-                                <form method="POST" action="{{ route('office.appointments.accept', $a) }}">
-                                    @csrf
-                                    <button type="submit" class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs text-emerald-800">Accept</button>
-                                </form>
-                            @endif
-                            @if($canManageAppointments && in_array($a->status, ['pending', 'confirmed']))
-                                <form method="POST" action="{{ route('office.appointments.complete', $a) }}">
-                                    @csrf
-                                    <button type="submit" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-700">Complete</button>
-                                </form>
-                                <form method="POST" action="{{ route('office.appointments.cancel', $a) }}">
-                                    @csrf
-                                    <button type="submit" class="rounded-full bg-red-100 px-3 py-1.5 text-xs text-red-700">Cancel</button>
-                                </form>
-                            @endif
-                        </div>
-                    </li>
-                @empty
-                    <li class="px-4 py-8 text-center text-slate-500">No appointments today.</li>
                 @endforelse
             </ul>
         </div>

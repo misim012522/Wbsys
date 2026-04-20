@@ -54,12 +54,20 @@ class RealtimeRefresh {
                 }
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                const element = document.getElementById(elementId);
-                if (element && updateCallback) {
-                    updateCallback(element, data);
-                }
+            if (response.status === 401 || response.status === 419) {
+                // Stop polling this element when session/auth is no longer valid.
+                this.unregister(elementId);
+                return;
+            }
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            const element = document.getElementById(elementId);
+            if (element && updateCallback) {
+                updateCallback(element, data);
             }
         } catch (error) {
             console.error(`Error refreshing element "${elementId}":`, error);
@@ -128,23 +136,7 @@ export function setupQueueRefresh(elementId, officeId, interval = 5000) {
 }
 
 /**
- * Helper function to set up appointments refresh
- */
-export function setupAppointmentsRefresh(elementId, officeId, interval = 5000) {
-    realtimeRefresh.register(
-        elementId,
-        `/api/offices/${officeId}/appointments-today`,
-        (element, data) => {
-            if (data.count !== undefined) {
-                element.textContent = data.count;
-            }
-        },
-        interval
-    );
-}
-
-/**
- * Helper function to set up list refresh (e.g., queue list, appointments list)
+ * Helper function to set up list refresh (e.g., queue list)
  */
 export function setupListRefresh(elementId, url, interval = 5000) {
     realtimeRefresh.register(

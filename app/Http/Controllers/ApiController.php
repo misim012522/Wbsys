@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Appointment;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\Tenant;
@@ -59,22 +58,6 @@ class ApiController extends Controller
     }
 
     /**
-     * Get today's appointments count
-     */
-    public function appointmentsToday(Request $request, Office $office): JsonResponse
-    {
-        // Authorization check
-        $this->authorize('view', $office);
-
-        $count = Appointment::where('office_id', $office->id)
-            ->whereDate('appointment_date', today())
-            ->where('status', '!=', 'cancelled')
-            ->count();
-
-        return response()->json(['count' => $count]);
-    }
-
-    /**
      * Get completed count for today
      */
     public function completedToday(Request $request, Office $office): JsonResponse
@@ -109,23 +92,4 @@ class ApiController extends Controller
         return response()->json(['html' => $html]);
     }
 
-    /**
-     * Get appointments list as HTML
-     */
-    public function appointmentsList(Request $request, Office $office): JsonResponse
-    {
-        // Authorization check
-        $this->authorize('view', $office);
-
-        $appointments = Appointment::where('office_id', $office->id)
-            ->whereDate('appointment_date', today())
-            ->where('status', '!=', 'cancelled')
-            ->orderBy('appointment_date', 'asc')
-            ->take(10)
-            ->get();
-
-        $html = view('components.appointments-list', ['appointments' => $appointments])->render();
-
-        return response()->json(['html' => $html]);
-    }
 }

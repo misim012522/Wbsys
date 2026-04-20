@@ -14,7 +14,7 @@
                         </span>
                         <div>
                             <p class="text-xl font-bold tracking-tight text-slate-900">QueueLess</p>
-                            <p class="text-sm text-slate-500">Smart appointment & queue management</p>
+                            <p class="text-sm text-slate-500">Smart queue management</p>
                         </div>
                     </div>
                 </div>

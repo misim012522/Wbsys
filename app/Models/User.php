@@ -31,7 +31,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'default' => true,
             'input' => 'office_staff_office_dashboard',
             'label' => 'Open office dashboard',
-            'description' => 'Lets office staff open their main office workspace and view live queue and appointment summaries.',
+            'description' => 'Lets office staff open their main office workspace and view live queue summaries.',
             'badge' => 'emerald',
         ],
         'office.qr' => [
@@ -49,14 +49,6 @@ class User extends Authenticatable implements MustVerifyEmail
             'label' => 'Manage queue operations',
             'description' => 'Lets office staff call the next number and update queue statuses for their assigned office.',
             'badge' => 'amber',
-        ],
-        'office.appointments.manage' => [
-            'setting' => 'rbac.office_staff.office.appointments.manage',
-            'default' => true,
-            'input' => 'office_staff_office_appointments_manage',
-            'label' => 'Manage appointments',
-            'description' => 'Lets office staff accept, complete, and cancel office appointments.',
-            'badge' => 'rose',
         ],
         'office.activity.view' => [
             'setting' => 'rbac.office_staff.office.activity.view',
@@ -108,7 +100,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'default' => true,
             'input' => 'tenant_admin_admin_office_serve',
             'label' => 'Use admin QR and serve tools',
-            'description' => 'Lets the tenant admin open QR pages and directly serve queue and appointment operations from admin pages.',
+            'description' => 'Lets the tenant admin open QR pages and directly serve queue operations from admin pages.',
             'badge' => 'rose',
         ],
         'users.manage' => [
@@ -211,9 +203,9 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(QueueEntry::class);
     }
 
-    public function appointments(): HasMany
+    public function assignedQueueEntries(): HasMany
     {
-        return $this->hasMany(Appointment::class);
+        return $this->hasMany(QueueEntry::class, 'assigned_staff_user_id');
     }
 
     public function isSystemAdmin(): bool
@@ -295,7 +287,6 @@ class User extends Authenticatable implements MustVerifyEmail
             if ($permissionSlug === 'office.serve') {
                 return ($permissions['office.dashboard'] ?? false)
                     || ($permissions['office.queue.manage'] ?? false)
-                    || ($permissions['office.appointments.manage'] ?? false)
                     || ($permissions['office.qr'] ?? false)
                     || ($permissions['office.activity.view'] ?? false);
             }
@@ -426,7 +417,6 @@ class User extends Authenticatable implements MustVerifyEmail
                 'office.dashboard',
                 'office.qr',
                 'office.queue.manage',
-                'office.appointments.manage',
                 'office.activity.view',
             ] as $slug) {
                 $states[$slug] = false;

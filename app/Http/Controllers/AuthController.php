@@ -78,13 +78,13 @@ class AuthController extends Controller
             }
 
             if ($tenantWorkspace && (int) ($user->tenant_id ?? 0) === (int) $tenantWorkspace->id) {
-                Log::info('[DEBUG-LOGIN] showLogin -> view login (tenant user already in workspace session)');
-                return $this->loginViewResponse($request);
+                Log::info('[DEBUG-LOGIN] showLogin -> dashboardRedirect (tenant user matches workspace)');
+                return $this->dashboardRedirect($user);
             }
 
             if ($tenantWorkspace) {
-                Log::info('[DEBUG-LOGIN] showLogin -> view login (tenant workspace mismatch)');
-                return $this->loginViewResponse($request);
+                Log::info('[DEBUG-LOGIN] showLogin -> force_login (tenant workspace mismatch)');
+                return redirect()->to(route('login', ['force_login' => 1]), 303);
             }
 
             if ($user->tenant && ! $this->currentTenant()) {
@@ -174,10 +174,6 @@ class AuthController extends Controller
 
         $this->signIn($request, $user, $request->boolean('remember'), $tenant);
 
-        if ($user->isOfficeStaff()) {
-            return redirect()->route('office.dashboard', status: 303);
-        }
-
         return $this->dashboardRedirect($user);
     }
 
@@ -242,7 +238,7 @@ class AuthController extends Controller
     public function showTenantRegister()
     {
         return redirect()->route('login')
-            ->with('info', 'Tenant end users should continue using the QR, queue, and appointment pages. Workspace accounts are only for tenant admins and office staff.');
+            ->with('info', 'Tenant end users should continue using the QR and queue pages. Workspace accounts are only for tenant admins and office staff.');
     }
 
     public function showVerificationSent()
@@ -290,7 +286,7 @@ class AuthController extends Controller
     public function registerTenantUser(Request $request)
     {
         return redirect()->route('login')
-            ->with('info', 'Tenant end users should continue using the QR, queue, and appointment pages. Workspace accounts are only for tenant admins and office staff.');
+            ->with('info', 'Tenant end users should continue using the QR and queue pages. Workspace accounts are only for tenant admins and office staff.');
     }
 
     public function logout(Request $request)
@@ -482,11 +478,13 @@ class AuthController extends Controller
         $allowedPaths = match ($routeName) {
             'admin.dashboard' => ['admin'],
             'office.dashboard' => ['office'],
+            'office.qr' => ['office/qr', 'office/qr/image'],
+            'office.activity' => ['office/activity'],
             'office.reports' => ['office/reports'],
             'tenant.settings.edit' => ['settings'],
             'tenant.home' => ['dashboard', 'tenant'],
             'central.dashboard' => ['central/dashboard'],
-            default => [],
+            default => null,
         };
 
         Log::info('[DEBUG-LOGIN] dashboardRedirect', [
@@ -510,7 +508,8 @@ class AuthController extends Controller
 
             if (
                 ! in_array($path, ['login', 'auth/continue', 'logout'], true)
-                && ($allowedPaths === [] || in_array($path, $allowedPaths, true))
+                && is_array($allowedPaths)
+                && in_array($path, $allowedPaths, true)
             ) {
                 if (str_starts_with($intendedUrl, $currentHost)) {
                     $relativeTarget = substr($intendedUrl, strlen($currentHost));

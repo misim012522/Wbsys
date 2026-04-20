@@ -29,20 +29,10 @@
             <strong>{{ $queueEntries->count() }}</strong>
             <span>Queue entries</span>
         </div>
-        <div class="summary-box">
-            <strong>{{ $appointments->count() }}</strong>
-            <span>Appointments</span>
-        </div>
         @foreach($queueByStatus as $status => $count)
         <div class="summary-box">
             <strong>{{ $count }}</strong>
             <span>Queue — {{ $status }}</span>
-        </div>
-        @endforeach
-        @foreach($appointmentsByStatus as $status => $count)
-        <div class="summary-box">
-            <strong>{{ $count }}</strong>
-            <span>Appt — {{ $status }}</span>
         </div>
         @endforeach
     </div>
@@ -73,33 +63,7 @@
         </tbody>
     </table>
 
-    <h2>Appointments ({{ $date }})</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Contact</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($appointments as $a)
-            <tr>
-                <td>{{ \Carbon\Carbon::parse($a->appointment_time)->format('g:i A') }}</td>
-                <td>{{ $a->display_name }}</td>
-                <td>{{ $a->appointment_type ?? '—' }}</td>
-                <td>{{ $a->guest_email ?? $a->guest_phone ?? '—' }}</td>
-                <td>{{ $a->status }}</td>
-            </tr>
-            @empty
-            <tr><td colspan="5">No appointments.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-
-    <p class="footer">QueueLess — Smart appointment & queue management. Report generated on {{ now()->toDateTimeString() }}.</p>
+    <p class="footer">QueueLess — Queue management. Report generated on {{ now()->toDateTimeString() }}.</p>
 
     <p class="no-print" style="margin-top: 24px;">
         <button type="button" onclick="window.print()" style="padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Print / Save as PDF</button>

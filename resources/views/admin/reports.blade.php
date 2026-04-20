@@ -5,13 +5,12 @@
 @section('content')
 @php
     $queueTotal = $queueEntries->count();
-    $appointmentTotal = $appointments->count();
-    $completedTotal = $queueEntries->where('status', 'completed')->count() + $appointments->where('status', 'completed')->count();
+    $completedTotal = $queueEntries->where('status', 'completed')->count();
 @endphp
 
 @include('admin._workspace-nav', [
     'title' => 'Daily reports',
-    'description' => 'Check queue totals and appointments for a selected date.',
+    'description' => 'Check queue totals for a selected date.',
 ])
 
 <form method="GET" action="{{ route('admin.reports') }}" class="mb-8 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
@@ -47,14 +46,10 @@
     </a>
 </div>
 
-<div class="grid gap-4 md:grid-cols-3 mb-8">
+<div class="grid gap-4 md:grid-cols-2 mb-8">
     <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 shadow-sm">
         <p class="text-sm text-slate-500">Queues</p>
         <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $queueTotal }}</p>
-    </div>
-    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-sky-50/60 p-5 shadow-sm">
-        <p class="text-sm text-slate-500">Appointments</p>
-        <p class="mt-2 text-3xl font-bold text-blue-600">{{ $appointmentTotal }}</p>
     </div>
     <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
         <p class="text-sm text-slate-500">Completed</p>
@@ -94,36 +89,5 @@
     </table>
 </div>
 
-<h2 class="text-lg font-semibold text-slate-800 mb-2">Appointment list</h2>
-<div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-    <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-200">
-            <tr>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Office</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Time</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Name</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Type</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Contact (remind)</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Reference</th>
-                <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($appointments as $a)
-                <tr class="border-b border-slate-100">
-                    <td class="px-4 py-3 text-slate-800">{{ $a->office->name }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ \Carbon\Carbon::parse($a->appointment_time)->format('h:i A') }}</td>
-                    <td class="px-4 py-3 text-slate-600">{{ $a->display_name }}</td>
-                    <td class="px-4 py-3 text-slate-600 text-sm">{{ $a->appointment_type ?? '-' }}</td>
-                    <td class="px-4 py-3 text-slate-600 text-sm">@if($a->guest_email)<a href="mailto:{{ $a->guest_email }}" class="text-blue-600 hover:underline">{{ $a->guest_email }}</a>@endif @if($a->guest_email && $a->guest_phone)<br>@endif @if($a->guest_phone)<a href="tel:{{ $a->guest_phone }}" class="text-blue-600 hover:underline">{{ $a->guest_phone }}</a>@endif @if(!$a->guest_email && !$a->guest_phone)-@endif</td>
-                    <td class="px-4 py-3 text-slate-600 font-mono text-sm">{{ $a->reference_code }}</td>
-                    <td class="px-4 py-3"><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700">{{ $a->status }}</span></td>
-                </tr>
-            @empty
-                <tr><td colspan="7" class="px-4 py-6 text-slate-500 text-center">No appointments for this date.</td></tr>
-            @endforelse
-        </tbody>
-    </table>
-</div>
 @include('admin._workspace-nav-footer')
 @endsection

@@ -40,11 +40,6 @@ class Office extends Model
         return $this->hasMany(QueueEntry::class);
     }
 
-    public function appointments(): HasMany
-    {
-        return $this->hasMany(Appointment::class);
-    }
-
     public function staff(): HasMany
     {
         return $this->hasMany(User::class, 'office_id');
