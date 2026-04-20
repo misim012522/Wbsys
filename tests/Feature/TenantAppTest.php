@@ -390,7 +390,7 @@ test('office staff qr page includes the full office qr toolkit', function () {
         ->assertSee('Open public page')
         ->assertSee('Open QR image')
         ->assertSee('Download QR image')
-        ->assertSee(route('queue.office', ['slug' => $office->slug]), false);
+        ->assertSee(\App\Support\TenantUrl::forPath($tenant, route('queue.office', ['slug' => $office->slug], false)), false);
 
     $this->actingAs($staff)
         ->withServerVariables(tenantHost())

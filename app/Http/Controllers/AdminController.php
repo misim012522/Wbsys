@@ -152,7 +152,7 @@ class AdminController extends Controller
         $office = $this->defaultOffice();
         abort_unless($office, 404);
 
-        $url = $this->qrCodeService->queueOfficeUrl($office->slug);
+        $url = $this->qrCodeService->queueOfficeUrl($office->slug, $this->currentTenant());
         $result = $this->qrCodeService->build($url);
 
         return response($result->getString())

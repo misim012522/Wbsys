@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Tenant;
+use App\Support\TenantUrl;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\ErrorCorrectionLevel;
@@ -32,8 +34,8 @@ class QrCodeService
     /**
      * Build public queue URL for an office (uses APP_URL for real-time / cross-device).
      */
-    public function queueOfficeUrl(string $officeSlug): string
+    public function queueOfficeUrl(string $officeSlug, ?Tenant $tenant = null): string
     {
-        return rtrim(config('app.url'), '/').route('queue.office', ['slug' => $officeSlug], false);
+        return TenantUrl::forPath($tenant, route('queue.office', ['slug' => $officeSlug], false));
     }
 }

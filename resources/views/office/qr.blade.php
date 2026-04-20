@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $queueUrl = route('queue.office', ['slug' => $office->slug]);
+    $queueUrl = \App\Support\TenantUrl::forPath($office->tenant, route('queue.office', ['slug' => $office->slug], false));
     $qrImageUrl = route('office.qr.image');
     $viewer = auth()->user();
     $canViewActivity = $viewer?->hasPermission('office.activity.view');

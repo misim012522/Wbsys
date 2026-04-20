@@ -179,7 +179,7 @@ class OfficeController extends Controller
         if (! $office) {
             abort(403);
         }
-        $url = $this->qrCodeService->queueOfficeUrl($office->slug);
+        $url = $this->qrCodeService->queueOfficeUrl($office->slug, $this->currentTenant());
         $result = $this->qrCodeService->build($url);
         $response = response($result->getString())
             ->header('Content-Type', $result->getMimeType());

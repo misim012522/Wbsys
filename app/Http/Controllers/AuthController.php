@@ -268,6 +268,10 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($office?->tenant) {
+            $this->tenantDatabaseManager->activate($office->tenant);
+        }
+
         User::create([
             'name' => $validated['name'],
             'username' => $validated['username'],
