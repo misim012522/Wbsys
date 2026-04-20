@@ -34,4 +34,5 @@
 @else
     <p class="text-slate-500">No active workspace is available yet.</p>
 @endif
+@include('admin._workspace-nav-footer')
 @endsection

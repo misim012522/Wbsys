@@ -68,21 +68,6 @@
                         @endif
                     </span>
 
-                    @if(! auth()->user()->isCentralUser())
-                        <a href="{{ auth()->user()->isAdmin() ? route('admin.settings.edit') : route('tenant.settings.edit') }}" class="text-sm text-slate-500 hover:text-slate-700">
-                            {{ auth()->user()->isAdmin() ? 'Admin settings' : 'Workspace settings' }}
-                        </a>
-                    @endif
-                    <form method="POST" action="{{ route('logout') }}" class="inline" id="logout-form">
-                        @csrf
-                        <button
-                            type="button"
-                            class="text-sm text-slate-600 hover:text-slate-900"
-                            onclick="window.showToast.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('logout-form').submit(), 500);"
-                        >
-                            Log out
-                        </button>
-                    </form>
                 @else
                     @if(app()->bound('current_tenant') && ! request()->routeIs('login'))
                         <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>

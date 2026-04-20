@@ -154,4 +154,4 @@
         </div>
     </div>
 </div>
-@endsection
+@include('admin._workspace-nav-footer')

@@ -23,4 +23,5 @@
     </div>
 </div>
 
+@include('admin._workspace-nav-footer')
 @endsection

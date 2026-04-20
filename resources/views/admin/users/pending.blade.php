@@ -103,6 +103,8 @@
     </div>
 @endif
 
+@include('admin._workspace-nav-footer')
+
 <script>
 (function() {
     document.querySelectorAll('[data-admin-action-form]').forEach(function (form) {

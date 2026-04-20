@@ -174,6 +174,8 @@
     </form>
 </div>
 
+@include('admin._workspace-nav-footer')
+
 <script>
 document.getElementById('primary_color').addEventListener('input', function() {
     document.getElementById('primary_color_text').value = this.value;

@@ -212,4 +212,5 @@
         </div>
     </section>
 </div>
+@include('admin._workspace-nav-footer')
 @endsection

@@ -125,4 +125,5 @@
         </tbody>
     </table>
 </div>
+@include('admin._workspace-nav-footer')
 @endsection
