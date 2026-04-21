@@ -15,7 +15,23 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', '1.0.0'),
+    'version' => env('APP_VERSION', (function() {
+        // In production, we don't want to run shell commands on every request.
+        // We only try Git detection if we are not in production or explicit version is missing.
+        if (config('app.env') === 'production') {
+            return '1.0.0';
+        }
+
+        try {
+            // --tags: use tags if available
+            // --always: fallback to commit hash if no tags
+            // --dirty: append -dirty if there are uncommitted changes
+            $version = trim(exec('git describe --tags --always --dirty 2>/dev/null'));
+            return $version ?: '1.0.0';
+        } catch (\Throwable $e) {
+            return '1.0.0';
+        }
+    })()),
 
     /*
     |--------------------------------------------------------------------------

@@ -118,6 +118,7 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 $view->with('tenantSupportWidget', $supportWidget);
+                $view->with('appVersion', config('app.version', 'v1.0.0'));
             } catch (\Throwable $e) {
                 // Prevent errors in view composer from causing infinite exception rendering loops
                 // Set safe defaults instead
@@ -138,6 +139,7 @@ class AppServiceProvider extends ServiceProvider
                     'unreadCount' => 0,
                     'open' => false,
                 ]);
+                $view->with('appVersion', config('app.version', 'v1.0.0'));
             }
         });
     }

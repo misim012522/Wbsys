@@ -42,6 +42,8 @@
         padding-left: 1.5rem;
         flex-shrink: 0;
         margin: 0;
+        display: flex;
+        flex-direction: column;
     }
     .admin-sidebar nav {
         display: flex;
@@ -115,6 +117,16 @@
                 </button>
             </form>
         </nav>
+
+        <div class="mt-auto pt-8 flex flex-col items-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/50 border border-slate-300/40">
+                <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/10"></span>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                    v{{ $appVersion }}
+                </span>
+            </div>
+            <p class="mt-2 text-[9px] font-medium text-slate-400/80 uppercase tracking-tighter">System Build Instance</p>
+        </div>
     </aside>
 
     <!-- Main Content Area -->
