@@ -28,7 +28,7 @@
         </div>
 
         @if($currentServing)
-            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
+            <div class="bg-emerald-50 border border-emerald-200 rounded-[1.75rem] p-4 mb-4">
                 <p class="text-sm text-emerald-700 font-medium">Now serving</p>
                 <p class="text-2xl font-bold text-emerald-800">#{{ $currentServing->queue_number }}</p>
                 <p class="text-sm text-emerald-600">{{ $currentServing->display_name }}</p>
@@ -54,7 +54,7 @@
             </div>
         @endif
 
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="bg-white/50/50 rounded-[1.75rem] border border-slate-200 shadow-sm overflow-hidden">
             <ul class="divide-y divide-slate-100">
                 @forelse($todayQueue as $q)
                     <li class="px-4 py-3 flex items-center justify-between {{ $q->status === 'called' ? 'bg-amber-50' : '' }}">

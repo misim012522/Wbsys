@@ -15,19 +15,27 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', (function() {
-        // In production, we don't want to run shell commands on every request.
-        // We only try Git detection if we are not in production or explicit version is missing.
-        if (config('app.env') === 'production') {
+    'version' => env('APP_VERSION', (function () {
+        // In production, prefer an explicit version set via environment/config.
+        if (env('APP_ENV', 'production') === 'production') {
+            return '1.0.0';
+        }
+
+        if (! function_exists('exec')) {
             return '1.0.0';
         }
 
         try {
+            // Use an OS-aware null device so local Git version discovery works on
+            // both Unix-like systems and Windows without boot-time path errors.
+            $nullDevice = DIRECTORY_SEPARATOR === '\\' ? 'NUL' : '/dev/null';
+
             // --tags: use tags if available
             // --always: fallback to commit hash if no tags
             // --dirty: append -dirty if there are uncommitted changes
-            $version = trim(exec('git describe --tags --always --dirty 2>/dev/null'));
-            return $version ?: '1.0.0';
+            $version = trim((string) exec("git describe --tags --always --dirty 2>{$nullDevice}"));
+
+            return $version !== '' ? $version : '1.0.0';
         } catch (\Throwable $e) {
             return '1.0.0';
         }

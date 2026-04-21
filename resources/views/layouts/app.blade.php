@@ -1,6 +1,8 @@
 @php
     $showAuthenticatedHeader = ($forceAuthenticatedHeader ?? false)
         || (auth()->check() && ! (request()->routeIs('login') && app()->bound('current_tenant')));
+    // Use the injected appVersion from AppServiceProvider, fallback only if not set
+    $appVersion = $appVersion ?? config('app.version', '1.0.0');
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -27,6 +29,7 @@
             --tenant-primary-soft-20: color-mix(in srgb, var(--tenant-primary) 20%, white);
             --tenant-primary-soft-12: color-mix(in srgb, var(--tenant-primary) 12%, white);
             --tenant-primary-soft-8: color-mix(in srgb, var(--tenant-primary) 8%, white);
+            --tenant-primary-bubble: color-mix(in srgb, var(--tenant-primary) 8%, white);
             --tenant-primary-ring-20: color-mix(in srgb, var(--tenant-primary) 20%, transparent);
             --tenant-primary-ring-10: color-mix(in srgb, var(--tenant-primary) 10%, transparent);
             --tenant-primary-shadow-25: color-mix(in srgb, var(--tenant-primary) 25%, transparent);
@@ -46,6 +49,16 @@
         .tenant-themed button.bg-emerald-700,
         .tenant-themed button.bg-slate-900 {
             background-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .bg-emerald-50,
+        .tenant-themed .bg-emerald-100,
+        .tenant-themed .bg-emerald-200,
+        .tenant-themed .panel:not(.bg-slate-900),
+        .tenant-themed .stat-card {
+            background-color: var(--tenant-primary-bubble) !important;
+            border-color: color-mix(in srgb, var(--tenant-primary) 15%, transparent) !important;
+            box-shadow: 0 4px 6px -1px var(--tenant-primary-shadow-25), 0 2px 4px -2px var(--tenant-primary-shadow-25) !important;
         }
 
         .tenant-themed .bg-emerald-50,
@@ -203,10 +216,24 @@
             @endphp
 
             @if($showAuthenticatedHeader)
-                <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
-                    @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-9 w-auto shrink-0">@endif
-                    {{ $brandName }}
-                </a>
+                <div class="flex items-center gap-4">
+                    <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                        @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-9 w-auto shrink-0">@endif
+                        {{ $brandName }}
+                    </a>
+                    <div class="flex flex-col border-l border-slate-200 pl-4">
+                        <span class="text-sm font-semibold text-slate-700 leading-tight">
+                            {{ $tenantWorkspace ? $tenantWorkspace->name : 'Central' }}
+                        </span>
+                        <span class="text-xs text-slate-500 leading-tight">
+                            @if($tenantWorkspace && auth()->user()->isAdmin())
+                                Administrator
+                            @else
+                                {{ auth()->user()->name }}
+                            @endif
+                        </span>
+                    </div>
+                </div>
             @else
                 <a href="{{ app()->bound('current_tenant') ? route('tenant.home') : route('home') }}" class="text-xl font-bold tenant-primary flex items-center gap-2">
                     @if($brandLogo)<img src="{{ $brandLogo }}" alt="" class="h-9 w-auto shrink-0">@endif
@@ -216,20 +243,7 @@
 
             <div class="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
                 @if($showAuthenticatedHeader)
-                    @unless($tenantWorkspace && auth()->user()->isAdmin())
-                        <a href="{{ \App\Support\TenantUrl::forUserDashboard(auth()->user()) }}" class="text-sm text-slate-600 hover:text-slate-900">
-                            {{ auth()->user()->isCentralUser() ? 'Central' : (auth()->user()->isAdmin() ? 'Admin' : (auth()->user()->isOfficeStaff() ? 'Office' : 'My workspace')) }}
-                        </a>
-                    @endunless
-
-                    <span class="text-sm text-slate-500">
-                        @if($tenantWorkspace && auth()->user()->isAdmin())
-                            {{ $tenantWorkspace->name }} Administrator
-                        @else
-                            {{ auth()->user()->name }}
-                        @endif
-                    </span>
-
+                    {{-- Navigation and other actions can go here if needed --}}
                 @else
                     @if(app()->bound('current_tenant') && ! request()->routeIs('login'))
                         <a href="{{ route('login') }}" class="text-sm text-slate-600 hover:text-slate-900">Log in</a>

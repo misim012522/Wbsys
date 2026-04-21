@@ -28,18 +28,17 @@ class ResolveTenant
             return $next($request);
         }
 
-        $host = (string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost());
-        $host = preg_replace('/:\d+$/', '', $host) ?: $request->getHost();
+        $host = Tenant::normalizeHost((string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost()));
+
+        if ($host === '') {
+            return $next($request);
+        }
 
         if ($redirect = $this->normalizeLegacyLocalhostTenantHost($request, $host)) {
             return $redirect;
         }
 
-        $tenant = Tenant::query()->where('domain', $host)->first();
-        if (! $tenant && count(explode('.', $host)) >= 2) {
-            $subdomain = explode('.', $host)[0];
-            $tenant = Tenant::query()->where('subdomain', $subdomain)->first();
-        }
+        $tenant = Tenant::resolveFromHost($host, true);
 
         if (
             ! $tenant

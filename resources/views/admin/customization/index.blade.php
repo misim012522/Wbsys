@@ -14,7 +14,7 @@
         @method('PUT')
 
         <div class="grid gap-6 xl:grid-cols-2">
-            <div class="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="min-w-0 panel shadow-sm p-6">
                 <h2 class="mb-4 text-lg font-semibold text-slate-800">Branding</h2>
                 <div class="space-y-4">
                     <div>
@@ -81,7 +81,7 @@
                 </div>
             </div>
 
-            <div class="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="min-w-0 panel shadow-sm p-6">
                 <h2 class="mb-4 text-lg font-semibold text-slate-800">Features</h2>
                 <p class="mb-4 text-sm text-slate-600">Turn on or off what visitors see on the public office page.</p>
                 <div class="space-y-3">
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <div class="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="min-w-0 panel shadow-sm p-6">
                 <h2 class="mb-4 text-lg font-semibold text-slate-800">Dashboard Profile</h2>
                 <p class="mb-4 text-sm text-slate-600">Choose which tenant dashboard style fits this workspace.</p>
                 <div>
@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <div class="min-w-0 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+            <div class="min-w-0 panel shadow-sm p-6">
                 <h2 class="mb-4 text-lg font-semibold text-slate-800">Labels</h2>
                 <p class="mb-4 text-sm text-slate-600">Override default words used across the tenant workspace.</p>
                 <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -148,7 +148,7 @@
 
         <div class="flex gap-3">
             <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700">Save customization</button>
-            <a href="{{ route('admin.dashboard') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50">Cancel</a>
+            <a href="{{ route('admin.dashboard') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-white/50/30">Cancel</a>
         </div>
     </form>
 </div>

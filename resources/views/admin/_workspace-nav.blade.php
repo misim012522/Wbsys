@@ -48,21 +48,15 @@
     .admin-sidebar nav {
         display: flex;
         flex-direction: column;
-        gap: 0;
+        gap: 0.5rem;
     }
-    .admin-sidebar a,
-    .admin-sidebar button {
-        margin-bottom: -1px;
+    .admin-sidebar a:hover,
+    .admin-sidebar button:hover {
+        background-color: rgb(241, 245, 249);
+        border-color: rgb(203, 213, 225);
     }
-    .admin-sidebar a:first-child,
-    .admin-sidebar button:last-child {
-        border-radius: 0.5rem;
-    }
-    .admin-sidebar a:not(:first-child) {
-        border-top: none;
-    }
-    .tenant-themed .admin-sidebar a.bg-white:hover,
-    .tenant-themed .admin-sidebar button.bg-white:hover {
+    .tenant-themed .admin-sidebar a.bg-white/50/50:hover,
+    .tenant-themed .admin-sidebar button.bg-white/50/50:hover {
         background-color: color-mix(in srgb, var(--tenant-primary) 16%, white) !important;
         border-color: color-mix(in srgb, var(--tenant-primary) 45%, white) !important;
         color: color-mix(in srgb, var(--tenant-primary) 85%, black) !important;
@@ -78,31 +72,31 @@
     <!-- Fixed Sidebar Navigation -->
     <aside class="admin-sidebar">
         <nav>
-            <a href="{{ route('admin.dashboard') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.dashboard') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+            <a href="{{ route('admin.dashboard') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.dashboard') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                 Dashboard
             </a>
             @if($viewer?->hasPermission('users.manage'))
-                <a href="{{ route('admin.users.index') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.users.index') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                <a href="{{ route('admin.users.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.users.index') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     Office staff
                 </a>
             @endif
             @if($viewer?->hasPermission('admin.office.serve') && $guestQueueEnabled)
-                <a href="{{ route('admin.qr') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.qr*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                <a href="{{ route('admin.qr') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.qr*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     QR codes
                 </a>
             @endif
             @if($viewer?->hasPermission('reports.view'))
-                <a href="{{ route('admin.reports') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.reports') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                <a href="{{ route('admin.reports') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.reports') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     Reports
                 </a>
             @endif
             @if($viewer?->hasPermission('admin.customization.manage'))
-                <a href="{{ route('admin.customization.index') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.customization.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                <a href="{{ route('admin.customization.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.customization.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     Customization
                 </a>
             @endif
             @if($viewer?->hasPermission('admin.settings.manage'))
-                <a href="{{ route('admin.settings.edit') }}" class="block w-full px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.settings.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                <a href="{{ route('admin.settings.edit') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.settings.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     Admin settings
                 </a>
             @endif
@@ -111,7 +105,7 @@
                 <button
                     type="button"
                     onclick="window.showToast.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('admin-logout-form').submit(), 500);"
-                    class="block w-full px-4 py-3 text-sm font-medium transition border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                    class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30"
                 >
                     Log out
                 </button>
@@ -122,10 +116,10 @@
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/50 border border-slate-300/40">
                 <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/10"></span>
                 <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
-                    v{{ $appVersion }}
+                    {{ str_starts_with($appVersion ?? '', 'v') ? $appVersion : 'v' . ($appVersion ?? '1.0.0') }}
                 </span>
             </div>
-            <p class="mt-2 text-[9px] font-medium text-slate-400/80 uppercase tracking-tighter">System Build Instance</p>
+            <p class="mt-2 text-[9px] font-medium text-slate-400/80 uppercase tracking-tighter">Queueless</p>
         </div>
     </aside>
 
@@ -149,7 +143,7 @@
                                     href="{{ $action['href'] }}"
                                     class="{{ ($action['variant'] ?? 'secondary') === 'primary'
                                         ? 'rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800'
-                                        : 'rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50' }}"
+                                        : 'rounded-lg border border-slate-300 bg-white/50/50 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-white/50/30' }}"
                                 >
                                     {{ $action['label'] }}
                                 </a>

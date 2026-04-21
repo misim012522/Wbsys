@@ -308,13 +308,13 @@ class AdminController extends Controller
         $validated = $request->validate([
             'date' => ['required', 'date'],
             'office_id' => ['nullable', 'integer'],
-            'format' => ['required', 'in:csv,print'],
+            'format' => ['required', 'in:csv,pdf'],
         ]);
 
         $officeId = (int) ($validated['office_id'] ?? 0);
         ['queueEntries' => $queueEntries] = $this->reportData($validated['date'], $officeId);
 
-        if ($validated['format'] === 'print') {
+        if ($validated['format'] === 'pdf') {
             $office = $officeId > 0 ? $this->officesQuery()->find($officeId) : null;
             $queueByStatus = $queueEntries->groupBy('status')->map->count();
             $html = view('office.report-print', [

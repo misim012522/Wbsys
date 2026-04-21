@@ -64,7 +64,7 @@
         </div>
         <div class="flex gap-2 pt-2">
             <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700">Create account</button>
-            <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Cancel</a>
+            <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-white/50/30">Cancel</a>
         </div>
     </form>
 </div>

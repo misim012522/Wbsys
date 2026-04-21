@@ -100,7 +100,7 @@ class AuthController extends Controller
             }
 
             if ($user->tenant && ! $this->currentTenant()) {
-                return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
+                return redirect()->away(TenantUrl::login($user->tenant, true));
             }
 
             if ($loginPath && $this->shouldUseRedirectViewFallback($request)) {
@@ -477,21 +477,13 @@ class AuthController extends Controller
 
     private function tenantForHost(Request $request, bool $includeInactive = false): ?Tenant
     {
-        $host = preg_replace('/:\d+$/', '', (string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost()));
+        $host = Tenant::normalizeHost((string) ($request->header('host') ?: $request->server('HTTP_HOST') ?: $request->getHost()));
 
-        if (! is_string($host) || $host === '') {
+        if ($host === '') {
             return null;
         }
 
-        $query = $includeInactive ? Tenant::query() : Tenant::active();
-        $tenant = $query->where('domain', $host)->first();
-
-        if ($tenant || count(explode('.', $host)) < 2) {
-            return $tenant;
-        }
-
-        $query = $includeInactive ? Tenant::query() : Tenant::active();
-        $tenant = $query->where('subdomain', explode('.', $host)[0])->first();
+        $tenant = Tenant::resolveFromHost($host, $includeInactive);
 
         if ($tenant || ! app()->environment('testing')) {
             return $tenant;

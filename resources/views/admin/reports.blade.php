@@ -13,7 +13,7 @@
     'description' => 'Check queue totals for a selected date.',
 ])
 
-<form method="GET" action="{{ route('admin.reports') }}" class="mb-8 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+<form method="GET" action="{{ route('admin.reports') }}" class="mb-8 rounded-[1.75rem] border border-slate-200 bg-white/50/50 p-5 shadow-sm">
     <div class="flex flex-wrap gap-4">
         <div>
         <label for="date" class="block text-sm font-medium text-slate-700 mb-1">Date</label>
@@ -29,38 +29,26 @@
             </select>
         </div>
         <div class="flex items-end gap-2">
-            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
+            <button type="submit" class="rounded-[1.75rem] bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply</button>
             @if($officeId > 0)
-                <a href="{{ route('admin.reports', ['date' => $date]) }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear office</a>
+                <a href="{{ route('admin.reports', ['date' => $date]) }}" class="rounded-[1.75rem] border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-white/50/30">Clear office</a>
             @endif
+            <div class="flex gap-2">
+                <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'csv']) }}" class="rounded-[1.75rem] border border-slate-300 bg-white/50/50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-white/50/30">
+                    CSV
+                </a>
+                <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'pdf']) }}" target="_blank" class="rounded-[1.75rem] border border-slate-300 bg-white/50/50 px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-white/50/30">
+                    PDF
+                </a>
+            </div>
         </div>
     </div>
 </form>
 
-<div class="mb-8 flex flex-wrap gap-3">
-    <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'csv']) }}" class="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-        CSV
-    </a>
-    <a href="{{ route('admin.reports.download', ['date' => $date, 'office_id' => $officeId, 'format' => 'print']) }}" class="inline-flex items-center rounded-2xl bg-slate-800 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-900">
-        Print
-    </a>
-</div>
-
-<div class="grid gap-4 md:grid-cols-2 mb-8">
-    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50 p-5 shadow-sm">
-        <p class="text-sm text-slate-500">Queues</p>
-        <p class="mt-2 text-3xl font-bold text-emerald-600">{{ $queueTotal }}</p>
-    </div>
-    <div class="rounded-[1.5rem] border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm">
-        <p class="text-sm text-slate-500">Completed</p>
-        <p class="mt-2 text-3xl font-bold text-slate-800">{{ $completedTotal }}</p>
-    </div>
-</div>
-
 <h2 class="text-lg font-semibold text-slate-800 mb-2">Queue list</h2>
-<div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+<div class="mb-8 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/50/50 shadow-sm">
     <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-200">
+        <thead class="bg-white/50/30 border-b border-slate-200">
             <tr>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Office</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">#</th>

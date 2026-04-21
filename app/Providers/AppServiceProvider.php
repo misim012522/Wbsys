@@ -2,22 +2,16 @@
 
 namespace App\Providers;
 
+use App\Models\AppVersion;
 use App\Models\SupportThread;
 use App\Models\TenantSubscription;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
-
     /**
      * Bootstrap any application services.
      */
@@ -44,6 +38,15 @@ class AppServiceProvider extends ServiceProvider
             ) {
                 return;
             }
+
+            $appVersion = Cache::remember('app_current_version', 3600, function () {
+                try {
+                    return AppVersion::query()->orderByDesc('released_at')->value('version') 
+                        ?? config('app.version', 'v1.0.0');
+                } catch (\Throwable) {
+                    return config('app.version', 'v1.0.0');
+                }
+            });
 
             try {
                 $tenant = null;
@@ -118,7 +121,7 @@ class AppServiceProvider extends ServiceProvider
                 }
 
                 $view->with('tenantSupportWidget', $supportWidget);
-                $view->with('appVersion', config('app.version', 'v1.0.0'));
+                $view->with('appVersion', $appVersion);
             } catch (\Throwable $e) {
                 // Prevent errors in view composer from causing infinite exception rendering loops
                 // Set safe defaults instead
@@ -139,7 +142,7 @@ class AppServiceProvider extends ServiceProvider
                     'unreadCount' => 0,
                     'open' => false,
                 ]);
-                $view->with('appVersion', config('app.version', 'v1.0.0'));
+                $view->with('appVersion', $appVersion);
             }
         });
     }

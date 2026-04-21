@@ -41,14 +41,32 @@ class EnsureTenantResolved
                     return $this->logoutDueToDeactivation($request);
                 }
 
-                $dashboardUrl = TenantUrl::dashboard($tenant, $user);
-                Log::warning('[DEBUG-TENANT-REQ] Redirecting tenant user to dashboard', [
+                $loginUrl = TenantUrl::login($tenant, true);
+                $currentUrl = $request->fullUrl();
+
+                Log::warning('[DEBUG-TENANT-REQ] Redirecting unresolved tenant user to canonical tenant login', [
                     'path' => $request->path(),
-                    'dashboard_url' => $dashboardUrl,
+                    'login_url' => $loginUrl,
+                    'current_url' => $currentUrl,
                 ]);
 
-                return redirect()->away($dashboardUrl)
-                    ->with('error', 'Please open your assigned tenant workspace to continue.');
+                if (rtrim($loginUrl, '/') === rtrim($currentUrl, '/')) {
+                    Log::warning('[DEBUG-TENANT-REQ] Redirect loop detected, clearing session', [
+                        'path' => $request->path(),
+                        'login_url' => $loginUrl,
+                    ]);
+
+                    Auth::logout();
+                    $request->session()->forget('tenant_auth');
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return redirect()->away(TenantUrl::login(null, true))
+                        ->with('error', 'Your tenant workspace could not be resolved. Please sign in again from your assigned workspace link.');
+                }
+
+                return redirect()->away($loginUrl)
+                    ->with('error', 'Please continue inside your assigned tenant workspace.');
             }
         }
 

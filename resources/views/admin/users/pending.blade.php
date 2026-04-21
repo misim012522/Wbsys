@@ -16,7 +16,7 @@
     <p class="mb-4 px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm">{{ session('info') }}</p>
 @endif
 @if(session('success'))
-    <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+    <div class="mb-4 rounded-[1.75rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
         {{ session('success') }}
     </div>
 @endif
@@ -28,7 +28,7 @@
     <p class="text-slate-600">Approve new staff so they can use the office workspace.</p>
 </div>
 
-<form method="GET" action="{{ route('admin.users.pending') }}" class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm">
+<form method="GET" action="{{ route('admin.users.pending') }}" class="mb-6 rounded-[1.75rem] border border-slate-200 bg-white/50/50 p-5 shadow-sm">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
         <div class="flex-1">
             <label for="search" class="mb-1 block text-sm font-medium text-slate-700">Search staff</label>
@@ -44,9 +44,9 @@
             </select>
         </div>
         <div class="flex gap-2">
-            <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply filters</button>
+            <button type="submit" class="rounded-[1.75rem] bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Apply filters</button>
             @if($search !== '' || $officeId > 0)
-                <a href="{{ route('admin.users.pending') }}" class="rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Clear</a>
+                <a href="{{ route('admin.users.pending') }}" class="rounded-[1.75rem] border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-white/50/30">Clear</a>
             @endif
         </div>
     </div>
@@ -61,9 +61,9 @@
     @endif
 </div>
 
-<div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+<div class="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/50/50 shadow-sm">
     <table class="w-full">
-        <thead class="bg-slate-50 border-b border-slate-200">
+        <thead class="bg-white/50/30 border-b border-slate-200">
             <tr>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Staff</th>
                 <th class="text-left px-4 py-3 text-sm font-medium text-slate-700">Office</th>

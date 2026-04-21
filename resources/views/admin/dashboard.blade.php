@@ -43,7 +43,7 @@
     </div>
     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         @forelse($staffQueueStats as $staff)
-            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="rounded-[1.75rem] border border-slate-200 bg-white/50/50 p-4">
                 <p class="font-semibold text-slate-800">{{ $staff['name'] }}</p>
                 <p class="text-xs text-slate-500">{{ $staff['office_name'] ?? 'No office assigned' }}</p>
                 <div class="mt-3 flex items-center justify-between text-sm">
@@ -56,7 +56,7 @@
                 </div>
             </div>
         @empty
-            <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
+            <div class="rounded-[1.75rem] border border-dashed border-slate-300 bg-white/50/50 p-5 text-sm text-slate-500 md:col-span-2 xl:col-span-3">
                 No office staff accounts available yet.
             </div>
         @endforelse

@@ -18,7 +18,33 @@ class AppVersion extends Model
 
     public function isNewerThan(?string $currentVersion): bool
     {
-        return ! $currentVersion || version_compare($this->version, $currentVersion, '>');
+        $publishedVersion = self::normalizeVersion($this->version);
+        $installedVersion = self::normalizeVersion($currentVersion);
+
+        if (! $publishedVersion) {
+            return false;
+        }
+
+        if (! $installedVersion) {
+            return true;
+        }
+
+        return version_compare($publishedVersion, $installedVersion, '>');
+    }
+
+    public static function normalizeVersion(?string $version): ?string
+    {
+        if (! is_string($version)) {
+            return null;
+        }
+
+        $normalized = trim($version);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        return preg_replace('/^[vV](?=\d)/', '', $normalized) ?: null;
     }
 
     public function scopeLatest($query)

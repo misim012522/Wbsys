@@ -21,16 +21,8 @@ class RedirectIfAuthenticated
             }
 
             $user = Auth::guard($guard)->user();
-            $host = preg_replace('/:\d+$/', '', (string) ($request->server('HTTP_HOST') ?: $request->getHost()));
-            $tenantOnHost = null;
-
-            if (is_string($host) && $host !== '') {
-                $tenantOnHost = Tenant::active()->where('domain', $host)->first();
-
-                if (! $tenantOnHost && count(explode('.', $host)) >= 2) {
-                    $tenantOnHost = Tenant::active()->where('subdomain', explode('.', $host)[0])->first();
-                }
-            }
+            $host = Tenant::normalizeHost((string) ($request->server('HTTP_HOST') ?: $request->getHost()));
+            $tenantOnHost = $host === '' ? null : Tenant::resolveFromHost($host);
 
             if ($tenantOnHost && $user->isCentralUser()) {
                 return redirect()->route('tenant.home');

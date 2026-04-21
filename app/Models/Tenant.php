@@ -107,4 +107,37 @@ class Tenant extends Model
     {
         return $query->where('domain', $domain)->orWhere('subdomain', $domain);
     }
+
+    public static function normalizeHost(?string $host): string
+    {
+        $host = preg_replace('/:\d+$/', '', (string) $host);
+
+        return strtolower(trim((string) $host));
+    }
+
+    public static function resolveFromHost(?string $host, bool $includeInactive = false): ?self
+    {
+        $normalizedHost = self::normalizeHost($host);
+
+        if ($normalizedHost === '') {
+            return null;
+        }
+
+        $query = $includeInactive ? self::query() : self::active();
+        $tenant = $query->where('domain', $normalizedHost)->first();
+
+        if ($tenant || count(explode('.', $normalizedHost)) < 2) {
+            return $tenant;
+        }
+
+        $subdomain = explode('.', $normalizedHost)[0] ?? '';
+
+        if ($subdomain === '') {
+            return null;
+        }
+
+        $query = $includeInactive ? self::query() : self::active();
+
+        return $query->where('subdomain', $subdomain)->first();
+    }
 }
