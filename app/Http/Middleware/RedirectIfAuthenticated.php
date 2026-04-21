@@ -37,13 +37,9 @@ class RedirectIfAuthenticated
             }
 
             if ($tenantOnHost) {
-                if ($request->isMethod('GET') && trim($request->path(), '/') === 'login') {
-                    return $next($request);
-                }
-
                 $dashboardUrl = TenantUrl::forUserDashboard($user);
 
-                return redirect()->to($dashboardUrl, 303);
+                return redirect()->to($dashboardUrl, 302);
             }
 
             return redirect()->away(TenantUrl::forUserDashboard($user));

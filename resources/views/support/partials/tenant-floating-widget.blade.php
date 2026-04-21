@@ -16,12 +16,12 @@
             id="tenant-chat-panel"
             class="hidden absolute bottom-20 right-0 flex h-[min(42rem,calc(100vh-7.5rem))] w-[min(92vw,24rem)] flex-col overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.24)]"
         >
-            <div class="bg-gradient-to-r from-cyan-500 via-sky-500 to-teal-400 px-5 py-4 text-white">
+            <div class="tenant-primary-bg px-5 py-4 text-white">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-50/80">Support chat</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">Support chat</p>
                         <h2 class="mt-1 text-lg font-semibold">Message support</h2>
-                        <p class="mt-1 text-xs leading-5 text-cyan-50/90">Quick support chat for your tenant workspace.</p>
+                        <p class="mt-1 text-xs leading-5 text-white/90">Quick support chat for your tenant workspace.</p>
                     </div>
                     <button
                         type="button"
@@ -124,35 +124,100 @@
                 return response;
             };
 
+            const captureWidgetState = () => {
+                const viewport = liveRegion.querySelector('[data-widget-chat-scroll]');
+                const distanceFromBottom = viewport
+                    ? Math.max(0, viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight)
+                    : null;
+                const wasNearBottom = viewport ? distanceFromBottom < 80 : false;
+
+                const activeElement = document.activeElement;
+                const activeTag = activeElement?.tagName?.toLowerCase() || '';
+                const activeName = activeElement?.getAttribute?.('name') || null;
+                const activeFormId = activeElement?.closest?.('form')?.id || null;
+                const activeSelectionStart =
+                    (activeTag === 'textarea' || (activeTag === 'input' && activeElement.type === 'text'))
+                        ? activeElement.selectionStart
+                        : null;
+                const activeSelectionEnd =
+                    (activeTag === 'textarea' || (activeTag === 'input' && activeElement.type === 'text'))
+                        ? activeElement.selectionEnd
+                        : null;
+
+                return {
+                    distanceFromBottom,
+                    wasNearBottom,
+                    activeName,
+                    activeFormId,
+                    activeSelectionStart,
+                    activeSelectionEnd,
+                    replyDraft: liveRegion.querySelector('#tenant-widget-reply-form textarea[name="message"]')?.value || '',
+                    createSubjectDraft: liveRegion.querySelector('#tenant-widget-create-thread-form input[name="subject"]')?.value || '',
+                    createMessageDraft: liveRegion.querySelector('#tenant-widget-create-thread-form textarea[name="message"]')?.value || '',
+                };
+            };
+
+            const applyWidgetState = (state) => {
+                const viewport = liveRegion.querySelector('[data-widget-chat-scroll]');
+
+                if (viewport) {
+                    if (state.wasNearBottom) {
+                        viewport.scrollTop = viewport.scrollHeight;
+                    } else if (state.distanceFromBottom !== null) {
+                        viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight - state.distanceFromBottom);
+                    }
+                }
+
+                const replyInput = liveRegion.querySelector('#tenant-widget-reply-form textarea[name="message"]');
+                if (replyInput && state.replyDraft !== '') {
+                    replyInput.value = state.replyDraft;
+                }
+
+                const createSubjectInput = liveRegion.querySelector('#tenant-widget-create-thread-form input[name="subject"]');
+                if (createSubjectInput && state.createSubjectDraft !== '') {
+                    createSubjectInput.value = state.createSubjectDraft;
+                }
+
+                const createMessageInput = liveRegion.querySelector('#tenant-widget-create-thread-form textarea[name="message"]');
+                if (createMessageInput && state.createMessageDraft !== '') {
+                    createMessageInput.value = state.createMessageDraft;
+                }
+
+                if (state.activeName && state.activeFormId) {
+                    const focusedField = liveRegion.querySelector(`#${state.activeFormId} [name="${state.activeName}"]`);
+                    if (focusedField) {
+                        focusedField.focus({ preventScroll: true });
+                        if (typeof state.activeSelectionStart === 'number' && typeof state.activeSelectionEnd === 'number' && typeof focusedField.setSelectionRange === 'function') {
+                            focusedField.setSelectionRange(state.activeSelectionStart, state.activeSelectionEnd);
+                        }
+                    }
+                }
+            };
+
+            const renderWidgetData = (data) => {
+                const previousState = captureWidgetState();
+
+                if (data.widget_html) {
+                    liveRegion.innerHTML = data.widget_html;
+                }
+
+                if (unreadBadge) {
+                    const unreadCount = Number(data.unread_count || 0);
+                    unreadBadge.textContent = `${unreadCount}`;
+                    unreadBadge.classList.toggle('hidden', unreadCount < 1);
+                }
+
+                bindWidgetForms();
+                applyWidgetState(previousState);
+            };
+
             const refreshWidget = () => {
                 if (!window.realtimeRefresh) {
                     return;
                 }
 
                 window.realtimeRefresh.refresh('tenant-chat-live-region', snapshotUrl, (_element, data) => {
-                    const previousViewport = liveRegion.querySelector('[data-widget-chat-scroll]');
-                    const wasNearBottom = previousViewport
-                        ? (previousViewport.scrollHeight - previousViewport.scrollTop - previousViewport.clientHeight) < 80
-                        : false;
-
-                    if (data.widget_html) {
-                        liveRegion.innerHTML = data.widget_html;
-                    }
-
-                    if (unreadBadge) {
-                        const unreadCount = Number(data.unread_count || 0);
-                        unreadBadge.textContent = `${unreadCount}`;
-                        unreadBadge.classList.toggle('hidden', unreadCount < 1);
-                    }
-
-                    if (wasNearBottom) {
-                        const nextViewport = liveRegion.querySelector('[data-widget-chat-scroll]');
-                        if (nextViewport) {
-                            nextViewport.scrollTop = nextViewport.scrollHeight;
-                        }
-                    }
-
-                    bindWidgetForms();
+                    renderWidgetData(data);
                 });
             };
 
@@ -211,17 +276,7 @@
 
             if (window.realtimeRefresh) {
                 window.realtimeRefresh.register('tenant-chat-live-region', snapshotUrl, (_element, data) => {
-                    if (data.widget_html) {
-                        liveRegion.innerHTML = data.widget_html;
-                    }
-
-                    if (unreadBadge) {
-                        const unreadCount = Number(data.unread_count || 0);
-                        unreadBadge.textContent = `${unreadCount}`;
-                        unreadBadge.classList.toggle('hidden', unreadCount < 1);
-                    }
-
-                    bindWidgetForms();
+                    renderWidgetData(data);
                 }, 5000);
             }
         });

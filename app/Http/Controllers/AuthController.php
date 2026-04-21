@@ -33,6 +33,8 @@ class AuthController extends Controller
 
     public function showLogin(Request $request)
     {
+        $loginPath = trim($request->path(), '/') === 'login';
+
         $hostTenant = $this->tenantForHost($request, includeInactive: true);
 
         if (
@@ -74,11 +76,21 @@ class AuthController extends Controller
 
             if ($tenantWorkspace && $user->isCentralUser()) {
                 Log::info('[DEBUG-LOGIN] showLogin -> tenant.home (central user)');
+                if ($loginPath && $this->shouldUseRedirectViewFallback($request)) {
+                    return response()->view('auth.redirecting', [
+                        'target' => TenantUrl::forUserDashboard($user),
+                    ]);
+                }
                 return redirect()->route('tenant.home');
             }
 
             if ($tenantWorkspace && (int) ($user->tenant_id ?? 0) === (int) $tenantWorkspace->id) {
                 Log::info('[DEBUG-LOGIN] showLogin -> dashboardRedirect (tenant user matches workspace)');
+                if ($loginPath && $this->shouldUseRedirectViewFallback($request)) {
+                    return response()->view('auth.redirecting', [
+                        'target' => TenantUrl::forUserDashboard($user),
+                    ]);
+                }
                 return $this->dashboardRedirect($user);
             }
 
@@ -91,11 +103,29 @@ class AuthController extends Controller
                 return redirect()->away(TenantUrl::dashboard($user->tenant, $user));
             }
 
+            if ($loginPath && $this->shouldUseRedirectViewFallback($request)) {
+                return response()->view('auth.redirecting', [
+                    'target' => TenantUrl::forUserDashboard($user),
+                ]);
+            }
+
             return $this->dashboardRedirect($user);
         }
 
+        $request->session()->forget('login_redirect_hits');
+
         Log::info('[DEBUG-LOGIN] showLogin: not authenticated, showing login form');
         return $this->loginViewResponse($request);
+    }
+
+    private function shouldUseRedirectViewFallback(Request $request): bool
+    {
+        $hits = (int) $request->session()->get('login_redirect_hits', 0) + 1;
+        $request->session()->put('login_redirect_hits', $hits);
+
+        // After repeated authenticated /login requests, render client-side redirect page
+        // to break browser redirect cache/frame loops.
+        return $hits >= 3;
     }
 
     public function login(LoginRequest $request)
@@ -511,26 +541,13 @@ class AuthController extends Controller
                 && is_array($allowedPaths)
                 && in_array($path, $allowedPaths, true)
             ) {
-                if (str_starts_with($intendedUrl, $currentHost)) {
-                    $relativeTarget = substr($intendedUrl, strlen($currentHost));
-
-                    return redirect($relativeTarget !== '' ? $relativeTarget : '/', 303);
-                }
-
-                return redirect()->to($intendedUrl);
+                return redirect()->to($intendedUrl, 302);
             }
         }
 
         $targetUrl = route($routeName);
         Log::info('[DEBUG-LOGIN] dashboardRedirect -> route(' . $routeName . ') = ' . $targetUrl);
-
-        if (str_starts_with($targetUrl, $currentHost)) {
-            $relativeTarget = substr($targetUrl, strlen($currentHost));
-
-            return redirect($relativeTarget !== '' ? $relativeTarget : '/', 303);
-        }
-
-        return redirect()->to($targetUrl, 303);
+        return redirect()->to($targetUrl, 302);
     }
 
     private function normalizeLegacyTenantUrl(string $url, User $user): string
