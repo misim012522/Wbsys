@@ -54,12 +54,24 @@ class EnsureTenantContext
         $currentTenant = app()->bound('current_tenant') ? app('current_tenant') : null;
 
         if (! $currentTenant || (int) $currentTenant->id !== (int) $tenant->id) {
-            Log::info('[DEBUG-TENANT-CTX] Tenant mismatch, redirect to tenant dashboard', [
+            $redirectUrl = TenantUrl::dashboard($tenant, $user);
+            $currentUrl = $request->fullUrl();
+            Log::info('[DEBUG-TENANT-CTX] Tenant mismatch, redirecting', [
                 'path' => $request->path(),
                 'currentTenant' => $currentTenant?->id,
                 'userTenant' => $tenant->id,
+                'redirectUrl' => $redirectUrl,
+                'currentUrl' => $currentUrl,
             ]);
-            return redirect()->away(TenantUrl::dashboard($tenant, $user))
+            // Prevent infinite redirect loop if target is the same as current URL
+            if (rtrim($redirectUrl, '/') === rtrim($currentUrl, '/')) {
+                Log::warning('[DEBUG-TENANT-CTX] Redirect loop detected, sending to tenant login instead', [
+                    'url' => $currentUrl,
+                ]);
+                return redirect()->away(TenantUrl::login($tenant));
+            }
+
+            return redirect()->away($redirectUrl)
                 ->with('error', 'Please continue inside your assigned tenant workspace.');
         }
 

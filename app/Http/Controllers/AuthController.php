@@ -85,13 +85,16 @@ class AuthController extends Controller
             }
 
             if ($tenantWorkspace && (int) ($user->tenant_id ?? 0) === (int) $tenantWorkspace->id) {
-                Log::info('[DEBUG-LOGIN] showLogin -> dashboardRedirect (tenant user matches workspace)');
+                Log::info('[DEBUG-LOGIN] showLogin -> redirecting to dashboard (tenant user matches workspace)');
+                // Reset redirect hits counter since we are doing a clean redirect
+                $request->session()->forget('login_redirect_hits');
+                $dashboardUrl = TenantUrl::forUserDashboard($user);
                 if ($loginPath && $this->shouldUseRedirectViewFallback($request)) {
                     return response()->view('auth.redirecting', [
-                        'target' => TenantUrl::forUserDashboard($user),
+                        'target' => $dashboardUrl,
                     ]);
                 }
-                return $this->dashboardRedirect($user);
+                return redirect()->away($dashboardUrl);
             }
 
             if ($tenantWorkspace) {
@@ -204,7 +207,17 @@ class AuthController extends Controller
 
         $this->signIn($request, $user, $request->boolean('remember'), $tenant);
 
-        return $this->dashboardRedirect($user);
+        // Use absolute URL redirect to ensure the browser stays on the correct tenant subdomain.
+        // route() helper may generate URLs without the subdomain, causing session cookie mismatches.
+        $dashboardUrl = TenantUrl::forUserDashboard($user);
+        Log::info('[DEBUG-LOGIN] login POST -> redirect to dashboard', [
+            'user_id' => $user->id,
+            'role' => $user->role,
+            'tenant_id' => $user->tenant_id,
+            'dashboard_url' => $dashboardUrl,
+        ]);
+
+        return redirect()->away($dashboardUrl);
     }
 
     public function continueLogin(Request $request): RedirectResponse|Response

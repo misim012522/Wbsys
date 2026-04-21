@@ -8,17 +8,30 @@ use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTenantResolved
 {
     public function handle(Request $request, Closure $next): Response
     {
+        Log::info('[DEBUG-TENANT-REQ] EnsureTenantResolved', [
+            'path' => $request->path(),
+            'current_tenant_bound' => app()->bound('current_tenant'),
+            'current_tenant_id' => app()->bound('current_tenant') ? app('current_tenant')->id : null,
+        ]);
+
         if (app()->bound('current_tenant')) {
             return $next($request);
         }
 
         $user = $request->user();
+
+        Log::warning('[DEBUG-TENANT-REQ] current_tenant NOT bound, checking user', [
+            'path' => $request->path(),
+            'user_id' => $user?->id,
+            'user_tenant_id' => $user?->tenant_id,
+        ]);
 
         if ($user && $user->tenant_id) {
             $tenant = Tenant::find($user->tenant_id);
@@ -28,10 +41,20 @@ class EnsureTenantResolved
                     return $this->logoutDueToDeactivation($request);
                 }
 
-                return redirect()->away(TenantUrl::dashboard($tenant, $user))
+                $dashboardUrl = TenantUrl::dashboard($tenant, $user);
+                Log::warning('[DEBUG-TENANT-REQ] Redirecting tenant user to dashboard', [
+                    'path' => $request->path(),
+                    'dashboard_url' => $dashboardUrl,
+                ]);
+
+                return redirect()->away($dashboardUrl)
                     ->with('error', 'Please open your assigned tenant workspace to continue.');
             }
         }
+
+        Log::warning('[DEBUG-TENANT-REQ] No tenant resolved, redirecting to central home', [
+            'path' => $request->path(),
+        ]);
 
         return redirect()->away(TenantUrl::centralHome())
             ->with('info', 'Open your tenant workspace link or subdomain to sign in, register, or manage tenant data.');
