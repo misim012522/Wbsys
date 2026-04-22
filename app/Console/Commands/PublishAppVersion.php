@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\AppVersion;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class PublishAppVersion extends Command
 {
@@ -19,6 +20,18 @@ class PublishAppVersion extends Command
 
     public function handle(): int
     {
+        if (! Schema::connection('central')->hasTable('app_versions')) {
+            $this->components->warn('The central app_versions table does not exist yet. Running central migrations first...');
+
+            $this->call('central:migrate');
+
+            if (! Schema::connection('central')->hasTable('app_versions')) {
+                $this->components->error('The app_versions table is still missing after central:migrate. Check your central database connection and run the migration manually.');
+
+                return self::FAILURE;
+            }
+        }
+
         $version = (string) ($this->argument('version') ?: config('app.version', '1.0.0'));
         $normalizedVersion = AppVersion::normalizeVersion($version);
 
