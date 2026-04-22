@@ -6,6 +6,7 @@ use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OtaUpdateController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\TenantUpdateController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TenantAccountSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,8 @@ Route::get('/example-toasts', function () {
 
 // Support & OTA updates
 Route::get('/api/ota/check', [OtaUpdateController::class, 'check'])->name('ota.check');
+Route::get('/api/tenant-update/status', [TenantUpdateController::class, 'status'])->name('tenant.update.status');
+Route::post('/api/tenant-update/apply', [TenantUpdateController::class, 'apply'])->middleware('auth')->name('tenant.update.apply');
 
 // Public: end users scan QR and land here (no login)
 Route::get('/o/{slug}', [PublicController::class, 'office'])->name('queue.office');

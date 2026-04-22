@@ -21,6 +21,17 @@
                     <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6"/></svg>
                     Support{{ $centralSupportUnreadCount ? ' ('.$centralSupportUnreadCount.')' : '' }}
                 </a>
+                <form method="POST" action="{{ route('logout') }}" class="shrink-0" id="central-logout-form">
+                    @csrf
+                    <button
+                        type="button"
+                        onclick="window.showToast?.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('central-logout-form').submit(), 500);"
+                        class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"/></svg>
+                        Log out
+                    </button>
+                </form>
             </div>
         </div>
     </div>
