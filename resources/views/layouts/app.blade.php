@@ -204,6 +204,8 @@
     @if(session('info')) data-info-message="{{ session('info') }}" @endif
     @if(session('status')) data-status-message="{{ session('status') }}" @endif
     @if(auth()->check() && app()->bound('current_tenant') && ! request()->routeIs('login')) data-tenant-session-monitor-url="{{ route('api.session.tenant-status') }}" @endif
+    @if(auth()->check() && app()->bound('current_tenant')) data-realtime-tenant-id="{{ app('current_tenant')->id }}" @endif
+    data-route-name="{{ optional(request()->route())->getName() }}"
 >
     <div id="toast-container"></div>
 

@@ -12,6 +12,7 @@
         "php": "^8.2",
         "endroid/qr-code": "*",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "*",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
@@ -48,7 +49,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" \"php artisan reverb:start --host=0.0.0.0 --port=8080\" --names='server,queue,vite,reverb'"
         ],
         "test": [
             "@php artisan config:clear --ansi",

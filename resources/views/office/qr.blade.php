@@ -9,26 +9,11 @@
     $canViewActivity = $viewer?->hasPermission('office.activity.view');
     $canOpenDashboard = $viewer?->hasPermission('office.dashboard');
 @endphp
-<div class="panel mb-8 overflow-hidden">
-    <div class="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_42%,_#eef6ff_100%)] p-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">Office QR access</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{{ $office->name }}</h1>
-                <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">Display or print this QR access point at your office. End users scan it to get a queue number, then you handle the live flow from the office staff workspace.</p>
-            </div>
 
-            <div class="flex flex-wrap gap-2">
-                @if($canViewActivity)
-                    <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Activity</a>
-                @endif
-                @if($canOpenDashboard)
-                    <a href="{{ route('office.dashboard') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50">Live operations</a>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
+@include('office._workspace-nav', [
+    'title' => 'Office QR access',
+    'description' => 'Display or share your office QR so visitors can join the queue quickly.',
+])
 
 <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
     <div class="panel p-6 text-center sm:p-8">
@@ -159,4 +144,6 @@
     }
 })();
 </script>
+
+@include('office._workspace-nav-footer')
 @endsection

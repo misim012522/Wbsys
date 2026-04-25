@@ -16,6 +16,11 @@
     $canViewActivity = $viewer?->hasPermission('office.activity.view');
 @endphp
 
+@include('office._workspace-nav', [
+    'title' => $office->name,
+    'description' => 'Call the next number and update live queue status for your assigned office.',
+])
+
 <div class="panel mb-6 overflow-hidden shadow-xl shadow-slate-200/50">
     <div class="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.18),_transparent_28%),linear-gradient(135deg,_#ffffff_0%,_#f8fffc_45%,_#eef6ff_100%)] p-6">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -25,17 +30,6 @@
                 <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-600">Call the next number and update live queue status.</p>
             </div>
 
-            <div class="flex flex-wrap gap-2">
-                @if($canUseQr)
-                    <a href="{{ route('office.qr') }}" class="rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">QR code</a>
-                @endif
-                @if($canViewReports && $queueEnabled)
-                    <a href="{{ route('office.reports') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Reports</a>
-                @endif
-                @if($canViewActivity)
-                    <a href="{{ route('office.activity') }}" class="rounded-full border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Activity</a>
-                @endif
-            </div>
         </div>
     </div>
 </div>
@@ -182,4 +176,6 @@
         </div>
     </div>
 </div>
+
+@include('office._workspace-nav-footer')
 @endsection

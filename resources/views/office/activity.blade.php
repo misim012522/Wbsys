@@ -7,14 +7,11 @@
     $viewer = auth()->user();
     $canOpenDashboard = $viewer?->hasPermission('office.dashboard');
 @endphp
-<div class="flex items-center justify-between mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">Activity log — {{ $office->name }}</h1>
-    @if($canOpenDashboard)
-        <a href="{{ route('office.dashboard') }}" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm">My queue</a>
-    @endif
-</div>
 
-<p class="text-slate-600 mb-6">Recent activity for your office: logins and queue actions.</p>
+@include('office._workspace-nav', [
+    'title' => 'Activity log',
+    'description' => 'Review recent office actions, queue updates, and account activity in one place.',
+])
 
 <form method="GET" action="{{ route('office.activity') }}" class="flex flex-wrap gap-4 mb-6 items-end">
     <div>
@@ -65,4 +62,6 @@
         {{ $activities->links() }}
     </div>
 @endif
+
+@include('office._workspace-nav-footer')
 @endsection

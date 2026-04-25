@@ -1,4 +1,5 @@
 import './bootstrap';
+import './echo';
 import { displaySessionToasts, setupAxiosToastInterceptor } from './toastNotifications';
 import { setupFocusHandling, realtimeRefresh, setupQueueRefresh, setupListRefresh } from './realtimeRefresh';
 
@@ -53,6 +54,81 @@ const initializeAppUi = () => {
 
         checkTenantSessionStatus();
         window.setInterval(checkTenantSessionStatus, 5000);
+    }
+
+    const tenantId = document.body.dataset.realtimeTenantId;
+    const routeName = document.body.dataset.routeName || '';
+    const supportsPartialRefresh = [
+        'office.dashboard',
+        'office.activity',
+        'office.reports',
+        'admin.dashboard',
+        'admin.reports',
+    ].includes(routeName);
+    const isWorkspaceLivePage = routeName.startsWith('office.') || routeName.startsWith('admin.');
+
+    if (tenantId && isWorkspaceLivePage && window.Echo) {
+        let refreshTimer = null;
+
+        const refreshWorkspaceRegion = async () => {
+            const currentRegion = document.querySelector('[data-live-refresh-root="workspace"]');
+            if (!currentRegion) {
+                window.location.reload();
+                return;
+            }
+
+            const currentScrollTop = currentRegion.scrollTop;
+
+            const response = await fetch(window.location.href, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html',
+                },
+            });
+
+            if (!response.ok) {
+                window.location.reload();
+                return;
+            }
+
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const nextRegion = doc.querySelector('[data-live-refresh-root="workspace"]');
+
+            if (!nextRegion) {
+                window.location.reload();
+                return;
+            }
+
+            currentRegion.innerHTML = nextRegion.innerHTML;
+            currentRegion.scrollTop = currentScrollTop;
+        };
+
+        const triggerRefresh = () => {
+            if (refreshTimer) {
+                return;
+            }
+
+            refreshTimer = window.setTimeout(() => {
+                refreshTimer = null;
+                if (!supportsPartialRefresh) {
+                    window.location.reload();
+                    return;
+                }
+
+                refreshWorkspaceRegion().catch(() => {
+                    window.location.reload();
+                });
+            }, 300);
+        };
+
+        window.Echo.private(`tenant.${tenantId}`)
+            .listen('.queue.updated', () => {
+                triggerRefresh();
+            });
     }
 };
 

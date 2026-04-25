@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\QueueUpdated;
 use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\QueueEntry;
@@ -185,6 +186,8 @@ class PublicController extends Controller
                 'assigned_staff_user_id' => $assignedStaff?->id,
             ]
         );
+
+        event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'joined', (int) $entry->id));
 
         return redirect()->route('queue.track', ['referenceCode' => $entry->reference_code])
             ->with('success', "You are #{$entry->queue_number} in line. Save your reference code to track your position.");

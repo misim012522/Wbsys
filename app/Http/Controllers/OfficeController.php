@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\QueueUpdated;
 use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\QueueEntry;
@@ -109,6 +110,8 @@ class OfficeController extends Controller
             ['queue_number' => $next->queue_number, 'display_name' => $next->display_name]
         );
 
+        event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'called', (int) $next->id));
+
         return back()->with('success', "Now serving #{$next->queue_number}");
     }
 
@@ -142,6 +145,8 @@ class OfficeController extends Controller
             $queueEntry->id,
             ['queue_number' => $queueEntry->queue_number, 'status' => $validated['status'], 'display_name' => $queueEntry->display_name]
         );
+
+        event(new QueueUpdated((int) $queueEntry->tenant_id, (int) $queueEntry->office_id, (string) $validated['status'], (int) $queueEntry->id));
 
         return back()->with('success', 'Queue status updated.');
     }
