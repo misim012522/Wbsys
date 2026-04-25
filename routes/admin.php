@@ -1,0 +1,46 @@
+<?php
+
+use App\Http\Controllers\AdminAccountSettingsController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CustomizationController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Admin Routes (RBAC: role:tenant_admin, prefix: admin)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard')->middleware(['role:tenant_admin', 'permission:admin.dashboard']);
+    Route::get('/profile', [AdminController::class, 'profile'])->name('profile')->middleware(['role:tenant_admin', 'permission:admin.profile']);
+    Route::get('/qr', [AdminController::class, 'qrCodes'])->name('qr')->middleware(['role:tenant_admin', 'permission:admin.office.serve']);
+    Route::get('/qr/image', [AdminController::class, 'qrCodeImage'])->name('qr.image')->middleware(['role:tenant_admin', 'permission:admin.office.serve']);
+    Route::get('/serve/{office}', [AdminController::class, 'serveOffice'])->name('serve')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
+    Route::post('/serve/{office}/call-next', [AdminController::class, 'callNext'])->name('call-next')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:office']);
+    Route::patch('/queue/{queueEntry}', [AdminController::class, 'updateQueueStatus'])->name('queue.update')->middleware(['role:tenant_admin', 'permission:admin.office.serve', 'tenant.resource:queueEntry']);
+    Route::get('/offices', [AdminController::class, 'offices'])->name('offices')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);
+    Route::get('/offices/create', [AdminController::class, 'createOffice'])->name('offices.create')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);
+    Route::post('/offices', [AdminController::class, 'storeOffice'])->name('offices.store')->middleware(['role:tenant_admin', 'permission:admin.office.manage']);
+    Route::get('/offices/{office}/edit', [AdminController::class, 'editOffice'])->name('offices.edit')->middleware(['role:tenant_admin', 'permission:admin.office.manage', 'tenant.resource:office']);
+    Route::put('/offices/{office}', [AdminController::class, 'updateOffice'])->name('offices.update')->middleware(['role:tenant_admin', 'permission:admin.office.manage', 'tenant.resource:office']);
+    Route::get('/reports', [AdminController::class, 'reports'])->name('reports')->middleware(['role:tenant_admin', 'permission:reports.view']);
+    Route::get('/reports/download', [AdminController::class, 'downloadReport'])->name('reports.download')->middleware(['role:tenant_admin', 'permission:reports.view']);
+    Route::get('/settings', [AdminAccountSettingsController::class, 'edit'])->name('settings.edit')->middleware(['role:tenant_admin', 'permission:admin.settings.manage']);
+    Route::put('/settings', [AdminAccountSettingsController::class, 'update'])->name('settings.update')->middleware(['role:tenant_admin', 'permission:admin.settings.manage']);
+    Route::get('/customization', [CustomizationController::class, 'index'])->name('customization.index')->middleware(['role:tenant_admin', 'permission:admin.customization.manage']);
+    Route::put('/customization', [CustomizationController::class, 'update'])->name('customization.update')->middleware(['role:tenant_admin', 'permission:admin.customization.manage']);
+    Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index')->middleware(['role:tenant_admin', 'permission:users.manage']);
+    Route::get('/users/pending', [AdminController::class, 'pendingAccounts'])->name('users.pending')->middleware(['role:tenant_admin', 'permission:users.manage']);
+    Route::get('/users/archived', [AdminController::class, 'archivedAccounts'])->name('users.archived')->middleware(['role:tenant_admin', 'permission:users.manage']);
+    // Show a confirmation page for approving a pending user (GET) to avoid 419 when the URL is visited directly.
+    Route::get('/users/{user}/approve', [AdminController::class, 'approveUserConfirm'])->name('users.approve.confirm')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    // Signed one-click approval link (suitable for email or one-click workflows)
+    Route::get('/users/{user}/approve/signed', [AdminController::class, 'approveUserSigned'])
+        ->name('users.approve.signed')
+        ->middleware(['signed', 'role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    Route::post('/users/{user}/approve', [AdminController::class, 'approveUser'])->name('users.approve')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    Route::post('/users/{user}/archive', [AdminController::class, 'archiveUser'])->name('users.archive')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    Route::post('/users/{user}/recover', [AdminController::class, 'recoverUser'])->name('users.recover')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+});

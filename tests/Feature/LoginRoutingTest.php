@@ -1,0 +1,542 @@
+<?php
+
+if (! extension_loaded('pdo_sqlite')) {
+    test('skip-database-driver', function () {
+        $this->assertTrue(true);
+    })->skip('No pdo_sqlite driver available; tests require sqlite in-memory.');
+
+    return;
+}
+
+use App\Models\Plan;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Services\TenantDatabaseManager;
+use App\Support\TenantUrl;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+
+uses(RefreshDatabase::class);
+
+function loginTenantHost(): array
+{
+    return ['HTTP_HOST' => 'acme.localhost'];
+}
+
+function otherTenantHost(): array
+{
+    return ['HTTP_HOST' => 'registrar.localhost'];
+}
+
+test('guest landing page redirects to login', function () {
+    $this->get('/')
+        ->assertRedirect(route('login'));
+});
+
+test('central handler account logs into the central dashboard', function () {
+    $user = User::factory()->create([
+        'username' => 'central.handler',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $this->post('/login', [
+        'login' => 'central.handler',
+        'password' => 'password',
+    ])->assertRedirect(route('central.dashboard'));
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('central login wins on the root host even when a tenant account shares the same credentials', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $centralUser = User::factory()->create([
+        'username' => 'central.handler',
+        'email' => 'central.handler@central.test',
+        'password' => 'Password123!',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'tenant.admin@tenant.test',
+        'phone' => '09123456789',
+        'password' => 'TempPassword123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    User::on('tenant')->create([
+        'name' => 'Tenant Collision User',
+        'username' => 'central.handler',
+        'email' => 'central.handler@tenant.test',
+        'phone' => '09123456788',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+        'email_verified_at' => now(),
+    ]);
+
+    $this->post('/login', [
+        'login' => 'central.handler',
+        'password' => 'Password123!',
+    ])->assertRedirect(route('central.dashboard'));
+
+    $this->assertAuthenticatedAs($centralUser);
+});
+
+test('central logout redirects back to login', function () {
+    $user = User::factory()->create([
+        'username' => 'sysadmin',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('logout'))
+        ->assertRedirect(route('login'));
+
+    $this->assertGuest();
+});
+
+test('tenant account login from the root host hands off to the tenant domain', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $response = $this->post('/login', [
+        'login' => 'tenant.admin',
+        'password' => 'Password123!',
+    ]);
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith('http://acme.localhost/auth/continue?token=');
+});
+
+test('tenant login page does not show create account in the header', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->withServerVariables(loginTenantHost())
+        ->get('/login')
+        ->assertOk()
+        ->assertSee('Log in')
+        ->assertDontSee('Create account');
+});
+
+test('tenant app entry routes only open on dedicated tenant domains', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+    Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->withHeader('Host', 'central.localhost')
+        ->get('/tenant')
+        ->assertRedirect(TenantUrl::centralHome());
+
+    $this->withHeader('Host', 'central.localhost')
+        ->get('/tenant/track')
+        ->assertRedirect(TenantUrl::centralHome());
+});
+
+test('tenant register page does not show login and create account in the header', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->withServerVariables(loginTenantHost())
+        ->get('/tenant/register')
+        ->assertRedirect(route('login'));
+});
+
+test('tenant workspace cannot access central pages', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $this->withServerVariables(loginTenantHost())
+        ->get('/central')
+        ->assertRedirect(route('login'));
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(loginTenantHost())
+        ->get('/central/dashboard')
+        ->assertRedirect(TenantUrl::dashboard($tenant, $admin));
+});
+
+test('central user can open a tenant workspace page without being forced into tenant admin routes', function () {
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $centralUser = User::factory()->create([
+        'username' => 'sysadmin',
+        'role' => User::ROLE_SYSTEM_ADMIN,
+        'tenant_id' => null,
+        'approved_at' => now(),
+    ]);
+
+    $this->actingAs($centralUser)
+        ->withServerVariables(loginTenantHost())
+        ->get('/tenant')
+        ->assertOk()
+        ->assertSee('Tenant Workspace')
+        ->assertSee('Central account detected')
+        ->assertSee('Log out and switch account');
+});
+
+test('tenant user on the central host is redirected back to their tenant workspace', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withHeader('Host', 'central.localhost')
+        ->get('/dashboard')
+        ->assertRedirect(TenantUrl::dashboard($tenant, $admin));
+});
+
+test('tenant user on another tenant domain is redirected back to their own workspace', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $this->actingAs($admin)
+        ->withHeader('Host', 'registrar.localhost')
+        ->withServerVariables(otherTenantHost())
+        ->get('/admin')
+        ->assertRedirect(TenantUrl::dashboard($tenant, $admin));
+});
+
+test('tenant urls use localhost subdomains when app url is 127.0.0.1', function () {
+    config()->set('app.url', 'http://127.0.0.1:8000');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    expect(TenantUrl::login($tenant))->toBe('http://registrar.lvh.me:8000/login');
+});
+
+test('tenant account cannot log in from another tenant domain', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    Tenant::create([
+        'name' => 'Registrar Office',
+        'slug' => 'registrar-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'registrar',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $response = $this->withHeader('Host', 'registrar.localhost')
+        ->withServerVariables(otherTenantHost())
+        ->post('/login', [
+            'login' => 'admin',
+            'password' => 'Password123!',
+            'tenant_id' => Tenant::where('subdomain', 'registrar')->value('id'),
+        ]);
+
+    $response->assertSessionHasErrors('login');
+    $this->assertGuest();
+});
+
+test('tenant login on a tenant domain lands on the shared tenant dashboard route', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Cot Office',
+        'slug' => 'cot-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'cot',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Cot Admin',
+        'username' => 'cot.admin',
+        'email' => 'admin@cot.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    $response = $this->withHeader('Host', 'cot.localhost')
+        ->post('/login', [
+            'login' => 'cot.admin',
+            'password' => 'Password123!',
+        ]);
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith('http://cot.localhost/auth/continue?token=');
+});
+
+test('office staff login still lands on an allowed tenant page when live operations access is disabled', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+        'settings' => [
+            'rbac' => [
+                'office_staff' => [
+                    'office' => ['serve' => false],
+                    'reports' => ['view' => false],
+                ],
+            ],
+        ],
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::on('tenant')->create([
+        'name' => 'Office Staff',
+        'username' => 'office.staff',
+        'email' => 'staff@acme.test',
+        'phone' => '09123456780',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+    $staff->forceFill(['email_verified_at' => now()])->save();
+
+    $response = $this->withServerVariables(loginTenantHost())
+        ->post('/login', [
+            'login' => 'office.staff',
+            'password' => 'Password123!',
+        ]);
+
+    $location = $response->headers->get('Location');
+
+    expect($location)->toStartWith('http://acme.localhost/auth/continue?token=');
+
+    $continuePath = parse_url($location, PHP_URL_PATH) ?: '/auth/continue';
+    $continueQuery = parse_url($location, PHP_URL_QUERY);
+
+    $this->withHeader('Host', 'acme.localhost')
+        ->withServerVariables(loginTenantHost())
+        ->get($continuePath.($continueQuery ? '?'.$continueQuery : ''))
+        ->assertRedirect(route('tenant.settings.edit'));
+});
+
+test('authenticated office staff visiting the tenant login page are redirected to office dashboard', function () {
+    config()->set('app.url', 'http://central.localhost');
+
+    $plan = Plan::firstOrCreate(['slug' => 'pro'], ['name' => 'Pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'is_active' => true,
+    ]);
+
+    app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    app(TenantDatabaseManager::class)->activate($tenant);
+
+    $staff = User::on('tenant')->create([
+        'name' => 'Office Staff',
+        'username' => 'office.staff',
+        'email' => 'staff@acme.test',
+        'phone' => '09123456780',
+        'password' => 'Password123!',
+        'role' => User::ROLE_OFFICE_STAFF,
+        'tenant_id' => $tenant->id,
+        'office_id' => \App\Models\Office::query()->value('id'),
+        'approved_at' => now(),
+    ]);
+    $staff->forceFill(['email_verified_at' => now()])->save();
+
+    $response = $this->actingAs($staff)
+        ->withHeader('Host', 'acme.localhost')
+        ->withServerVariables(loginTenantHost())
+        ->get('/login');
+
+    $response->assertRedirect(route('office.dashboard'));
+
+    $this->assertAuthenticated();
+    $this->assertAuthenticatedAs($staff);
+});
