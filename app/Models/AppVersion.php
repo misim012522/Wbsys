@@ -44,7 +44,13 @@ class AppVersion extends Model
             return null;
         }
 
-        return preg_replace('/^[vV](?=\d)/', '', $normalized) ?: null;
+        // Remove 'v' or 'V' prefix
+        $normalized = preg_replace('/^[vV](?=\d)/', '', $normalized) ?: $normalized;
+        
+        // Remove '-dirty' suffix (common in git repositories)
+        $normalized = preg_replace('/-dirty$/', '', $normalized) ?: $normalized;
+
+        return $normalized;
     }
 
     public function scopeLatest($query)

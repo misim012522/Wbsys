@@ -44,4 +44,11 @@ return [
         'simulate' => env('STRIPE_SIMULATE_CHECKOUT', false),
     ],
 
+    'github' => [
+        'owner' => env('GITHUB_OWNER'),
+        'repo' => env('GITHUB_REPO'),
+        'token' => env('GITHUB_TOKEN'),
+        'webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+    ],
+
 ];

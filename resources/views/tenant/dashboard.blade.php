@@ -27,6 +27,32 @@
                 <p class="mt-3 max-w-2xl text-sm text-slate-600">Workspace dashboard for today's line, bookings, and queue tools.</p>
             </div>
 
+            @if($updateAvailable)
+            <div class="rounded-xl border-2 border-amber-200 bg-amber-50 p-4 lg:max-w-md">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-amber-900">System update available</p>
+                        <p class="mt-1 text-sm text-amber-800">
+                            New version {{ $latestVersion->version }} is available. You are currently on version {{ $currentVersion }}.
+                        </p>
+                        @if($latestVersion->download_url)
+                        <a href="{{ $latestVersion->download_url }}" target="_blank" class="mt-2 inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-900">
+                            View release notes
+                            <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <div class="flex flex-wrap gap-2">
         @if($user->isAdmin())
             <a href="{{ route('admin.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open admin dashboard</a>

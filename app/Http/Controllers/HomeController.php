@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppVersion;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\User;
@@ -94,11 +95,19 @@ class HomeController extends Controller
                 ->first();
         }
 
+        // Check for system updates
+        $currentVersion = config('app.version', '1.0.0');
+        $latestVersion = AppVersion::latest()->first();
+        $updateAvailable = $latestVersion && $latestVersion->isNewerThan($currentVersion) && $latestVersion->version !== AppVersion::normalizeVersion($currentVersion);
+
         return view('tenant.dashboard', [
             'tenant' => $tenant,
             'user' => $user,
             'office' => $office,
             'summary' => $summary,
+            'updateAvailable' => $updateAvailable,
+            'latestVersion' => $latestVersion,
+            'currentVersion' => $currentVersion,
         ]);
     }
 }

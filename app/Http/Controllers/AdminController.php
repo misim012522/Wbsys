@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppVersion;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\User;
@@ -175,7 +176,12 @@ class AdminController extends Controller
                 ];
             });
 
-        return view('admin.dashboard', compact('office', 'todayQueues', 'completedToday', 'staffQueueStats'));
+        // Check for system updates
+        $currentVersion = config('app.version', '1.0.0');
+        $latestVersion = AppVersion::latest()->first();
+        $updateAvailable = $latestVersion && $latestVersion->isNewerThan($currentVersion) && $latestVersion->version !== AppVersion::normalizeVersion($currentVersion);
+
+        return view('admin.dashboard', compact('office', 'todayQueues', 'completedToday', 'staffQueueStats', 'updateAvailable', 'latestVersion', 'currentVersion'));
     }
 
     public function profile()

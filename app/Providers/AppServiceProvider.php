@@ -41,8 +41,12 @@ class AppServiceProvider extends ServiceProvider
 
             $appVersion = Cache::remember('app_current_version', 3600, function () {
                 try {
-                    return AppVersion::query()->orderByDesc('released_at')->value('version') 
-                        ?? config('app.version', 'v1.0.0');
+                    // Use current config version, not latest from database
+                    $currentVersion = config('app.version', 'v1.0.0');
+                    // Normalize: remove 'v' prefix and '-dirty' suffix
+                    $normalized = preg_replace('/^v/', '', $currentVersion);
+                    $normalized = preg_replace('/-dirty$/', '', $normalized);
+                    return $normalized;
                 } catch (\Throwable) {
                     return config('app.version', 'v1.0.0');
                 }

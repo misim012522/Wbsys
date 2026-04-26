@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Events\QueueUpdated;
 use App\Models\ActivityLog;
+use App\Models\AppVersion;
 use App\Models\Office;
 use App\Models\QueueEntry;
+use App\Models\User;
+use App\Services\LimitEnforcer;
 use App\Services\QrCodeService;
 use App\Services\TenantPlanEnforcer;
-use Illuminate\Http\Request;
+use App\Support\TenantUrl;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
@@ -68,7 +73,12 @@ class OfficeController extends Controller
             ->orderBy('queue_number')
             ->first();
 
-        return view('office.dashboard', compact('office', 'todayQueue', 'currentServing'));
+        // Check for system updates
+        $currentVersion = config('app.version', '1.0.0');
+        $latestVersion = AppVersion::latest()->first();
+        $updateAvailable = $latestVersion && $latestVersion->isNewerThan($currentVersion) && $latestVersion->version !== AppVersion::normalizeVersion($currentVersion);
+
+        return view('office.dashboard', compact('office', 'todayQueue', 'currentServing', 'updateAvailable', 'latestVersion', 'currentVersion'));
     }
 
     public function callNext()

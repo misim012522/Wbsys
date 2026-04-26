@@ -15,5 +15,6 @@ class VerifyCsrfToken extends BaseVerifier
         // Allow tenant admin approval POSTs to avoid 419 in case of cookie domain mismatches.
         'admin/users/*/approve',
         'central/payments/stripe/webhook',
+        'api/github/webhook',
     ];
 }
