@@ -75,6 +75,7 @@
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Payment Details</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Usage Summary</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Last Activity</th>
+                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Version</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Status</th>
                         <th class="w-[14rem] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Actions</th>
                     </tr>
@@ -179,6 +180,11 @@
                             </td>
                             <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
                                 <div class="max-w-[10rem] rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[5rem]">
+                                    <div class="text-xs font-medium text-slate-900">{{ $tenant->app_version ?? 'N/A' }}</div>
+                                </div>
                             </td>
                             <td class="border-y border-slate-200 bg-white px-2 py-2 shadow-sm">
                                 <div class="min-w-[7rem]">
@@ -293,7 +299,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="px-2 py-6">
+                            <td colspan="13" class="px-2 py-6">
                                 <div class="mx-auto max-w-2xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
                                     <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
                                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -406,6 +412,13 @@
                         <input type="text" name="domain" value="{{ $isTenantUpdateModalOpen ? old('domain', $tenant->domain) : $tenant->domain }}" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('domain') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
                         @if($errors->{$tenantUpdateErrorBag}->has('domain'))
                             <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('domain') }}</p>
+                        @endif
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">App Version</label>
+                        <input type="text" name="app_version" value="{{ $isTenantUpdateModalOpen ? old('app_version', $tenant->app_version) : $tenant->app_version }}" placeholder="e.g., v1.0.17" class="w-full rounded-xl border px-3 py-2.5 text-sm text-slate-900 focus:bg-white focus:outline-none focus:ring-2 {{ $errors->{$tenantUpdateErrorBag}->has('app_version') ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-500/20' : 'border-slate-300 bg-slate-50 focus:border-emerald-500 focus:ring-emerald-500/20' }}">
+                        @if($errors->{$tenantUpdateErrorBag}->has('app_version'))
+                            <p class="mt-1 text-xs text-red-600">{{ $errors->{$tenantUpdateErrorBag}->first('app_version') }}</p>
                         @endif
                     </div>
                 </div>

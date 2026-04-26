@@ -41,8 +41,21 @@ class AppServiceProvider extends ServiceProvider
 
             $appVersion = Cache::remember('app_current_version', 3600, function () {
                 try {
-                    // Use current config version, not latest from database
-                    $currentVersion = config('app.version', 'v1.0.0');
+                    // Use tenant-specific version if available, otherwise use global config version
+                    $tenant = null;
+                    if (auth()->check() && auth()->user()->tenant_id) {
+                        $tenant = auth()->user()->tenant;
+                    }
+                    if (! $tenant && app()->bound('current_tenant')) {
+                        $tenant = app('current_tenant');
+                    }
+
+                    if ($tenant && $tenant->app_version) {
+                        $currentVersion = $tenant->app_version;
+                    } else {
+                        $currentVersion = config('app.version', 'v1.0.0');
+                    }
+
                     // Normalize: remove 'v' prefix and '-dirty' suffix
                     $normalized = preg_replace('/^v/', '', $currentVersion);
                     $normalized = preg_replace('/-dirty$/', '', $normalized);

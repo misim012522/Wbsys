@@ -84,6 +84,7 @@ class CentralController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:tenants,email,'.$tenant->id],
             'subdomain' => ['nullable', 'string', 'max:255', 'alpha_dash', 'unique:tenants,subdomain,'.$tenant->id],
             'domain' => ['nullable', 'string', 'max:255', 'unique:tenants,domain,'.$tenant->id],
+            'app_version' => ['nullable', 'string', 'max:50'],
         ]);
 
         $validator->after(function ($validator) use ($request): void {
@@ -111,6 +112,7 @@ class CentralController extends Controller
             'email' => $validated['email'],
             'subdomain' => $validated['domain'] ? null : ($validated['subdomain'] ?: null),
             'domain' => $validated['domain'] ?: null,
+            'app_version' => $validated['app_version'] ?? null,
         ]);
 
         return redirect()->route('central.dashboard')
@@ -663,6 +665,7 @@ class CentralController extends Controller
                 'address' => $validated['address'] ?? null,
                 'email' => $validated['email'] ?? $payment->email,
                 'contact_number' => $validated['contact_number'] ?? null,
+                'app_version' => config('app.version', 'v1.0.0'),
                 'settings' => [
                     'database' => ['mode' => 'dedicated'],
                     'theme' => [
