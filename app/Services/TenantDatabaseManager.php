@@ -32,7 +32,9 @@ class TenantDatabaseManager
             $driver = $config['driver'] ?? 'mysql';
             $config['database'] = $driver === 'sqlite'
                 ? $this->sqlitePath($tenant)
-                : TenantDatabaseName::mysqlSchemaName($tenant);
+                : ($tenant->database_name && !str_ends_with($tenant->database_name, '.db')
+                    ? $tenant->database_name
+                    : TenantDatabaseName::mysqlSchemaName($tenant));
         }
 
         config(['database.connections.tenant' => $config]);
@@ -69,6 +71,10 @@ class TenantDatabaseManager
         $user->setConnection('tenant');
         $user->email_verified_at = now();
         $user->save();
+
+        // Institutional licensing removed; support levels are driven by plan settings only.
+        // Apply plan-derived limits and support to tenant settings
+        $this->applyPlanSettings($tenant);
 
         return $user;
     }
@@ -300,4 +306,33 @@ class TenantDatabaseManager
     {
         return $tenant->getSetting('database.mode') === 'shared';
     }
+    
+    /**
+     * Apply plan limits and support metadata to tenant settings. Public for testing.
+     */
+    public function applyPlanSettings(\App\Models\Tenant $tenant): void
+    {
+        try {
+            if ($tenant->plan_id) {
+                $plan = \App\Models\Plan::query()->find($tenant->plan_id);
+                if ($plan) {
+                    $tenant->setSetting('limits.max_offices', $plan->max_offices);
+                    $tenant->setSetting('limits.qr_codes_per_office', $plan->qr_codes_per_office ?? null);
+                    $tenant->setSetting('limits.daily_service_limit', $plan->daily_service_limit ?? null);
+
+                    $supportLevel = $plan->support_level ?? null;
+                    $slaHours = $plan->sla_hours ?? null;
+                    if ($supportLevel) {
+                        $tenant->setSetting('support.level', $supportLevel);
+                    }
+                    if ($slaHours) {
+                        $tenant->setSetting('support.sla_hours', $slaHours);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
 }

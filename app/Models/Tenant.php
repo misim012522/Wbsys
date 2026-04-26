@@ -28,6 +28,10 @@ class Tenant extends Model
     protected static function booted(): void
     {
         static::saving(function (Tenant $tenant): void {
+            // Skip normalization if database_name is already set and doesn't end with .db (MySQL format)
+            if ($tenant->database_name && !str_ends_with($tenant->database_name, '.db')) {
+                return;
+            }
             if ($tenant->database_name || $tenant->name) {
                 $tenant->database_name = TenantDatabaseName::normalize(
                     (string) $tenant->database_name,

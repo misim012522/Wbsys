@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
             'central.user' => \App\Http\Middleware\EnsureCentralUser::class,
             'central.public' => \App\Http\Middleware\EnsureNotTenantWorkspace::class,
+            'stripe.registration.config' => \App\Http\Middleware\EnsureStripeRegistrationConfigured::class,
             'role' => \App\Http\Middleware\EnsureRole::class,
             'permission' => \App\Http\Middleware\EnsurePermission::class,
             'tenant.context' => \App\Http\Middleware\EnsureTenantContext::class,

@@ -20,6 +20,7 @@ class OfficeController extends Controller
     public function __construct(
         private QrCodeService $qrCodeService,
         private TenantPlanEnforcer $tenantPlanEnforcer,
+        private \App\Services\LimitEnforcer $limitEnforcer,
     ) {}
 
     private function currentTenant(): ?\App\Models\Tenant
@@ -176,6 +177,9 @@ class OfficeController extends Controller
         $office = $staffUser->office;
         if (! $office) {
             abort(403);
+        }
+        if (! $this->limitEnforcer->canIssueQr($this->currentTenant())) {
+            abort(403, 'QR issuance limit reached for your plan.');
         }
         $path = URL::signedRoute('queue.office.staff', [
             'slug' => $office->slug,

@@ -14,6 +14,7 @@ class Plan extends Model
     protected $fillable = [
         'name', 'slug', 'price_monthly', 'price_yearly', 'features',
         'max_offices', 'max_users_per_tenant', 'is_active',
+        'qr_codes_per_office', 'daily_service_limit', 'support_level', 'sla_hours',
     ];
 
     protected function casts(): array

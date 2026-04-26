@@ -43,4 +43,5 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::post('/users/{user}/archive', [AdminController::class, 'archiveUser'])->name('users.archive')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
     Route::post('/users/{user}/recover', [AdminController::class, 'recoverUser'])->name('users.recover')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
     Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy')->middleware(['role:tenant_admin', 'permission:users.manage', 'tenant.resource:user']);
+    // Institutional license routes removed
 });

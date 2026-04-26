@@ -14,5 +14,6 @@ class VerifyCsrfToken extends BaseVerifier
     protected $except = [
         // Allow tenant admin approval POSTs to avoid 419 in case of cookie domain mismatches.
         'admin/users/*/approve',
+        'central/payments/stripe/webhook',
     ];
 }

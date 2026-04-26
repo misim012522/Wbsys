@@ -31,4 +31,6 @@ class SaasSeeder extends Seeder
             );
         }
     }
+
+    // Institutional licenses removed; seeding only plans now.
 }

@@ -16,10 +16,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('central')->name('central.')->middleware('central.public')->group(function () {
     Route::get('/', [CentralController::class, 'home'])->name('home');
+    Route::get('/pricing', [CentralController::class, 'pricing'])->name('pricing');
+    Route::post('/payments/stripe/webhook', [CentralController::class, 'stripeWebhook'])->name('payments.stripe.webhook');
 
-    Route::middleware('guest')->group(function () {
+    Route::middleware(['guest', 'stripe.registration.config'])->group(function () {
         Route::get('/register', [CentralController::class, 'create'])->name('register');
         Route::post('/register', [CentralController::class, 'store'])->name('register.store');
+        Route::get('/register/payment/fake', [CentralController::class, 'fakePayment'])->name('register.payment.fake');
+        Route::post('/register/payment/fake', [CentralController::class, 'fakePaymentProcess'])->name('register.payment.fake.process');
+        Route::get('/register/payment/success', [CentralController::class, 'paymentSuccess'])->name('register.payment.success');
+        Route::get('/register/payment/cancel', [CentralController::class, 'paymentCancel'])->name('register.payment.cancel');
     });
 
     Route::middleware(['auth', 'central.user'])->group(function () {

@@ -72,6 +72,7 @@
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Email</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Created At</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Subscription Plan</th>
+                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Payment Details</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Usage Summary</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Last Activity</th>
                         <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Status</th>
@@ -85,6 +86,7 @@
                             $loginUrl = \App\Support\TenantUrl::login($tenant);
                             $workspaceHost = parse_url($workspaceUrl, PHP_URL_HOST) ?: 'N/A';
                             $latestSubscription = $tenant->subscriptions->sortByDesc('id')->first();
+                            $latestPayment = $latestPayments[$tenant->id] ?? null;
                             $tenantAdmin = $tenantAdmins[$tenant->id] ?? null;
                             $tenantInsight = $tenantInsights[$tenant->id] ?? [
                                 'office_count' => 0,
@@ -152,6 +154,19 @@
                                                 until {{ $latestSubscription->ends_at->format('M d, Y') }}
                                             @endif
                                         </div>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[9rem]">
+                                    @if($latestPayment)
+                                        <div class="text-xs font-medium text-slate-900">{{ str($latestPayment->status)->replace('_', ' ')->title() }}</div>
+                                        <div class="mt-0.5 text-[10px] text-slate-500">
+                                            ${{ number_format(($latestPayment->amount_cents ?? 0) / 100, 2) }} {{ strtoupper($latestPayment->currency ?? 'usd') }}
+                                        </div>
+                                        <div class="mt-0.5 break-all text-[10px] text-slate-400">Ref: {{ $latestPayment->reference }}</div>
+                                    @else
+                                        <div class="text-xs font-medium text-slate-500">No payment record</div>
                                     @endif
                                 </div>
                             </td>
@@ -278,7 +293,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="px-2 py-6">
+                            <td colspan="12" class="px-2 py-6">
                                 <div class="mx-auto max-w-2xl rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
                                     <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
                                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

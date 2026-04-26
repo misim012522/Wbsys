@@ -88,6 +88,7 @@
                         Pick a plan, enter the office details, and create the workspace.
                     </p>
                 </div>
+                {{-- Institutional license selection removed --}}
 
                 <div class="relative mt-10 grid gap-4 lg:grid-cols-3">
                     @foreach($plans as $plan)
@@ -127,6 +128,8 @@
                                     <div>
                                         <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Plan</p>
                                         <p class="mt-2 text-3xl font-semibold text-slate-900">{{ $plan->name }}</p>
+                                        @php $planCount = $planCounts[$plan->slug] ?? 0; @endphp
+                                        <div class="text-sm text-slate-500">Tenants: {{ $planCount }}</div>
                                     </div>
                                     <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full {{ $theme['soft'] }}">
                                         <span class="h-2.5 w-2.5 rounded-full {{ $theme['dot'] }}"></span>
@@ -141,14 +144,39 @@
 
                                     <p class="mt-4 text-sm leading-6 text-slate-500">{{ $planSummary }}</p>
 
-                                    <ul class="mt-6 space-y-3 text-sm text-slate-600">
-                                        @foreach($features as $feature)
-                                            <li class="flex items-center gap-3">
-                                                <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-500">&#10003;</span>
-                                                <span>{{ str($feature)->replace('_', ' ')->title() }}</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
+                                                <ul class="mt-6 space-y-3 text-sm text-slate-600">
+                                                    <li><strong>Max offices:</strong> {{ $plan->max_offices === null ? 'Unlimited' : $plan->max_offices }}</li>
+                                                    <li>
+                                                        <strong>QR codes per office:</strong>
+                                                        @php $qrVal = $plan['qr_codes_per_office'] ?? ($plan->qr_codes_per_office ?? null); @endphp
+                                                        @if($qrVal === null || $qrVal === 'N/A')
+                                                            Unlimited
+                                                        @else
+                                                            {{ $qrVal }}
+                                                        @endif
+                                                        {{-- description removed per request --}}
+                                                    </li>
+                                                    @php $supportLevel = $plan['support_level'] ?? ($plan->support_level ?? null); $slaHours = $plan['sla_hours'] ?? ($plan->sla_hours ?? null); @endphp
+                                                    @if($supportLevel)
+                                                        <li><strong>Support:</strong> {{ ucfirst($supportLevel) }}{{ $slaHours ? ' — Response within '.$slaHours.' hours' : '' }}</li>
+                                                    @endif
+                                                    <li>
+                                                        <strong>Daily service limit:</strong>
+                                                        @php $dailyVal = $plan['daily_service_limit'] ?? ($plan->daily_service_limit ?? null); @endphp
+                                                        @if($dailyVal === null || $dailyVal === 'N/A')
+                                                            Unlimited
+                                                        @else
+                                                            {{ $dailyVal }}
+                                                        @endif
+                                                        {{-- description removed per request --}}
+                                                    </li>
+                                                    @foreach($features as $feature)
+                                                        <li class="flex items-center gap-3">
+                                                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-slate-500">&#10003;</span>
+                                                            <span>{{ str($feature)->replace('_', ' ')->title() }}</span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
 
                                     <div class="mt-8">
                                         <div class="inline-flex min-w-[10rem] items-center justify-center rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white">
@@ -231,8 +259,8 @@
                                 <p class="text-sm font-semibold">Ready to create the tenant workspace?</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-4">
-                                <button type="submit" id="create-tenant-submit" class="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900" data-idle-label="Create tenant workspace" data-loading-label="Creating workspace...">
-                                    Create tenant workspace
+                                <button type="submit" id="create-tenant-submit" class="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900" data-idle-label="Proceed to secure payment" data-loading-label="Redirecting to payment...">
+                                    Proceed to secure payment
                                 </button>
                                 <a href="{{ \App\Support\TenantUrl::login(null, true) }}" id="create-tenant-cancel" class="text-sm font-medium text-slate-300 transition hover:text-white">Cancel</a>
                             </div>

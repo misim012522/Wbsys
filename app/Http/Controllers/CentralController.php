@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\Plan;
 use App\Models\QueueEntry;
+use App\Models\RegistrationPayment;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\User;
@@ -16,16 +17,20 @@ use App\Notifications\TenantSubscriptionUpdatedNotification;
 use App\Notifications\TenantWorkspaceAccessNotification;
 use App\Services\TenantDatabaseManager;
 use App\Services\TenantRbacService;
+use App\Services\StripeCheckoutService;
 use App\Support\CentralPricing;
 use App\Support\TenantDashboardProfile;
 use App\Support\TenantDatabaseName;
 use App\Support\TenantWorkspaceUrlValidator;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -34,7 +39,8 @@ class CentralController extends Controller
 {
     public function __construct(
         private TenantDatabaseManager $tenantDatabaseManager,
-        private TenantRbacService $tenantRbacService
+        private TenantRbacService $tenantRbacService,
+        private StripeCheckoutService $stripeCheckoutService,
     ) {}
 
     public function home(): View|RedirectResponse
@@ -336,94 +342,378 @@ class CentralController extends Controller
 
     public function create(): View
     {
+        $plans = $this->availablePlans();
+        $planSlugs = $plans->pluck('slug')->filter()->values()->all();
+        $planCounts = \App\Models\Plan::whereIn('slug', $planSlugs)
+            ->withCount('tenants')
+            ->get()
+            ->mapWithKeys(fn($p) => [$p->slug => $p->tenants_count]);
+
         return view('central.register', [
-            'plans' => $this->availablePlans(),
+            'plans' => $plans,
+            // institutional licenses removed
+            'planCounts' => $planCounts,
+        ]);
+    }
+
+    public function pricing(): View
+    {
+        $plans = collect(\App\Support\CentralPricing::plans());
+
+        // Count tenants currently assigned to each plan
+        $planSlugs = $plans->pluck('slug')->filter()->values()->all();
+        $planCounts = \App\Models\Plan::whereIn('slug', $planSlugs)
+            ->withCount('tenants')
+            ->get()
+            ->mapWithKeys(fn($p) => [$p->slug => $p->tenants_count]);
+
+        return view('central.pricing', [
+            'plans' => $plans,
+            // institutional licenses removed
+            'planCounts' => $planCounts,
         ]);
     }
 
     public function store(CentralTenantSignupRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $plan = Plan::findOrFail($validated['plan_id']);
+        $plan = Plan::active()->findOrFail((int) $validated['plan_id']);
+        $amountCents = (int) round(((float) $plan->price_monthly) * 100);
+        $simulateCheckout = (bool) config('services.stripe.simulate', false);
+
+        if (! Schema::connection('central')->hasTable('registration_payments')) {
+            return back()->withInput()->withErrors([
+                'tenant_name' => 'Payment setup is incomplete: registration payments table is missing. Please run central migrations.',
+            ]);
+        }
+
+        if ($amountCents <= 0) {
+            return back()->withInput()->withErrors(['plan_id' => 'Selected plan has invalid payment amount.']);
+        }
+
+        try {
+            $payment = RegistrationPayment::create([
+                'reference' => (string) Str::uuid(),
+                'plan_id' => $plan->id,
+                'email' => $validated['email'],
+                'provider' => 'stripe',
+                'amount_cents' => $amountCents,
+                'currency' => (string) config('services.stripe.currency', 'usd'),
+                'status' => RegistrationPayment::STATUS_PENDING,
+                'payload' => $validated,
+            ]);
+
+            $successUrl = route('central.register.payment.success', ['ref' => $payment->reference, 'session_id' => '{CHECKOUT_SESSION_ID}']);
+            $cancelUrl = route('central.register.payment.cancel', ['ref' => $payment->reference]);
+
+            if ($simulateCheckout) {
+                return redirect()->route('central.register.payment.fake', [
+                    'ref' => $payment->reference,
+                ]);
+            }
+
+            $session = $this->stripeCheckoutService->createCheckoutSession([
+                'success_url' => $successUrl,
+                'cancel_url' => $cancelUrl,
+                'client_reference_id' => $payment->reference,
+                'currency' => $payment->currency,
+                'amount_cents' => $payment->amount_cents,
+                'product_name' => 'Tenant Registration - '.($plan->name ?: strtoupper($plan->slug)),
+                'payment_reference' => $payment->reference,
+            ]);
+
+            $payment->forceFill([
+                'provider_session_id' => $session['id'] ?? null,
+            ])->save();
+
+            $checkoutUrl = $session['url'] ?? null;
+            if (! $checkoutUrl) {
+                throw new \RuntimeException('Payment checkout URL missing.');
+            }
+
+            return redirect()->away($checkoutUrl);
+        } catch (QueryException $e) {
+            report($e);
+
+            return back()->withInput()->withErrors([
+                'tenant_name' => 'Payment setup is incomplete in central DB. Please run central migrations and try again.',
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withInput()->withErrors([
+                'tenant_name' => 'Unable to start payment checkout. Please try again.',
+            ]);
+        }
+    }
+
+    public function paymentSuccess(Request $request): RedirectResponse
+    {
+        $ref = (string) $request->query('ref', '');
+        $sessionId = (string) $request->query('session_id', '');
+        $simulateCheckout = (bool) config('services.stripe.simulate', false);
+
+        $payment = RegistrationPayment::query()->where('reference', $ref)->first();
+        if (! $payment || $sessionId === '') {
+            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Invalid payment session. Please try again.']);
+        }
+
+        if ($payment->finalized_at) {
+            return redirect()->route('login')->with('success', 'Registration already completed. You may now log in after central approval.');
+        }
+
+        try {
+            if ($simulateCheckout) {
+                $paid = str_starts_with($sessionId, 'sim_');
+            } else {
+                $session = $this->stripeCheckoutService->retrieveCheckoutSession($sessionId);
+                $paid = ($session['payment_status'] ?? null) === 'paid';
+            }
+
+            if (! $paid) {
+                return redirect()->route('central.register')->withErrors(['tenant_name' => 'Payment is not completed yet.']);
+            }
+
+            $payment->forceFill([
+                'status' => RegistrationPayment::STATUS_PAID,
+                'provider_session_id' => $sessionId,
+                'paid_at' => now(),
+            ])->save();
+
+            $tenant = $this->finalizeTenantRegistrationFromPayment($payment);
+
+            return redirect()->route('login')->with(
+                'success',
+                sprintf('Payment received. Tenant %s has been registered and is pending central approval.', $tenant->name)
+            );
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Could not verify payment. Please contact support.']);
+        }
+    }
+
+    public function paymentCancel(Request $request): RedirectResponse
+    {
+        $ref = (string) $request->query('ref', '');
+        $payment = RegistrationPayment::query()->where('reference', $ref)->first();
+
+        if ($payment && $payment->status === RegistrationPayment::STATUS_PENDING) {
+            $payment->forceFill(['status' => RegistrationPayment::STATUS_CANCELLED])->save();
+        }
+
+        return redirect()->route('central.register')->withErrors(['tenant_name' => 'Payment was cancelled. Registration was not completed.']);
+    }
+
+    public function fakePayment(Request $request): View|RedirectResponse
+    {
+        $simulateCheckout = (bool) config('services.stripe.simulate', false);
+        if (! $simulateCheckout) {
+            return redirect()->route('central.register');
+        }
+
+        $ref = (string) $request->query('ref', '');
+        $payment = RegistrationPayment::query()->where('reference', $ref)->first();
+        if (! $payment) {
+            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Invalid payment reference.']);
+        }
+
+        return view('central.payment-fake', ['payment' => $payment]);
+    }
+
+    public function fakePaymentProcess(Request $request): RedirectResponse
+    {
+        $simulateCheckout = (bool) config('services.stripe.simulate', false);
+        if (! $simulateCheckout) {
+            return redirect()->route('central.register');
+        }
+
+        $validated = $request->validate([
+            'ref' => ['required', 'string'],
+            'card_name' => ['required', 'string', 'max:255'],
+            'card_number' => ['required', 'string', 'max:25'],
+            'expiry' => ['required', 'string', 'max:10'],
+            'cvc' => ['required', 'string', 'max:6'],
+        ]);
+
+        $payment = RegistrationPayment::query()->where('reference', $validated['ref'])->first();
+        if (! $payment) {
+            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Invalid payment reference.']);
+        }
+
+        if ($payment->finalized_at) {
+            return redirect()->route('login')->with('success', 'Registration already completed.');
+        }
+
+        $payment->forceFill([
+            'status' => RegistrationPayment::STATUS_PAID,
+            'provider_session_id' => 'fake_'.$payment->reference,
+            'paid_at' => now(),
+        ])->save();
+
+        $tenant = $this->finalizeTenantRegistrationFromPayment($payment);
+
+        return redirect()->route('login')->with(
+            'success',
+            sprintf('Payment received. Tenant %s has been registered and is pending central approval.', $tenant->name)
+        );
+    }
+
+    public function stripeWebhook(Request $request): JsonResponse
+    {
+        $payload = (string) $request->getContent();
+        $signature = (string) $request->header('Stripe-Signature', '');
+        $secret = (string) config('services.stripe.webhook_secret', '');
+
+        if (! $this->isValidStripeWebhookSignature($payload, $signature, $secret)) {
+            return response()->json(['ok' => false, 'error' => 'Invalid signature'], 400);
+        }
+
+        $event = json_decode($payload, true);
+        if (! is_array($event)) {
+            return response()->json(['ok' => false, 'error' => 'Invalid payload'], 400);
+        }
+
+        $eventType = (string) ($event['type'] ?? '');
+        $session = $event['data']['object'] ?? null;
+
+        if ($eventType !== 'checkout.session.completed' || ! is_array($session)) {
+            return response()->json(['ok' => true]);
+        }
+
+        $sessionId = (string) ($session['id'] ?? '');
+        $paymentStatus = (string) ($session['payment_status'] ?? '');
+        $reference = (string) ($session['metadata']['payment_reference'] ?? $session['client_reference_id'] ?? '');
+
+        if ($sessionId === '' || $reference === '' || $paymentStatus !== 'paid') {
+            return response()->json(['ok' => true]);
+        }
+
+        $payment = RegistrationPayment::query()
+            ->where('reference', $reference)
+            ->first();
+
+        if (! $payment) {
+            return response()->json(['ok' => true]);
+        }
+
+        if ($payment->finalized_at) {
+            return response()->json(['ok' => true, 'idempotent' => true]);
+        }
+
+        $payment->forceFill([
+            'status' => RegistrationPayment::STATUS_PAID,
+            'provider_session_id' => $sessionId,
+            'paid_at' => now(),
+        ])->save();
+
+        $this->finalizeTenantRegistrationFromPayment($payment);
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function isValidStripeWebhookSignature(string $payload, string $signatureHeader, string $secret): bool
+    {
+        if ($payload === '' || $signatureHeader === '' || $secret === '') {
+            return false;
+        }
+
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $segment) {
+            $pair = explode('=', trim($segment), 2);
+            if (count($pair) === 2) {
+                $parts[$pair[0]] = $pair[1];
+            }
+        }
+
+        $timestamp = $parts['t'] ?? null;
+        $v1 = $parts['v1'] ?? null;
+
+        if (! $timestamp || ! $v1) {
+            return false;
+        }
+
+        $signedPayload = $timestamp.'.'.$payload;
+        $expected = hash_hmac('sha256', $signedPayload, $secret);
+
+        return hash_equals($expected, $v1);
+    }
+
+    private function finalizeTenantRegistrationFromPayment(RegistrationPayment $payment): Tenant
+    {
+        $validated = $payment->payload ?? [];
+        $plan = Plan::active()->findOrFail((int) $payment->plan_id);
+
         $tenant = null;
         $generatedPassword = $this->generateReadableTemporaryPassword();
 
-        try {
-            DB::connection('central')->transaction(function () use ($validated, $plan, &$tenant): void {
-                $tenantName = trim($validated['tenant_name']);
-                $slug = $this->generateUniqueTenantValue('slug', $tenantName);
-                $subdomain = $this->generateUniqueTenantValue('subdomain', $tenantName);
-                $databaseName = $this->generateUniqueTenantDatabaseName($tenantName);
+        DB::connection('central')->transaction(function () use (&$tenant, $validated, $plan, $payment): void {
+            $tenantName = trim((string) ($validated['tenant_name'] ?? 'Tenant'));
+            $slug = $this->generateUniqueTenantValue('slug', $tenantName);
+            $subdomain = $this->generateUniqueTenantValue('subdomain', $tenantName);
+            $databaseName = $this->generateUniqueTenantDatabaseName($tenantName);
 
-                $tenant = new Tenant([
-                    'name' => $tenantName,
-                    'slug' => $slug,
-                    'plan_id' => $plan->id,
-                    'domain' => null,
-                    'subdomain' => $subdomain,
-                    'database_name' => $databaseName,
-                    'address' => $validated['address'] ?? null,
-                    'email' => $validated['email'],
-                    'contact_number' => $validated['contact_number'],
-                    'settings' => [
-                        'database' => [
-                            'mode' => 'dedicated',
-                        ],
-                        'theme' => [
-                            'primary_color' => '#2563eb',
-                            'app_name' => $tenantName,
-                            'logo_url' => null,
-                        ],
-                        'dashboard' => [
-                            'profile' => TenantDashboardProfile::inferFromName($tenantName),
-                        ],
+            $tenant = new Tenant([
+                'name' => $tenantName,
+                'slug' => $slug,
+                'plan_id' => $plan->id,
+                'domain' => null,
+                'subdomain' => $subdomain,
+                'database_name' => $databaseName,
+                'address' => $validated['address'] ?? null,
+                'email' => $validated['email'] ?? $payment->email,
+                'contact_number' => $validated['contact_number'] ?? null,
+                'settings' => [
+                    'database' => ['mode' => 'dedicated'],
+                    'theme' => [
+                        'primary_color' => '#2563eb',
+                        'app_name' => $tenantName,
+                        'logo_url' => null,
                     ],
-                    'is_active' => false,
-                    'approved_at' => null,
-                ]);
-                $tenant->save();
+                    'dashboard' => [
+                        'profile' => TenantDashboardProfile::inferFromName($tenantName),
+                    ],
+                ],
+                'is_active' => false,
+                'approved_at' => null,
+            ]);
+            $tenant->save();
 
-                TenantSubscription::create([
-                    'tenant_id' => $tenant->id,
-                    'plan_id' => $plan->id,
-                    'starts_at' => $tenant->created_at ?? now(),
-                    'ends_at' => TenantSubscription::calculateMonthlyEndAt(($tenant->created_at ?? now())->copy()),
-                    'status' => TenantSubscription::STATUS_ACTIVE,
-                ]);
-            });
+            TenantSubscription::create([
+                'tenant_id' => $tenant->id,
+                'plan_id' => $plan->id,
+                'starts_at' => $tenant->created_at ?? now(),
+                'ends_at' => TenantSubscription::calculateMonthlyEndAt(($tenant->created_at ?? now())->copy()),
+                'status' => TenantSubscription::STATUS_ACTIVE,
+            ]);
 
-            if (! $tenant) {
-                throw new \RuntimeException('Tenant signup could not be completed.');
-            }
+            $payment->forceFill([
+                'tenant_id' => $tenant->id,
+                'finalized_at' => now(),
+            ])->save();
+        });
 
+        if (! $tenant) {
+            throw new \RuntimeException('Unable to finalize tenant registration.');
+        }
+
+        try {
             $adminData = [
                 'name' => $tenant->name.' Admin',
-                'username' => $validated['tenant_admin_username'],
-                'email' => $validated['email'],
-                'phone' => $validated['contact_number'],
+                'username' => (string) ($validated['tenant_admin_username'] ?? 'admin'),
+                'email' => (string) ($validated['email'] ?? $payment->email),
+                'phone' => (string) ($validated['contact_number'] ?? ''),
                 'password' => $generatedPassword,
             ];
 
             $this->tenantDatabaseManager->provision($tenant, $adminData);
         } catch (\Throwable $e) {
-            if ($tenant) {
-                rescue(fn () => $this->tenantDatabaseManager->deleteTenantArtifacts($tenant), report: false);
-                rescue(fn () => $tenant->delete(), report: false);
-            }
-
-            report($e);
+            rescue(fn () => $this->tenantDatabaseManager->deleteTenantArtifacts($tenant), report: false);
+            rescue(fn () => $tenant->delete(), report: false);
+            throw $e;
         }
 
-        if (! isset($tenant) || ! $tenant) {
-            return back()
-                ->withInput()
-                ->withErrors(['tenant_name' => 'Tenant registration failed while preparing the tenant database. Please try again.']);
-        }
-
-        return redirect()->route('login')->with(
-            'success',
-            sprintf('Tenant %s has been registered and is pending central approval. Credentials will be emailed after approval.', $tenant->name)
-        );
+        return $tenant;
     }
 
     private function generateUniqueTenantValue(string $column, string $source): string
@@ -459,6 +749,13 @@ class CentralController extends Controller
             return [$tenant->id => $this->tenantInsightData($tenant)];
         });
 
+        $latestPayments = \App\Models\RegistrationPayment::query()
+            ->whereIn('tenant_id', $tenants->pluck('id'))
+            ->orderByDesc('id')
+            ->get()
+            ->unique('tenant_id')
+            ->keyBy('tenant_id');
+
         return [
             'tenantCount' => $tenants->count(),
             'activeTenantCount' => $tenants->where('is_active', true)->count(),
@@ -468,6 +765,7 @@ class CentralController extends Controller
             'tenants' => $tenants,
             'tenantAdmins' => $tenantAdmins,
             'tenantInsights' => $tenantInsights,
+            'latestPayments' => $latestPayments,
         ];
     }
 

@@ -25,6 +25,7 @@ class AdminController extends Controller
     public function __construct(
         private QrCodeService $qrCodeService,
         private TenantPlanEnforcer $tenantPlanEnforcer,
+        private \App\Services\LimitEnforcer $limitEnforcer,
     ) {}
 
     private function tenantId(): ?int
@@ -219,6 +220,7 @@ class AdminController extends Controller
     public function qrCodeImage(): Response
     {
         abort_unless($this->currentTenant()?->getSetting('customization.guest_queue', true) ?? true, 404);
+        abort_unless($this->limitEnforcer->canIssueQr($this->currentTenant()), 403);
 
         $office = $this->defaultOffice();
         abort_unless($office, 404);

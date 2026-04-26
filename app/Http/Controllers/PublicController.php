@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use App\Services\LimitEnforcer;
 
 class PublicController extends Controller
 {
@@ -131,6 +132,13 @@ class PublicController extends Controller
 
         if (empty($validated['guest_email']) && empty($validated['guest_phone'])) {
             return back()->withErrors(['guest_email' => 'Please provide at least an email or phone so we can contact or remind you.'])->withInput();
+        }
+
+        $limitEnforcer = app(LimitEnforcer::class);
+
+        // Enforce tenant daily service/queue limits before creating an entry
+        if (! $limitEnforcer->canCreateService($office->tenant, $office->id)) {
+            return back()->with('error', 'Daily service limit reached for this workspace.');
         }
 
         $today = today();
