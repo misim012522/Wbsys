@@ -3,11 +3,104 @@
 @section('title', 'Central Dashboard')
 
 @section('content')
-<div class="space-y-4" data-central-dashboard-root data-open-modal="{{ session('open_modal', '') }}">
+<style>
+    html {
+        overflow: hidden;
+        height: 100%;
+    }
+    body {
+        overflow: hidden;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .app-shell {
+        padding: 0 !important;
+        max-width: none !important;
+        margin: 0 !important;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+    .central-layout {
+        display: flex;
+        height: 100%;
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+        position: relative;
+        margin-top: 0;
+    }
+    .central-sidebar {
+        width: 16rem;
+        background-color: rgb(248, 250, 252);
+        border-right: 1px solid rgb(226, 232, 240);
+        padding: 1.5rem;
+        padding-left: 1.5rem;
+        flex-shrink: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .central-sidebar nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .central-sidebar a:hover,
+    .central-sidebar button:hover {
+        background-color: rgb(241, 245, 249);
+        border-color: rgb(203, 213, 225);
+    }
+    .central-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1.5rem;
+    }
+</style>
+
+<div class="central-layout">
+    <aside class="central-sidebar">
+        <div class="mb-6">
+            <span class="inline-flex rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
+                Central Admin
+            </span>
+        </div>
+
+        <nav>
+            <a href="{{ route('central.dashboard') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('central.dashboard') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
+                Dashboard
+            </a>
+            <a href="{{ route('central.support.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('central.support.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
+                Support
+            </a>
+            <form method="POST" action="{{ route('logout') }}" class="w-full" id="central-logout-form">
+                @csrf
+                <button
+                    type="button"
+                    onclick="window.showToast?.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('central-logout-form').submit(), 500);"
+                    class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30"
+                >
+                    Log out
+                </button>
+            </form>
+        </nav>
+
+        <div class="mt-auto pt-8 flex flex-col items-center">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/50 border border-slate-300/40">
+                <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse ring-4 ring-emerald-500/10"></span>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                    {{ str_starts_with($appVersion ?? '', 'v') ? $appVersion : 'v' . ($appVersion ?? '1.0.0') }}
+                </span>
+            </div>
+            <p class="mt-2 text-[9px] font-medium text-slate-400/80 uppercase tracking-tighter">Queueless</p>
+        </div>
+    </aside>
+
+    <div class="central-content">
+        <div class="space-y-4" data-central-dashboard-root data-open-modal="{{ session('open_modal', '') }}">
     <div class="rounded-2xl border border-slate-200 bg-white p-3 md:p-4 shadow-sm">
-        @php
-            $centralSupportUnreadCount = \App\Models\SupportThread::unreadCountForCentral();
-        @endphp
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div class="flex-1">
                 <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
@@ -15,23 +108,6 @@
                 </span>
                 <h1 class="mt-2 text-lg md:text-xl font-extrabold text-slate-900">Central dashboard</h1>
                 <p class="mt-1 max-w-3xl text-xs text-slate-600">New tenant registrations stay pending until approved in this dashboard.</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('central.support.index') }}" class="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2 py-1 text-xs font-semibold text-white shadow-sm hover:bg-sky-700 transition">
-                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h6"/></svg>
-                    Support{{ $centralSupportUnreadCount ? ' ('.$centralSupportUnreadCount.')' : '' }}
-                </a>
-                <form method="POST" action="{{ route('logout') }}" class="shrink-0" id="central-logout-form">
-                    @csrf
-                    <button
-                        type="button"
-                        onclick="window.showToast?.success('Logged out successfully. Redirecting...'); this.disabled = true; setTimeout(() => document.getElementById('central-logout-form').submit(), 500);"
-                        class="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"/></svg>
-                        Log out
-                    </button>
-                </form>
             </div>
         </div>
     </div>
@@ -61,23 +137,23 @@
             </div>
             <p class="text-xs text-slate-500">{{ $tenants->count() }} workspaces listed</p>
         </div>
-        <div class="scroll-region-x overflow-x-auto rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,_#f8fbff_0%,_#ffffff_12%)] p-3">
+        <div class="scroll-region-x overflow-x-auto rounded-3xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3">
             <table class="min-w-full md:min-w-[112rem] border-separate border-spacing-y-2 text-xs">
                 <thead>
-                    <tr class="text-left text-slate-500">
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Tenant Name</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Tenant Domain</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Address</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Contact Number</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Email</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Created At</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Subscription Plan</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Payment Details</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Usage Summary</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Last Activity</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Version</th>
-                        <th class="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Status</th>
-                        <th class="w-[14rem] px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.15em]">Actions</th>
+                    <tr class="text-left text-slate-600 bg-slate-100/50">
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Tenant Name</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Tenant Domain</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Address</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Contact Number</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Email</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Created At</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Subscription Plan</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Payment Details</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Usage Summary</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Last Activity</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Version</th>
+                        <th class="px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Status</th>
+                        <th class="w-[14rem] px-3 py-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-700 border-b border-slate-200">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,11 +172,11 @@
                                 'last_activity_label' => 'Unavailable',
                             ];
                         @endphp
-                        <tr class="align-top">
-                            <td class="rounded-l-2xl border-y border-l border-slate-200 bg-white px-2 py-2 shadow-sm">
+                        <tr class="align-top hover:bg-slate-50/50 transition-colors">
+                            <td class="rounded-l-2xl border-y border-l border-slate-200 bg-white px-3 py-3 shadow-sm hover:bg-slate-50/50 transition-colors">
                                 <div class="text-xs font-semibold text-slate-900">{{ $tenant->name }}</div>
                                 <div class="text-[11px] text-slate-500">Slug: {{ $tenant->slug }}</div>
-                                <div class="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 space-y-0.5">
+                                <div class="mt-2 rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 space-y-0.5">
                                     <p class="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">Main tenant account</p>
                                     @if($tenantAdmin)
                                         <div class="text-[11px] font-medium text-slate-800">{{ $tenantAdmin->name }}</div>
@@ -111,8 +187,8 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 shadow-sm">
-                                <div class="rounded-lg border border-sky-200 bg-sky-50/70 p-2">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-sky-200 bg-gradient-to-br from-sky-50 to-sky-100/50 p-2">
                                     <p class="text-[9px] font-semibold uppercase tracking-[0.15em] text-sky-700">Tenant domain</p>
                                     <div class="mt-1 break-all text-xs font-semibold text-slate-900">
                                         {{ $workspaceHost }}
@@ -123,30 +199,30 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[8rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[8rem]">
                                     <div class="text-xs font-medium text-slate-900">{{ $tenant->address ?: 'N/A' }}</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[6rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[6rem]">
                                     <div class="text-xs font-medium text-slate-900">{{ $tenant->contact_number ?: 'N/A' }}</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[10rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[10rem]">
                                     <div class="break-all text-xs font-medium text-slate-900">{{ $tenant->email ?: 'N/A' }}</div>
                                     <div class="mt-0.5 text-[10px] text-slate-400">Registration contact</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[7rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[7rem]">
                                     <div class="text-xs font-medium text-slate-900">{{ optional($tenant->created_at)->format('M d, Y') ?: 'N/A' }}</div>
                                     <div class="mt-0.5 text-[10px] text-slate-500">{{ optional($tenant->created_at)->format('h:i A') ?: '' }}</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 min-w-[7rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-2 min-w-[7rem]">
                                     <div class="text-xs font-medium text-slate-900">{{ $tenant->plan?->name ?? 'N/A' }}</div>
                                     @if($latestSubscription)
                                         <div class="mt-0.5 text-[10px] text-slate-500">
@@ -158,8 +234,8 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[9rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[9rem]">
                                     @if($latestPayment)
                                         <div class="text-xs font-medium text-slate-900">{{ str($latestPayment->status)->replace('_', ' ')->title() }}</div>
                                         <div class="mt-0.5 text-[10px] text-slate-500">
@@ -171,35 +247,35 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
                                 <div class="grid min-w-[8rem] grid-cols-2 gap-1 text-[10px]">
-                                    <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> staff</div>
-                                    <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
-                                    <div class="rounded-lg bg-slate-50 px-2 py-1"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues</div>
+                                    <div class="rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 px-2 py-1 border border-slate-200"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_staff_count'] }}</span> staff</div>
+                                    <div class="rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 px-2 py-1 border border-slate-200"><span class="font-semibold text-slate-800">{{ $tenantInsight['office_count'] }}</span> offices</div>
+                                    <div class="rounded-lg bg-gradient-to-br from-slate-50 to-slate-100 px-2 py-1 border border-slate-200"><span class="font-semibold text-slate-800">{{ $tenantInsight['today_queue_count'] }}</span> queues</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="max-w-[10rem] rounded-lg border border-slate-200 bg-slate-50 p-2 text-xs text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="max-w-[10rem] rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 text-xs text-slate-700">{{ $tenantInsight['last_activity_label'] }}</div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 text-slate-600 shadow-sm">
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 min-w-[5rem]">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 text-slate-600 shadow-sm hover:bg-slate-50/50 transition-colors">
+                                <div class="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-2 min-w-[5rem]">
                                     <div class="text-xs font-medium text-slate-900">{{ $tenant->app_version ?? 'N/A' }}</div>
                                 </div>
                             </td>
-                            <td class="border-y border-slate-200 bg-white px-2 py-2 shadow-sm">
+                            <td class="border-y border-slate-200 bg-white px-3 py-3 shadow-sm hover:bg-slate-50/50 transition-colors">
                                 <div class="min-w-[7rem]">
                                     @if(! $tenant->approved_at)
-                                        <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                                        <span class="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 border border-amber-200">
                                             Pending approval
                                         </span>
                                     @else
-                                        <span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600' }}">
+                                        <span class="inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium border {{ $tenant->is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200' }}">
                                             {{ $tenant->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     @endif
                                 </div>
                             </td>
-                            <td class="rounded-r-2xl border-y border-r border-slate-200 bg-white px-2 py-2 shadow-sm">
+                            <td class="rounded-r-2xl border-y border-r border-slate-200 bg-white px-3 py-3 shadow-sm hover:bg-slate-50/50 transition-colors">
                                 <div class="w-full min-w-[12rem] space-y-2">
                                     <div class="space-y-1">
                                         <p class="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">Manage</p>
@@ -326,7 +402,9 @@
             </table>
         </div>
     </div>
+    </div>
 </div>
+@endsection
 
 @foreach($tenants as $tenant)
     @php
@@ -851,4 +929,5 @@
         }
     });
 </script>
-@endsection
+    </div>
+</div>
