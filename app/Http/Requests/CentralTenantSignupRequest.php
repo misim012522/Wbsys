@@ -25,7 +25,7 @@ class CentralTenantSignupRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'tenant_name' => ['required', 'string', 'max:255'],
             'tenant_admin_username' => [
                 'required',
@@ -46,14 +46,32 @@ class CentralTenantSignupRequest extends FormRequest
             'email' => ['required', 'string', 'email', 'max:255', 'unique:'.$this->centralTable('tenants').',email'],
             'contact_number' => ['required', 'string', 'max:50'],
         ];
+
+        // Temporarily disabled for testing
+        // if (config('recaptcha.enabled') && config('recaptcha.secret_key')) {
+        //     $rules['g-recaptcha-response'] = ['required'];
+        // }
+
+        return $rules;
     }
 
     public function withValidator($validator): void
     {
+        \Log::info('Form validation running', [
+            'all_input' => $this->all(),
+            'errors' => $validator->errors()->all(),
+        ]);
+
         $validator->after(function ($validator): void {
             $generatedSubdomain = Str::slug((string) $this->input('tenant_name')) ?: 'tenant';
 
+            \Log::info('Subdomain validation', [
+                'tenant_name' => $this->input('tenant_name'),
+                'generated_subdomain' => $generatedSubdomain,
+            ]);
+
             foreach (TenantWorkspaceUrlValidator::validate(null, $generatedSubdomain) as $message) {
+                \Log::error('Subdomain validation failed', ['message' => $message]);
                 $validator->errors()->add('tenant_name', $message);
             }
         });
@@ -69,6 +87,7 @@ class CentralTenantSignupRequest extends FormRequest
             'tenant_admin_username.required' => 'Please enter the tenant administrator username.',
             'plan_id.required' => 'Please choose a subscription plan.',
             'plan_id.exists' => 'The selected subscription plan is invalid.',
+            'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification.',
         ];
     }
 }

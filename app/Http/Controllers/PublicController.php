@@ -195,7 +195,13 @@ class PublicController extends Controller
             ]
         );
 
-        event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'joined', (int) $entry->id));
+        try {
+            event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'joined', (int) $entry->id));
+        } catch (\Illuminate\Broadcasting\BroadcastException $e) {
+            \Log::warning('Broadcast failed when queue joined', ['error' => $e->getMessage(), 'tenant_id' => $office->tenant_id, 'office_id' => $office->id]);
+        } catch (\Throwable $e) {
+            \Log::error('Unexpected error dispatching QueueUpdated event', ['error' => $e->getMessage(), 'tenant_id' => $office->tenant_id, 'office_id' => $office->id]);
+        }
 
         return redirect()->route('queue.track', ['referenceCode' => $entry->reference_code])
             ->with('success', "You are #{$entry->queue_number} in line. Save your reference code to track your position.");
@@ -216,6 +222,15 @@ class PublicController extends Controller
             ->whereIn('status', [QueueEntry::STATUS_WAITING, QueueEntry::STATUS_CALLED, QueueEntry::STATUS_SERVING])
             ->where('queue_number', '<=', $queueEntry->queue_number)
             ->count();
+
+        // Return JSON for AJAX requests (real-time updates)
+        if (request()->expectsJson()) {
+            return response()->json([
+                'status' => $queueEntry->status,
+                'position' => $position,
+                'ahead' => $position - 1,
+            ]);
+        }
 
         return view('public.track', [
             'queueEntry' => $queueEntry,

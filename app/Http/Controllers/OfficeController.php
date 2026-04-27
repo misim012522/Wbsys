@@ -7,13 +7,17 @@ use App\Models\ActivityLog;
 use App\Models\AppVersion;
 use App\Models\Office;
 use App\Models\QueueEntry;
+use App\Models\SupportThread;
 use App\Models\User;
 use App\Services\LimitEnforcer;
 use App\Services\QrCodeService;
 use App\Services\TenantPlanEnforcer;
 use App\Support\TenantUrl;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\Response;
@@ -122,7 +126,47 @@ class OfficeController extends Controller
             ['queue_number' => $next->queue_number, 'display_name' => $next->display_name]
         );
 
-        event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'called', (int) $next->id));
+        try {
+            event(new QueueUpdated((int) $office->tenant_id, (int) $office->id, 'called', (int) $next->id));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to broadcast queue update', [
+                'error' => $e->getMessage(),
+                'office_id' => $office->id,
+                'queue_entry_id' => $next->id,
+            ]);
+        }
+
+        \Log::info('Checking email sending', [
+            'queue_entry_id' => $next->id,
+            'guest_email' => $next->guest_email,
+            'guest_email_empty' => empty($next->guest_email),
+        ]);
+
+        if (! empty($next->guest_email)) {
+            \Log::info('Attempting to send email', [
+                'email' => $next->guest_email,
+                'subject' => 'Your turn now at '.$office->name,
+            ]);
+
+            try {
+                \Mail::raw(
+                    sprintf('Hi %s! It is your turn now at %s. Your queue number is #%d.', $next->display_name, $office->name, $next->queue_number),
+                    function ($message) use ($next, $office) {
+                        $message->to($next->guest_email)
+                            ->subject('Your turn now at '.$office->name);
+                    }
+                );
+                \Log::info('Email sent successfully', ['queue_entry_id' => $next->id]);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send queue email notification.', [
+                    'queue_entry_id' => $next->id,
+                    'office_id' => $office->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        } else {
+            \Log::warning('Email not sent - guest_email is empty', ['queue_entry_id' => $next->id]);
+        }
 
         return back()->with('success', "Now serving #{$next->queue_number}");
     }
@@ -158,9 +202,52 @@ class OfficeController extends Controller
             ['queue_number' => $queueEntry->queue_number, 'status' => $validated['status'], 'display_name' => $queueEntry->display_name]
         );
 
-        event(new QueueUpdated((int) $queueEntry->tenant_id, (int) $queueEntry->office_id, (string) $validated['status'], (int) $queueEntry->id));
+        try {
+            event(new QueueUpdated((int) $queueEntry->tenant_id, (int) $queueEntry->office_id, (string) $validated['status'], (int) $queueEntry->id));
+        } catch (\Throwable $e) {
+            \Log::error('Failed to broadcast queue update', [
+                'error' => $e->getMessage(),
+                'office_id' => $queueEntry->office_id,
+                'queue_entry_id' => $queueEntry->id,
+            ]);
+        }
 
         return back()->with('success', 'Queue status updated.');
+    }
+
+    public function clearAllQueues(Request $request): RedirectResponse
+    {
+        $staffUser = auth()->user();
+        $office = $staffUser->office;
+        if (! $office) {
+            return redirect()->route('office.dashboard')->with('error', 'No office assigned.');
+        }
+
+        $this->authorizeOffice($office->id);
+
+        $queueEntries = QueueEntry::where('office_id', $office->id)
+            ->whereIn('status', ['waiting', 'called', 'serving'])
+            ->get();
+
+        $count = $queueEntries->count();
+
+        if ($count > 0) {
+            foreach ($queueEntries as $queueEntry) {
+                $queueEntry->update(['status' => 'cancelled']);
+            }
+
+            ActivityLog::log(
+                $office->id,
+                'queue_cleared',
+                auth()->user()->name.' cleared all queues ('.$count.' entries)',
+                auth()->id(),
+                QueueEntry::class,
+                null,
+                ['count' => $count]
+            );
+        }
+
+        return back()->with('success', $count > 0 ? "Cleared {$count} queue entries." : 'No queues to clear.');
     }
 
     /** Show QR code for the officer's office (so end users can scan to get number or book). */
@@ -239,6 +326,56 @@ class OfficeController extends Controller
         ];
 
         return view('office.activity', compact('office', 'activities', 'actionOptions'));
+    }
+
+    public function notifications(Request $request)
+    {
+        $tenant = $this->currentTenant();
+        $items = collect();
+
+        if ($tenant && SupportThread::supportTablesExist()) {
+            $threads = SupportThread::query()
+                ->where('tenant_id', $tenant->id)
+                ->latest('last_message_at')
+                ->limit(200)
+                ->get();
+
+            $items = $items->merge($threads->map(function (SupportThread $thread) {
+                return [
+                    'created_at' => $thread->last_message_at ?? $thread->created_at,
+                    'title' => 'Support thread update',
+                    'message' => $thread->subject,
+                    'is_unread' => $thread->hasUnreadForTenant(),
+                    'kind' => 'support',
+                ];
+            }));
+        }
+
+        try {
+            $databaseNotifications = auth()->user()?->notifications()->latest()->limit(200)->get() ?? collect();
+            $items = $items->merge($databaseNotifications->map(function ($notification) {
+                $data = is_array($notification->data) ? $notification->data : [];
+
+                return [
+                    'created_at' => $notification->created_at,
+                    'title' => str(class_basename((string) $notification->type))->replace('Notification', '')->headline()->toString(),
+                    'message' => (string) ($data['message'] ?? $data['subject'] ?? 'Notification received.'),
+                    'is_unread' => $notification->read_at === null,
+                    'kind' => 'system',
+                ];
+            }));
+        } catch (\Throwable) {
+            // Ignore notification-source issues and continue with support notifications.
+        }
+
+        $items = $items
+            ->sortByDesc(fn (array $row) => optional($row['created_at'])->timestamp ?? 0)
+            ->values();
+
+        return view('office.notifications', [
+            'notifications' => $this->paginateCollection($items, 25, $request),
+            'unreadCount' => $items->where('is_unread', true)->count(),
+        ]);
     }
 
     /** Daily report for the officer's office only. */
@@ -344,5 +481,23 @@ class OfficeController extends Controller
         if (auth()->user()->office_id !== $officeId) {
             abort(403);
         }
+    }
+
+    private function paginateCollection(Collection $items, int $perPage, Request $request): LengthAwarePaginator
+    {
+        $page = max(1, (int) $request->integer('page', 1));
+        $total = $items->count();
+        $results = $items->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $results,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
     }
 }

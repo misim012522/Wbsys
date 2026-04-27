@@ -74,7 +74,7 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ \App\Support\TenantUrl::centralRegister() }}" class="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+        <form method="POST" action="{{ route('central.register.store') }}" class="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
             @csrf
 
             <section class="register-reveal rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8" style="--reveal-delay: 140ms;">
@@ -266,6 +266,13 @@
                             </div>
                         </div>
                     </div>
+
+                    @if(config('recaptcha.enabled') && config('recaptcha.site_key'))
+                    <div class="flex justify-center rounded-[1.5rem] border border-slate-200 bg-white px-5 py-5 shadow-sm">
+                        <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}"></div>
+                    </div>
+                    @error('g-recaptcha-response')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+                    @endif
                 </div>
             </section>
         </form>
@@ -314,4 +321,7 @@
     }
 })();
 </script>
+@if(config('recaptcha.enabled') && config('recaptcha.site_key'))
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endif
 @endsection

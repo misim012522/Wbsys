@@ -40,5 +40,6 @@
             </div>
         </div>
     @endif
+    @stack('scripts')
 </body>
 </html>

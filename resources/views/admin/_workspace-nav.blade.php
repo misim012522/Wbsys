@@ -90,6 +90,12 @@
                     Reports
                 </a>
             @endif
+            <a href="{{ route('admin.activity') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.activity') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
+                Activity logs
+            </a>
+            <a href="{{ route('admin.notifications') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.notifications') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
+                Notifications
+            </a>
             @if($viewer?->hasPermission('admin.customization.manage'))
                 <a href="{{ route('admin.customization.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('admin.customization.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                     Customization

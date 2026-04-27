@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="wlDEpHyqh5v8rZ8AXtu2ApbmXjRgwdk9SSeqEvTe">
+    <title>Log in - QueueLess</title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=dm-sans:400,500,600,700" rel="stylesheet" />
+            <script type="module" src="http://localhost:5173/@vite/client"></script><link rel="stylesheet" href="http://localhost:5173/resources/css/app.css" /><script type="module" src="http://localhost:5173/resources/js/app.js"></script>        <style>
+        :root { --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
+        :root { --tenant-primary: #2563eb; }
+        .tenant-primary { color: var(--tenant-primary); }
+        .tenant-primary-bg { background-color: var(--tenant-primary); }
+        .tenant-primary-bg:hover { filter: brightness(0.95); }
+
+        /* Tenant-wide accent overrides so customization primary color applies to highlights/buttons */
+        .tenant-themed {
+            --tenant-primary-strong: color-mix(in srgb, var(--tenant-primary) 90%, black);
+            --tenant-primary-soft-20: color-mix(in srgb, var(--tenant-primary) 20%, white);
+            --tenant-primary-soft-12: color-mix(in srgb, var(--tenant-primary) 12%, white);
+            --tenant-primary-soft-8: color-mix(in srgb, var(--tenant-primary) 8%, white);
+            --tenant-primary-bubble: color-mix(in srgb, var(--tenant-primary) 8%, white);
+            --tenant-primary-ring-20: color-mix(in srgb, var(--tenant-primary) 20%, transparent);
+            --tenant-primary-ring-10: color-mix(in srgb, var(--tenant-primary) 10%, transparent);
+            --tenant-primary-shadow-25: color-mix(in srgb, var(--tenant-primary) 25%, transparent);
+            --tenant-primary-shadow-30: color-mix(in srgb, var(--tenant-primary) 30%, transparent);
+        }
+
+        .tenant-themed .bg-emerald-500,
+        .tenant-themed .bg-emerald-600,
+        .tenant-themed .bg-emerald-700,
+        .tenant-themed .bg-slate-900,
+        .tenant-themed a.bg-emerald-500,
+        .tenant-themed a.bg-emerald-600,
+        .tenant-themed a.bg-emerald-700,
+        .tenant-themed a.bg-slate-900,
+        .tenant-themed button.bg-emerald-500,
+        .tenant-themed button.bg-emerald-600,
+        .tenant-themed button.bg-emerald-700,
+        .tenant-themed button.bg-slate-900 {
+            background-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .bg-emerald-50,
+        .tenant-themed .bg-emerald-100,
+        .tenant-themed .bg-emerald-200,
+        .tenant-themed .panel:not(.bg-slate-900),
+        .tenant-themed .stat-card {
+            background-color: var(--tenant-primary-bubble) !important;
+            border-color: color-mix(in srgb, var(--tenant-primary) 15%, transparent) !important;
+            box-shadow: 0 4px 6px -1px var(--tenant-primary-shadow-25), 0 2px 4px -2px var(--tenant-primary-shadow-25) !important;
+        }
+
+        .tenant-themed .bg-emerald-50,
+        .tenant-themed .bg-emerald-100,
+        .tenant-themed .bg-emerald-200 {
+            background-color: var(--tenant-primary-soft-12) !important;
+        }
+
+        .tenant-themed .border-emerald-200,
+        .tenant-themed .border-emerald-300,
+        .tenant-themed .border-emerald-500,
+        .tenant-themed .border-emerald-600,
+        .tenant-themed .border-slate-900,
+        .tenant-themed a.border-emerald-500,
+        .tenant-themed a.border-emerald-600,
+        .tenant-themed a.border-slate-900,
+        .tenant-themed button.border-emerald-500,
+        .tenant-themed button.border-emerald-600,
+        .tenant-themed button.border-slate-900 {
+            border-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .text-emerald-500,
+        .tenant-themed .text-emerald-600,
+        .tenant-themed .text-emerald-700,
+        .tenant-themed .text-emerald-800 {
+            color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .ring-emerald-100,
+        .tenant-themed .ring-emerald-200,
+        .tenant-themed .ring-emerald-300,
+        .tenant-themed .ring-emerald-400,
+        .tenant-themed .ring-emerald-500,
+        .tenant-themed .ring-emerald-600 {
+            --tw-ring-color: var(--tenant-primary-ring-20) !important;
+        }
+
+        .tenant-themed .ring-emerald-100\/50,
+        .tenant-themed .ring-emerald-200\/50,
+        .tenant-themed .ring-emerald-300\/50,
+        .tenant-themed .ring-emerald-400\/50,
+        .tenant-themed .ring-emerald-500\/50,
+        .tenant-themed .ring-emerald-600\/50 {
+            --tw-ring-color: var(--tenant-primary-ring-10) !important;
+        }
+
+        .tenant-themed .from-emerald-50,
+        .tenant-themed .from-emerald-100,
+        .tenant-themed .from-emerald-200,
+        .tenant-themed .from-emerald-300,
+        .tenant-themed .from-emerald-400,
+        .tenant-themed .from-emerald-500,
+        .tenant-themed .from-emerald-600,
+        .tenant-themed .from-emerald-700,
+        .tenant-themed .from-emerald-800,
+        .tenant-themed .from-emerald-900 {
+            --tw-gradient-from: var(--tenant-primary-soft-12) var(--tw-gradient-from-position) !important;
+            --tw-gradient-to: color-mix(in srgb, var(--tenant-primary-soft-12) 0%, transparent) var(--tw-gradient-to-position) !important;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+        }
+
+        .tenant-themed .via-emerald-50,
+        .tenant-themed .via-emerald-100,
+        .tenant-themed .via-emerald-200,
+        .tenant-themed .via-emerald-300,
+        .tenant-themed .via-emerald-400,
+        .tenant-themed .via-emerald-500,
+        .tenant-themed .via-emerald-600,
+        .tenant-themed .via-emerald-700,
+        .tenant-themed .via-emerald-800,
+        .tenant-themed .via-emerald-900 {
+            --tw-gradient-via: var(--tenant-primary-soft-20) var(--tw-gradient-via-position) !important;
+            --tw-gradient-to: color-mix(in srgb, var(--tenant-primary-soft-20) 0%, transparent) var(--tw-gradient-to-position) !important;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to) !important;
+        }
+
+        .tenant-themed .to-emerald-50,
+        .tenant-themed .to-emerald-100,
+        .tenant-themed .to-emerald-200,
+        .tenant-themed .to-emerald-300,
+        .tenant-themed .to-emerald-400,
+        .tenant-themed .to-emerald-500,
+        .tenant-themed .to-emerald-600,
+        .tenant-themed .to-emerald-700,
+        .tenant-themed .to-emerald-800,
+        .tenant-themed .to-emerald-900 {
+            --tw-gradient-to: var(--tenant-primary-soft-20) var(--tw-gradient-to-position) !important;
+        }
+
+        .tenant-themed .to-emerald-50\/50,
+        .tenant-themed .to-emerald-100\/50,
+        .tenant-themed .to-emerald-200\/50,
+        .tenant-themed .to-emerald-300\/50,
+        .tenant-themed .to-emerald-400\/50,
+        .tenant-themed .to-emerald-500\/50,
+        .tenant-themed .to-emerald-600\/50,
+        .tenant-themed .to-emerald-700\/50,
+        .tenant-themed .to-emerald-800\/50,
+        .tenant-themed .to-emerald-900\/50 {
+            --tw-gradient-to: var(--tenant-primary-soft-8) var(--tw-gradient-to-position) !important;
+        }
+
+        .tenant-themed .focus\:ring-emerald-500:focus,
+        .tenant-themed .focus\:ring-emerald-500:focus-visible,
+        .tenant-themed .focus\:ring-emerald-500\/20:focus,
+        .tenant-themed .focus\:ring-emerald-500\/20:focus-visible,
+        .tenant-themed .focus\:ring-emerald-500\/10:focus,
+        .tenant-themed .focus\:ring-emerald-500\/10:focus-visible {
+            --tw-ring-color: var(--tenant-primary-ring-20) !important;
+        }
+
+        .tenant-themed .focus\:border-emerald-500:focus,
+        .tenant-themed .focus\:border-emerald-500:focus-visible {
+            border-color: var(--tenant-primary) !important;
+        }
+
+        .tenant-themed .hover\:bg-emerald-700:hover,
+        .tenant-themed .hover\:bg-emerald-600:hover,
+        .tenant-themed .hover\:bg-slate-800:hover,
+        .tenant-themed .hover\:bg-slate-900:hover {
+            background-color: var(--tenant-primary-strong) !important;
+        }
+
+        .tenant-themed .hover\:text-emerald-700:hover,
+        .tenant-themed .hover\:text-emerald-600:hover {
+            color: var(--tenant-primary-strong) !important;
+        }
+
+        .tenant-themed .shadow-emerald-500\/25 {
+            --tw-shadow-color: var(--tenant-primary-shadow-25) !important;
+        }
+
+        .tenant-themed .shadow-emerald-500\/30 {
+            --tw-shadow-color: var(--tenant-primary-shadow-30) !important;
+        }
+    </style>
+</head>
+<body
+    class="min-h-screen overflow-x-clip bg-slate-100 text-slate-900 font-sans antialiased tenant-themed"
+                            data-route-name="login"
+>
+    <div id="toast-container"></div>
+
+    <header class="border-b border-slate-200/90 bg-white/95 shadow-sm backdrop-blur">
+        <nav class="app-header-shell">
+            
+                            <a href="http://vob.lvh.me:8000/tenant" class="text-xl font-bold tenant-primary flex items-center gap-2">
+                                        vob
+                </a>
+            
+            <div class="flex flex-wrap items-center justify-end gap-3 sm:gap-4">
+                                                                </div>
+        </nav>
+    </header>
+
+    <div style="display: none;">
+                                    </div>
+
+    <div class="app-shell">
+        <div class="auth-stage bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_24%),linear-gradient(180deg,_#f7faf9_0%,_#eef4f2_100%)]">
+    <div class="mx-auto w-full max-w-xl">
+        <section class="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_30px_80px_rgba(15,23,42,0.08)] backdrop-blur sm:p-10">
+            <div class="mx-auto max-w-[450px]">
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm ring-1 ring-slate-200/70">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </span>
+                        <div>
+                            <p class="text-xl font-bold tracking-tight text-slate-900">QueueLess</p>
+                            <p class="text-sm text-slate-500">Smart queue management</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">Sign in to continue</h2>
+                <p class="mt-2 text-sm leading-6 text-slate-500">
+                                            Enter your workspace credentials below.
+                                    </p>
+            </div>
+
+            <form method="POST" action="http://vob.lvh.me:8000/login" class="mt-8 space-y-5">
+                <input type="hidden" name="_token" value="wlDEpHyqh5v8rZ8AXtu2ApbmXjRgwdk9SSeqEvTe" autocomplete="off">                                    <input type="hidden" name="tenant_id" value="33">
+                                <div>
+                    <label for="login" class="mb-2 block text-sm font-medium text-slate-700">Username or email</label>
+                    <input type="text" name="login" id="login" value="" required autofocus
+                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        placeholder="Username or email" autocomplete="username">
+                                    </div>
+                <div>
+                    <label for="password" class="mb-2 block text-sm font-medium text-slate-700">Password</label>
+                    <input type="password" name="password" id="password" required
+                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3.5 text-slate-900 placeholder-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10"
+                        placeholder="Password">
+                                    </div>
+                <div class="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+                    <label class="flex cursor-pointer items-center gap-2">
+                        <input type="checkbox" name="remember" id="remember"
+                            class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                        <span class="text-sm text-slate-600">Remember me</span>
+                    </label>
+                </div>
+                                <div class="flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                    <div class="g-recaptcha" data-sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"></div>
+                </div>
+                                                <button type="submit"
+                    class="w-full rounded-2xl bg-emerald-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-[0.99]">
+                    Log in
+                </button>
+            </form>
+
+                            <p class="mt-6 text-center text-sm text-slate-500">
+                    Office staff need an account? <a href="http://vob.lvh.me:8000/register" class="font-medium text-emerald-600 hover:text-emerald-700 hover:underline">Register here</a>.
+                </p>
+                <p class="mt-2 text-center text-sm text-slate-500">
+                    Tenant admin access is created from the central registration flow.
+                </p>
+                        </div>
+        </section>
+    </div>
+</div>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    </div>
+
+    </body>
+</html>

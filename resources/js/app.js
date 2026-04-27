@@ -12,6 +12,50 @@ const initializeAppUi = () => {
     displaySessionToasts();
     setupFocusHandling();
 
+    // Setup real-time queue status updates for public track page
+    if (window.queueData && window.Echo) {
+        const { tenantId, queueEntryId, referenceCode } = window.queueData;
+
+        window.Echo.private(`tenant.${tenantId}`)
+            .listen('.queue.updated', (e) => {
+                // Only update if this queue entry is affected
+                if (e.queue_entry_id === queueEntryId) {
+                    // Fetch updated queue data
+                    fetch(`/t/${referenceCode}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update status
+                        const statusEl = document.getElementById('queue-status');
+                        if (statusEl && data.status) {
+                            statusEl.textContent = data.status.replace('_', ' ');
+                        }
+
+                        // Update position
+                        const positionEl = document.getElementById('position');
+                        if (positionEl && data.position !== undefined) {
+                            positionEl.textContent = data.position;
+                        }
+
+                        // Update ahead text
+                        const aheadTextEl = document.getElementById('ahead-text');
+                        if (aheadTextEl && data.ahead !== undefined) {
+                            if (data.ahead > 0) {
+                                aheadTextEl.textContent = `${data.ahead} person${data.ahead > 1 ? 's' : ''} ahead of you`;
+                            } else {
+                                aheadTextEl.innerHTML = '<span class="font-medium text-emerald-600">You are next.</span>';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Failed to fetch queue update:', error));
+                }
+            });
+    }
+
     const monitorUrl = document.body.dataset.tenantSessionMonitorUrl;
 
     if (monitorUrl) {

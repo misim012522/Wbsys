@@ -26,6 +26,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::put('/offices/{office}', [AdminController::class, 'updateOffice'])->name('offices.update')->middleware(['role:tenant_admin', 'permission:admin.office.manage', 'tenant.resource:office']);
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports')->middleware(['role:tenant_admin', 'permission:reports.view']);
     Route::get('/reports/download', [AdminController::class, 'downloadReport'])->name('reports.download')->middleware(['role:tenant_admin', 'permission:reports.view']);
+    Route::get('/activity', [AdminController::class, 'activity'])->name('activity')->middleware(['role:tenant_admin', 'permission:admin.dashboard']);
+    Route::get('/notifications', [AdminController::class, 'notifications'])->name('notifications')->middleware(['role:tenant_admin', 'permission:admin.dashboard']);
     Route::get('/settings', [AdminAccountSettingsController::class, 'edit'])->name('settings.edit')->middleware(['role:tenant_admin', 'permission:admin.settings.manage']);
     Route::put('/settings', [AdminAccountSettingsController::class, 'update'])->name('settings.update')->middleware(['role:tenant_admin', 'permission:admin.settings.manage']);
     Route::get('/customization', [CustomizationController::class, 'index'])->name('customization.index')->middleware(['role:tenant_admin', 'permission:admin.customization.manage']);

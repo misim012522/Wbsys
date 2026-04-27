@@ -8,6 +8,8 @@ use App\Models\Office;
 use App\Models\Plan;
 use App\Models\QueueEntry;
 use App\Models\RegistrationPayment;
+use App\Models\SupportMessage;
+use App\Models\SupportThread;
 use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\User;
@@ -27,10 +29,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -58,6 +62,133 @@ class CentralController extends Controller
     public function dashboard(): View
     {
         return view('central.dashboard', $this->dashboardViewData());
+    }
+
+    public function activity(Request $request): View
+    {
+        $selectedTenantId = $request->integer('tenant_id');
+        $selectedAction = trim((string) $request->string('action'));
+
+        $tenants = Tenant::query()->orderBy('name')->get(['id', 'name']);
+        $targetTenants = $selectedTenantId > 0
+            ? $tenants->where('id', $selectedTenantId)->values()
+            : $tenants;
+
+        $activities = collect();
+
+        if (SupportThread::supportTablesExist()) {
+            $centralMessages = SupportMessage::query()
+                ->with('thread.tenant')
+                ->where('sender_type', SupportMessage::SENDER_CENTRAL)
+                ->latest('created_at')
+                ->limit(120)
+                ->get();
+
+            $activities = $activities->merge($centralMessages->map(function (SupportMessage $message) {
+                return [
+                    'created_at' => $message->created_at,
+                    'action' => 'central_support_reply',
+                    'description' => 'Central replied to support thread: '.($message->thread?->subject ?? 'Untitled thread'),
+                    'tenant_name' => $message->thread?->tenant?->name,
+                    'office_name' => null,
+                    'actor_name' => $message->sender_name ?: 'Central',
+                    'actor_role' => 'system_admin',
+                    'source' => 'central',
+                ];
+            }));
+        }
+
+        foreach ($targetTenants as $tenant) {
+            try {
+                $this->tenantDatabaseManager->activate($tenant);
+
+                $tenantLogs = ActivityLog::query()
+                    ->with(['user:id,name,role', 'office:id,name'])
+                    ->latest('created_at')
+                    ->limit(160)
+                    ->get();
+
+                $activities = $activities->merge($tenantLogs->map(function (ActivityLog $log) use ($tenant) {
+                    return [
+                        'created_at' => $log->created_at,
+                        'action' => $log->action,
+                        'description' => $log->description,
+                        'tenant_name' => $tenant->name,
+                        'office_name' => $log->office?->name,
+                        'actor_name' => $log->user?->name ?: 'System',
+                        'actor_role' => $log->user?->role ?: 'system',
+                        'source' => 'tenant',
+                    ];
+                }));
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        if ($selectedAction !== '') {
+            $activities = $activities->where('action', $selectedAction)->values();
+        }
+
+        $activities = $activities
+            ->sortByDesc(fn (array $row) => $row['created_at'] instanceof Carbon ? $row['created_at']->timestamp : 0)
+            ->values();
+
+        return view('central.activity', [
+            'activities' => $this->paginateCollection($activities, 30, $request),
+            'tenants' => $tenants,
+            'selectedTenantId' => $selectedTenantId,
+            'selectedAction' => $selectedAction,
+            'actionOptions' => $activities->pluck('action')->filter()->unique()->sort()->values(),
+        ]);
+    }
+
+    public function notifications(Request $request): View
+    {
+        $items = collect();
+
+        if (SupportThread::supportTablesExist()) {
+            $threads = SupportThread::query()
+                ->with('tenant')
+                ->latest('last_message_at')
+                ->limit(200)
+                ->get();
+
+            $items = $items->merge($threads->map(function (SupportThread $thread) {
+                return [
+                    'created_at' => $thread->last_message_at ?? $thread->created_at,
+                    'title' => 'Support thread update',
+                    'message' => sprintf('%s (%s)', $thread->subject, $thread->tenant?->name ?? 'Unknown tenant'),
+                    'is_unread' => $thread->hasUnreadForCentral(),
+                    'kind' => 'support',
+                ];
+            }));
+        }
+
+        try {
+            $databaseNotifications = auth()->user()?->notifications()->latest()->limit(200)->get() ?? collect();
+            $items = $items->merge($databaseNotifications->map(function ($notification) {
+                $data = is_array($notification->data) ? $notification->data : [];
+
+                return [
+                    'created_at' => $notification->created_at,
+                    'title' => str(class_basename((string) $notification->type))->replace('Notification', '')->headline()->toString(),
+                    'message' => (string) ($data['message'] ?? $data['subject'] ?? 'Notification received.'),
+                    'is_unread' => $notification->read_at === null,
+                    'kind' => 'system',
+                ];
+            }));
+        } catch (\Throwable) {
+            // Ignore notification-source issues and continue with support notifications.
+        }
+
+        $items = $items
+            ->sortByDesc(fn (array $row) => $row['created_at'] instanceof Carbon ? $row['created_at']->timestamp : 0)
+            ->values();
+
+        return view('central.notifications', [
+            'notifications' => $this->paginateCollection($items, 25, $request),
+            'unreadCount' => $items->where('is_unread', true)->count(),
+        ]);
     }
 
     public function destroy(Tenant $tenant): RedirectResponse
@@ -378,6 +509,13 @@ class CentralController extends Controller
 
     public function store(CentralTenantSignupRequest $request): RedirectResponse
     {
+        // Test if code is being executed
+        \Log::emergency('STORE METHOD CALLED - TEST', ['time' => now()]);
+
+        \Log::info('Registration form submitted', [
+            'all_input' => $request->all(),
+        ]);
+
         $validated = $request->validated();
         $plan = Plan::active()->findOrFail((int) $validated['plan_id']);
         $amountCents = (int) round(((float) $plan->price_monthly) * 100);
@@ -394,6 +532,12 @@ class CentralController extends Controller
         }
 
         try {
+            \Log::info('Creating registration payment', [
+                'plan_id' => $plan->id,
+                'amount_cents' => $amountCents,
+                'simulate_checkout' => $simulateCheckout,
+            ]);
+
             $payment = RegistrationPayment::create([
                 'reference' => (string) Str::uuid(),
                 'plan_id' => $plan->id,
@@ -405,8 +549,19 @@ class CentralController extends Controller
                 'payload' => $validated,
             ]);
 
-            $successUrl = route('central.register.payment.success', ['ref' => $payment->reference, 'session_id' => '{CHECKOUT_SESSION_ID}']);
+            \Log::info('Payment created, building URLs', ['payment_ref' => $payment->reference]);
+
+            $successUrl = str_replace(
+                urlencode('__CHECKOUT_SESSION_ID__'),
+                '{CHECKOUT_SESSION_ID}',
+                route('central.register.payment.success', [
+                    'ref' => $payment->reference,
+                    'session_id' => '__CHECKOUT_SESSION_ID__',
+                ])
+            );
             $cancelUrl = route('central.register.payment.cancel', ['ref' => $payment->reference]);
+
+            \Log::info('URLs built', ['success_url' => $successUrl, 'cancel_url' => $cancelUrl]);
 
             if ($simulateCheckout) {
                 return redirect()->route('central.register.payment.fake', [
@@ -441,6 +596,10 @@ class CentralController extends Controller
                 'tenant_name' => 'Payment setup is incomplete in central DB. Please run central migrations and try again.',
             ]);
         } catch (\Throwable $e) {
+            \Log::error('Payment checkout failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             report($e);
 
             return back()->withInput()->withErrors([
@@ -449,14 +608,19 @@ class CentralController extends Controller
         }
     }
 
-    public function paymentSuccess(Request $request): RedirectResponse
+    public function paymentSuccess(Request $request, string $ref, string $session_id): RedirectResponse
     {
-        $ref = (string) $request->query('ref', '');
-        $sessionId = (string) $request->query('session_id', '');
         $simulateCheckout = (bool) config('services.stripe.simulate', false);
 
+        \Log::info('Payment success callback', [
+            'ref' => $ref,
+            'session_id' => $session_id,
+            'simulate_checkout' => $simulateCheckout,
+        ]);
+
         $payment = RegistrationPayment::query()->where('reference', $ref)->first();
-        if (! $payment || $sessionId === '') {
+        if (! $payment || $session_id === '') {
+            \Log::error('Invalid payment session', ['ref' => $ref, 'session_id' => $session_id, 'payment_exists' => $payment !== null]);
             return redirect()->route('central.register')->withErrors(['tenant_name' => 'Invalid payment session. Please try again.']);
         }
 
@@ -466,9 +630,10 @@ class CentralController extends Controller
 
         try {
             if ($simulateCheckout) {
-                $paid = str_starts_with($sessionId, 'sim_');
+                $paid = str_starts_with($session_id, 'sim_');
             } else {
-                $session = $this->stripeCheckoutService->retrieveCheckoutSession($sessionId);
+                $session = $this->stripeCheckoutService->retrieveCheckoutSession($session_id);
+                \Log::info('Stripe session retrieved', ['session_id' => $session_id, 'session' => $session]);
                 $paid = ($session['payment_status'] ?? null) === 'paid';
             }
 
@@ -478,7 +643,7 @@ class CentralController extends Controller
 
             $payment->forceFill([
                 'status' => RegistrationPayment::STATUS_PAID,
-                'provider_session_id' => $sessionId,
+                'provider_session_id' => $session_id,
                 'paid_at' => now(),
             ])->save();
 
@@ -489,15 +654,20 @@ class CentralController extends Controller
                 sprintf('Payment received. Tenant %s has been registered and is pending central approval.', $tenant->name)
             );
         } catch (\Throwable $e) {
+            \Log::error('Payment verification failed', [
+                'session_id' => $session_id,
+                'payment_ref' => $ref,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             report($e);
 
-            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Could not verify payment. Please contact support.']);
+            return redirect()->route('central.register')->withErrors(['tenant_name' => 'Could not verify payment: '.$e->getMessage()]);
         }
     }
 
-    public function paymentCancel(Request $request): RedirectResponse
+    public function paymentCancel(Request $request, string $ref): RedirectResponse
     {
-        $ref = (string) $request->query('ref', '');
         $payment = RegistrationPayment::query()->where('reference', $ref)->first();
 
         if ($payment && $payment->status === RegistrationPayment::STATUS_PENDING) {
@@ -887,5 +1057,23 @@ class CentralController extends Controller
         }
 
         return $password;
+    }
+
+    private function paginateCollection(Collection $items, int $perPage, Request $request): LengthAwarePaginator
+    {
+        $page = max(1, (int) $request->integer('page', 1));
+        $total = $items->count();
+        $results = $items->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $results,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
     }
 }

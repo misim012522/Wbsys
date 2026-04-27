@@ -2,6 +2,17 @@
 
 @section('title', 'Queue status - QueueLess')
 
+@push('scripts')
+<script>
+    window.queueData = {
+        tenantId: {{ $queueEntry->tenant_id }},
+        officeId: {{ $queueEntry->office_id }},
+        queueEntryId: {{ $queueEntry->id }},
+        referenceCode: '{{ $queueEntry->reference_code }}'
+    };
+</script>
+@endpush
+
 @section('content')
 @php
     $office = $queueEntry->office;
@@ -15,23 +26,25 @@
 
 <div class="panel mt-8 border-2 border-emerald-200 p-8 text-center shadow-lg">
     <p class="mb-1 text-sm uppercase tracking-wide text-slate-500">Queue number</p>
-    <p class="text-5xl font-bold text-emerald-600">#{{ $queueEntry->queue_number }}</p>
-    <p class="mt-4 font-mono text-sm text-slate-600">{{ $queueEntry->reference_code }}</p>
+    <p class="text-5xl font-bold text-emerald-600" id="queue-number">#{{ $queueEntry->queue_number }}</p>
+    <p class="mt-4 font-mono text-sm text-slate-600" id="reference-code">{{ $queueEntry->reference_code }}</p>
 </div>
 
 <div class="panel-soft mt-6 p-6 text-center">
     <p class="mb-1 text-slate-600">Position</p>
-    <p class="text-3xl font-bold text-slate-800">{{ $position }}</p>
-    @if($ahead > 0)
-        <p class="mt-2 text-sm text-slate-500">{{ $ahead }} {{ Str::plural('person', $ahead) }} ahead of you</p>
-    @else
-        <p class="mt-2 text-sm font-medium text-emerald-600">You are next.</p>
-    @endif
+    <p class="text-3xl font-bold text-slate-800" id="position">{{ $position }}</p>
+    <p class="mt-2 text-sm text-slate-500" id="ahead-text">
+        @if($ahead > 0)
+            {{ $ahead }} {{ Str::plural('person', $ahead) }} ahead of you
+        @else
+            <span class="font-medium text-emerald-600">You are next.</span>
+        @endif
+    </p>
 </div>
 
 <div class="panel mt-6 p-6 text-center">
     <p class="text-sm text-slate-500">Status</p>
-    <p class="mt-2 text-lg font-semibold capitalize text-slate-700">{{ str_replace('_', ' ', $queueEntry->status) }}</p>
+    <p class="mt-2 text-lg font-semibold capitalize text-slate-700" id="queue-status">{{ str_replace('_', ' ', $queueEntry->status) }}</p>
     <p class="mt-2 text-xs text-slate-400">Save your number and reference code.</p>
 </div>
 @endsection

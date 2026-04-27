@@ -24,12 +24,14 @@ Route::prefix('central')->name('central.')->middleware('central.public')->group(
         Route::post('/register', [CentralController::class, 'store'])->name('register.store');
         Route::get('/register/payment/fake', [CentralController::class, 'fakePayment'])->name('register.payment.fake');
         Route::post('/register/payment/fake', [CentralController::class, 'fakePaymentProcess'])->name('register.payment.fake.process');
-        Route::get('/register/payment/success', [CentralController::class, 'paymentSuccess'])->name('register.payment.success');
-        Route::get('/register/payment/cancel', [CentralController::class, 'paymentCancel'])->name('register.payment.cancel');
+        Route::get('/register/payment/success/{ref}/{session_id}', [CentralController::class, 'paymentSuccess'])->name('register.payment.success');
+        Route::get('/register/payment/cancel/{ref}', [CentralController::class, 'paymentCancel'])->name('register.payment.cancel');
     });
 
     Route::middleware(['auth', 'central.user'])->group(function () {
         Route::get('/dashboard', [CentralController::class, 'dashboard'])->name('dashboard');
+        Route::get('/activity', [CentralController::class, 'activity'])->name('activity');
+        Route::get('/notifications', [CentralController::class, 'notifications'])->name('notifications');
         Route::get('/support', [SupportChatController::class, 'centralIndex'])->name('support.index');
         Route::get('/support/snapshot', [SupportChatController::class, 'centralSnapshot'])->name('support.snapshot');
         Route::post('/support/announcements', [SupportChatController::class, 'centralStoreAnnouncement'])->name('support.announcements.store');

@@ -97,6 +97,12 @@
                         @error('office_id')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
                     </div>
                 @endif
+                @if(config('recaptcha.enabled') && config('recaptcha.site_key'))
+                <div class="flex justify-center rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                    <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}"></div>
+                </div>
+                @error('g-recaptcha-response')<p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>@enderror
+                @endif
                 <button type="submit"
                     class="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-700 hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 active:scale-[0.99]">
                     Create account
@@ -111,4 +117,7 @@
         <p class="mt-6 text-center text-xs text-slate-400">QueueLess - Queue management</p>
     </div>
 </div>
+@if(config('recaptcha.enabled') && config('recaptcha.site_key'))
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+@endif
 @endsection

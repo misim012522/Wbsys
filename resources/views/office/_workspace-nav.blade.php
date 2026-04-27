@@ -77,11 +77,9 @@
                     Reports
                 </a>
             @endif
-            @if($viewer?->hasPermission('office.activity.view'))
-                <a href="{{ route('office.activity') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('office.activity*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
-                    Activity
-                </a>
-            @endif
+            <a href="{{ route('office.notifications') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('office.notifications') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
+                Notifications
+            </a>
             <form method="POST" action="{{ route('logout') }}" class="w-full" id="office-logout-form">
                 @csrf
                 <button

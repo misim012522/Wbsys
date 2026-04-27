@@ -22,7 +22,7 @@ class LoginRequest extends FormRequest
             'tenant_id' => ['nullable', 'integer'],
         ];
 
-        if (config('recaptcha.enabled') && ! app()->environment(['local', 'testing']) && config('recaptcha.secret_key')) {
+        if (config('recaptcha.enabled') && config('recaptcha.secret_key')) {
             $rules['g-recaptcha-response'] = ['required'];
         }
 

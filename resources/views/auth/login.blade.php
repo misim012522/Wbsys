@@ -55,7 +55,7 @@
                         <span class="text-sm text-slate-600">Remember me</span>
                     </label>
                 </div>
-                @if(config('recaptcha.enabled') && ! app()->environment(['local', 'testing']) && config('recaptcha.site_key'))
+                @if(config('recaptcha.enabled') && config('recaptcha.site_key'))
                 <div class="flex justify-center rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
                     <div class="g-recaptcha" data-sitekey="{{ config('recaptcha.site_key') }}"></div>
                 </div>
@@ -83,7 +83,7 @@
         </section>
     </div>
 </div>
-@if(config('recaptcha.enabled') && ! app()->environment(['local', 'testing']) && config('recaptcha.site_key'))
+@if(config('recaptcha.enabled') && config('recaptcha.site_key'))
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 @endif
 @endsection

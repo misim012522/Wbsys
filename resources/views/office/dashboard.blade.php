@@ -92,7 +92,15 @@
     <div>
         <div class="mb-4 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-slate-800">Queue today</h2>
-            <span class="text-sm text-slate-500">{{ $todayQueue->count() }} in line</span>
+            <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-500">{{ $todayQueue->count() }} in line</span>
+                @if($canManageQueue && $todayQueue->count() > 0)
+                    <form method="POST" action="{{ route('office.queue.clear-all') }}" onsubmit="return confirm('Are you sure you want to clear all queues? This cannot be undone.');" class="inline">
+                        @csrf
+                        <button type="submit" class="rounded-full bg-red-600 px-3 py-1.5 text-xs text-white hover:bg-red-700">Clear All</button>
+                    </form>
+                @endif
+            </div>
         </div>
 
         @if($currentServing)

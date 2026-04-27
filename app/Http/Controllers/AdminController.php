@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppVersion;
+use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\QueueEntry;
+use App\Models\SupportThread;
 use App\Models\User;
 use App\Notifications\AccountConfirmedNotification;
 use App\Services\QrCodeService;
 use App\Services\TenantPlanEnforcer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -308,6 +312,102 @@ class AdminController extends Controller
         return view('admin.reports', compact('queueEntries', 'date', 'offices', 'officeId'));
     }
 
+    public function activity(Request $request)
+    {
+        $tenantId = $this->tenantId();
+        abort_unless($tenantId, 403);
+
+        $selectedAction = trim((string) $request->string('action'));
+        $selectedRole = trim((string) $request->string('role'));
+
+        $query = ActivityLog::query()
+            ->with(['user:id,name,role', 'office:id,name'])
+            ->where('tenant_id', $tenantId)
+            ->whereHas('user', function ($q) {
+                $q->whereIn('role', [User::ROLE_TENANT_ADMIN, User::ROLE_OFFICE_STAFF]);
+            })
+            ->latest('created_at');
+
+        if ($selectedAction !== '') {
+            $query->where('action', $selectedAction);
+        }
+
+        if ($selectedRole !== '') {
+            $query->whereHas('user', function ($q) use ($selectedRole) {
+                $q->where('role', $selectedRole);
+            });
+        }
+
+        $activities = $query->paginate(30)->withQueryString();
+
+        $actionOptions = ActivityLog::query()
+            ->where('tenant_id', $tenantId)
+            ->whereHas('user', function ($q) {
+                $q->whereIn('role', [User::ROLE_TENANT_ADMIN, User::ROLE_OFFICE_STAFF]);
+            })
+            ->select('action')
+            ->distinct()
+            ->orderBy('action')
+            ->pluck('action');
+
+        return view('admin.activity', [
+            'activities' => $activities,
+            'actionOptions' => $actionOptions,
+            'selectedAction' => $selectedAction,
+            'selectedRole' => $selectedRole,
+        ]);
+    }
+
+    public function notifications(Request $request)
+    {
+        $tenant = $this->currentTenant();
+        $items = collect();
+
+        if ($tenant && SupportThread::supportTablesExist()) {
+            $threads = SupportThread::query()
+                ->where('tenant_id', $tenant->id)
+                ->latest('last_message_at')
+                ->limit(200)
+                ->get();
+
+            $items = $items->merge($threads->map(function (SupportThread $thread) {
+                return [
+                    'created_at' => $thread->last_message_at ?? $thread->created_at,
+                    'title' => 'Support thread update',
+                    'message' => $thread->subject,
+                    'is_unread' => $thread->hasUnreadForTenant(),
+                    'kind' => 'support',
+                ];
+            }));
+        }
+
+        try {
+            $databaseNotifications = auth()->user()?->notifications()->latest()->limit(200)->get() ?? collect();
+            $items = $items->merge($databaseNotifications->map(function ($notification) {
+                $data = is_array($notification->data) ? $notification->data : [];
+
+                return [
+                    'created_at' => $notification->created_at,
+                    'title' => str(class_basename((string) $notification->type))->replace('Notification', '')->headline()->toString(),
+                    'message' => (string) ($data['message'] ?? $data['subject'] ?? 'Notification received.'),
+                    'is_unread' => $notification->read_at === null,
+                    'kind' => 'system',
+                ];
+            }));
+        } catch (\Throwable) {
+            // Ignore notification-source issues and continue with support notifications.
+        }
+
+        $items = $items
+            ->sortByDesc(fn (array $row) => optional($row['created_at'])->timestamp ?? 0)
+            ->values();
+
+        return view('admin.notifications', [
+            'notifications' => $this->paginateCollection($items, 25, $request),
+            'unreadCount' => $items->where('is_unread', true)->count(),
+        ]);
+    }
+
     public function downloadReport(Request $request): StreamedResponse|RedirectResponse|Response
     {
         if (! $this->tenantPlanEnforcer->hasFeature($this->currentTenant(), 'reports')) {
@@ -529,5 +629,23 @@ class AdminController extends Controller
         $user->notify(new AccountConfirmedNotification);
 
         return redirect()->route('admin.users.pending')->with('success', "Office staff account for {$user->name} has been confirmed.");
+    }
+
+    private function paginateCollection(Collection $items, int $perPage, Request $request): LengthAwarePaginator
+    {
+        $page = max(1, (int) $request->integer('page', 1));
+        $total = $items->count();
+        $results = $items->forPage($page, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $results,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
     }
 }

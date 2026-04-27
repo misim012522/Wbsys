@@ -18,7 +18,7 @@ class RegisterRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['required', 'string', 'max:255'],
             'username' => [
                 'required',
@@ -37,6 +37,12 @@ class RegisterRequest extends FormRequest
             'password' => ['required', 'confirmed', Password::defaults()],
             'office_id' => ['required', 'exists:tenant.offices,id'],
         ];
+
+        if (config('recaptcha.enabled') && config('recaptcha.secret_key')) {
+            $rules['g-recaptcha-response'] = ['required'];
+        }
+
+        return $rules;
     }
 
     /**
@@ -48,6 +54,7 @@ class RegisterRequest extends FormRequest
             'office_id.required' => 'Please select your office.',
             'office_id.exists' => 'The selected office is invalid.',
             'username.regex' => 'Username may only contain letters, numbers, dots, underscores and hyphens.',
+            'g-recaptcha-response.required' => 'Please complete the reCAPTCHA verification.',
         ];
     }
 }

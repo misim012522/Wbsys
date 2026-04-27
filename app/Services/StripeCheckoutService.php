@@ -15,6 +15,15 @@ class StripeCheckoutService
             throw new \RuntimeException('Stripe secret key is not configured.');
         }
 
+        \Log::info('Creating Stripe checkout session', [
+            'success_url' => $input['success_url'],
+            'cancel_url' => $input['cancel_url'],
+            'client_reference_id' => $input['client_reference_id'],
+            'currency' => $input['currency'],
+            'amount_cents' => $input['amount_cents'],
+            'product_name' => $input['product_name'],
+        ]);
+
         $response = Http::withOptions(['verify' => $verifySsl])
             ->withBasicAuth($secretKey, '')
             ->asForm()
@@ -31,8 +40,14 @@ class StripeCheckoutService
                 'metadata[payment_reference]' => $input['payment_reference'],
             ]);
 
+        \Log::info('Stripe create session response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'failed' => $response->failed(),
+        ]);
+
         if ($response->failed()) {
-            throw new \RuntimeException('Unable to create Stripe Checkout session.');
+            throw new \RuntimeException('Unable to create Stripe Checkout session. Status: '.$response->status().', Body: '.$response->body());
         }
 
         return $response->json();
@@ -47,12 +62,24 @@ class StripeCheckoutService
             throw new \RuntimeException('Stripe secret key is not configured.');
         }
 
+        \Log::info('Retrieving Stripe session', [
+            'session_id' => $sessionId,
+            'secret_key_prefix' => substr($secretKey, 0, 8) . '...',
+            'verify_ssl' => $verifySsl,
+        ]);
+
         $response = Http::withOptions(['verify' => $verifySsl])
             ->withBasicAuth($secretKey, '')
             ->get('https://api.stripe.com/v1/checkout/sessions/'.$sessionId);
 
+        \Log::info('Stripe API response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'failed' => $response->failed(),
+        ]);
+
         if ($response->failed()) {
-            throw new \RuntimeException('Unable to verify Stripe Checkout session.');
+            throw new \RuntimeException('Unable to verify Stripe Checkout session. Status: '.$response->status().', Body: '.$response->body());
         }
 
         return $response->json();
