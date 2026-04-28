@@ -32,7 +32,8 @@ Route::get('/api/tenant-update/status', [TenantUpdateController::class, 'status'
 Route::post('/api/tenant-update/apply', [TenantUpdateController::class, 'apply'])->middleware('auth')->name('tenant.update.apply');
 
 // GitHub webhook for automatic release sync
-Route::post('/api/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook');
+Route::post('/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook');
+Route::post('/api/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook.api');
 
 // Public: end users scan QR and land here (no login)
 Route::get('/o/{slug}', [PublicController::class, 'office'])->name('queue.office');
