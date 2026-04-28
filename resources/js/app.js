@@ -174,6 +174,85 @@ const initializeAppUi = () => {
                 triggerRefresh();
             });
     }
+
+    const updateStatusUrl = window.systemUpdateStatusUrl;
+    const updateBanner = document.getElementById('system-update-banner');
+    const updateBannerTemplate = document.getElementById('system-update-banner-template');
+
+    if (updateStatusUrl && updateBannerTemplate) {
+        const showUpdateBanner = (payload) => {
+            const banner = updateBanner || updateBannerTemplate.cloneNode(true);
+
+            banner.id = 'system-update-banner';
+            banner.classList.remove('hidden');
+
+            const messageNode = banner.querySelector('[data-update-message]');
+            const notesLink = banner.querySelector('#release-notes-link');
+
+            if (messageNode) {
+                const latestVersion = payload?.latest_version || window.latestSystemVersion || 'the latest release';
+                const currentVersion = payload?.current_version || window.currentSystemVersion || 'unknown';
+                messageNode.textContent = `New version ${latestVersion} is available. You are currently on version ${currentVersion}.`;
+            }
+
+            if (notesLink) {
+                if (payload?.download_url) {
+                    notesLink.href = payload.download_url;
+                    notesLink.classList.remove('hidden');
+                } else {
+                    notesLink.classList.add('hidden');
+                }
+            }
+
+            if (!updateBanner) {
+                const anchor = document.getElementById('system-update-banner-template');
+                if (anchor && anchor.parentElement) {
+                    anchor.parentElement.insertBefore(banner, anchor);
+                    window.latestSystemVersion = payload?.latest_version || window.latestSystemVersion;
+                }
+            } else {
+                updateBanner.classList.remove('hidden');
+            }
+        };
+
+        const hideUpdateBanner = () => {
+            const banner = document.getElementById('system-update-banner');
+            if (banner && banner !== updateBannerTemplate) {
+                banner.remove();
+            }
+        };
+
+        const pollUpdateStatus = async () => {
+            try {
+                const response = await fetch(updateStatusUrl, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+
+                if (payload?.update_available) {
+                    showUpdateBanner(payload);
+                    window.latestSystemVersion = payload.latest_version || window.latestSystemVersion;
+                    window.currentSystemVersion = payload.current_version || window.currentSystemVersion;
+                } else {
+                    hideUpdateBanner();
+                }
+            } catch (error) {
+                console.error('Unable to check system update status:', error);
+            }
+        };
+
+        pollUpdateStatus();
+        window.setInterval(pollUpdateStatus, 60000);
+    }
 };
 
 if (document.readyState === 'loading') {

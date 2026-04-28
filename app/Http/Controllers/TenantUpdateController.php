@@ -16,8 +16,6 @@ class TenantUpdateController extends Controller
     {
         $currentVersion = $request->input('version', null);
         $latest = AppVersion::latest()->first();
-        $markerPath = storage_path('app/app-update.marker');
-        $installedVersion = File::exists($markerPath) ? trim((string) File::get($markerPath)) : null;
         $tenant = null;
         if (auth()->check() && auth()->user()->tenant_id) {
             $tenant = auth()->user()->tenant;
@@ -27,16 +25,8 @@ class TenantUpdateController extends Controller
         }
 
         if ($tenant instanceof Tenant) {
-            if ($installedVersion) {
-                $normalizedInstalled = AppVersion::normalizeVersion($installedVersion);
-                $normalizedTenant = AppVersion::normalizeVersion($tenant->app_version);
-                if ($normalizedInstalled && $normalizedInstalled !== $normalizedTenant) {
-                    $tenant->update(['app_version' => 'v'.$normalizedInstalled]);
-                    Cache::forget('app_current_version');
-                }
-            }
-            if (! $currentVersion && $tenant->app_version) {
-                $currentVersion = $tenant->app_version;
+            if (! $currentVersion) {
+                $currentVersion = $tenant->app_version ?: config('app.version', '1.0.0');
             }
         }
 
@@ -44,12 +34,16 @@ class TenantUpdateController extends Controller
             $currentVersion = config('app.version', '1.0.0');
         }
 
+        $normalizedCurrentVersion = AppVersion::normalizeVersion($currentVersion) ?? $currentVersion;
+
+        if ($latest && $latest->download_url === null) {
+            // Keep the response stable even if the release exists without assets.
+        }
+
         return response()->json([
             'latest_version' => $latest?->version,
-            'installed_version' => $installedVersion,
-            'current_version' => $currentVersion,
-            'update_available' => (bool) $latest && $latest->isNewerThan($currentVersion),
-            'needs_install' => $latest ? $installedVersion !== $latest->version : false,
+            'current_version' => $normalizedCurrentVersion,
+            'update_available' => (bool) $latest && $latest->isNewerThan($normalizedCurrentVersion),
             'download_url' => $latest?->download_url,
             'is_forced' => (bool) ($latest?->is_forced ?? false),
         ]);

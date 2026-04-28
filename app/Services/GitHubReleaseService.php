@@ -99,6 +99,7 @@ class GitHubReleaseService
     {
         $releases = $this->fetchAllReleases();
         $synced = 0;
+        $latestPublishedRelease = null;
 
         foreach ($releases as $release) {
             if ($release['draft'] || $release['prerelease']) {
@@ -133,6 +134,14 @@ class GitHubReleaseService
             if ($appVersion->wasRecentlyCreated) {
                 $synced++;
             }
+
+            if (! $latestPublishedRelease) {
+                $latestPublishedRelease = $appVersion;
+            }
+        }
+
+        if ($latestPublishedRelease) {
+            Cache::put('app_current_version', AppVersion::normalizeVersion($latestPublishedRelease->version) ?? $latestPublishedRelease->version, now()->addHour());
         }
 
         // Clear cache

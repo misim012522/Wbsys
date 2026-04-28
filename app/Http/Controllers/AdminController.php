@@ -182,7 +182,7 @@ class AdminController extends Controller
 
         // Check for system updates
         $tenant = $this->currentTenant();
-        $currentVersion = $tenant->app_version ?? config('app.version', '1.0.0');
+        $currentVersion = $tenant->app_version ?? cache('app_current_version', config('app.version', '1.0.0'));
         $latestVersion = AppVersion::latest()->first();
         $updateAvailable = $latestVersion && $latestVersion->isNewerThan($currentVersion) && $latestVersion->version !== AppVersion::normalizeVersion($currentVersion);
 

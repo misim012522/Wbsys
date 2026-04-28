@@ -28,7 +28,7 @@
             </div>
 
             @if($updateAvailable)
-            <div class="rounded-xl border-2 border-amber-200 bg-amber-50 p-4 lg:max-w-md">
+            <div id="system-update-banner" class="rounded-xl border-2 border-amber-200 bg-amber-50 p-4 lg:max-w-md">
                 <div class="flex items-start gap-3">
                     <div class="flex-shrink-0">
                         <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -67,6 +67,41 @@
                 </div>
             </div>
             @endif
+
+            <div id="system-update-banner-template" class="hidden rounded-xl border-2 border-amber-200 bg-amber-50 p-4 lg:max-w-md">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold text-amber-900">System update available</p>
+                        <p class="mt-1 text-sm text-amber-800" data-update-message></p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            @if($user->isAdmin())
+                            <button 
+                                type="button"
+                                onclick="applyUpdate(window.latestSystemVersion)"
+                                id="apply-update-btn"
+                                class="inline-flex items-center rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <svg class="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                <span id="apply-update-text">Apply Update</span>
+                            </button>
+                            @endif
+                            <a id="release-notes-link" href="#" target="_blank" class="hidden inline-flex items-center text-sm font-medium text-amber-700 hover:text-amber-900">
+                                View release notes
+                                <svg class="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             @if($announcements->count() > 0)
             <div class="space-y-3 lg:max-w-md">
@@ -128,6 +163,13 @@
         </div>
     </div>
 </div>
+
+<script>
+    window.latestSystemVersion = @json($latestVersion?->version);
+    window.currentSystemVersion = @json($currentVersion);
+    window.systemUpdateStatusUrl = @json(route('tenant.update.status'));
+    window.systemUpdateDownloadUrl = @json($latestVersion?->download_url);
+</script>
 
 <div class="stats-grid">
     <div class="stat-card">
