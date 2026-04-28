@@ -38,7 +38,7 @@ Route::post('/api/github/webhook', [GitHubWebhookController::class, 'handle'])->
 
 // Public: end users scan QR and land here (no login)
 Route::get('/o/{slug}', [PublicController::class, 'office'])->name('queue.office');
-Route::get('/o/{slug}/staff/{userId}', [PublicController::class, 'officeForStaff'])->middleware('signed:relative')->name('queue.office.staff');
+Route::get('/o/{slug}/staff/{userId}', [PublicController::class, 'officeForStaff'])->name('queue.office.staff');
 Route::post('/o/{slug}/queue', [PublicController::class, 'getQueue'])->name('queue.get');
 Route::get('/t/{referenceCode}', [PublicController::class, 'track'])->name('queue.track');
 
@@ -109,3 +109,5 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
 });
+
+require __DIR__.'/debug.php';

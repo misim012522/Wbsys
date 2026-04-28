@@ -9,6 +9,7 @@ if (! extension_loaded('pdo_sqlite')) {
 }
 
 use App\Models\Plan;
+use App\Models\AppVersion;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\TenantDatabaseManager;
@@ -16,6 +17,7 @@ use App\Support\ReservedUsernames;
 use App\Support\TenantDashboardProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
@@ -58,6 +60,177 @@ test('tenant home shows tenant workspace onboarding for administrators and staff
         ->assertSee('Office staff dashboard')
         ->assertSee('Public external users')
         ->assertDontSee('Create account');
+});
+
+test('tenant dashboard shows update banner when a newer GitHub release exists', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'app_version' => 'v1.0.0',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    AppVersion::query()->create([
+        'version' => '1.0.1',
+        'release_notes' => 'New release available',
+        'released_at' => now(),
+        'is_forced' => false,
+        'download_url' => 'https://example.com/releases/v1.0.1.zip',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('System update available')
+        ->assertSee('New version 1.0.1 is available')
+        ->assertSee('https://example.com/releases/v1.0.1.zip');
+});
+
+test('tenant update status endpoint returns the latest release metadata when an update is available', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'app_version' => 'v1.0.0',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    AppVersion::query()->create([
+        'version' => '1.0.2',
+        'release_notes' => 'Second release available',
+        'released_at' => now(),
+        'is_forced' => false,
+        'download_url' => 'https://example.com/releases/v1.0.2.zip',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->getJson(route('tenant.update.status'))
+        ->assertOk()
+        ->assertJson([
+            'latest_version' => '1.0.2',
+            'current_version' => '1.0.0',
+            'update_available' => true,
+            'download_url' => 'https://example.com/releases/v1.0.2.zip',
+            'is_forced' => false,
+            'release_notes' => 'Second release available',
+        ]);
+});
+
+test('tenant update status endpoint reports no update when the current version matches the latest release', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'app_version' => 'v1.0.2',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    AppVersion::query()->create([
+        'version' => '1.0.2',
+        'release_notes' => 'Current release',
+        'released_at' => now(),
+        'is_forced' => false,
+        'download_url' => 'https://example.com/releases/v1.0.2.zip',
+    ]);
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->getJson(route('tenant.update.status'))
+        ->assertOk()
+        ->assertJson([
+            'latest_version' => '1.0.2',
+            'current_version' => '1.0.2',
+            'update_available' => false,
+            'download_url' => 'https://example.com/releases/v1.0.2.zip',
+            'is_forced' => false,
+            'release_notes' => 'Current release',
+        ]);
+});
+
+test('tenant admin can apply the latest release update', function () {
+    $plan = Plan::create(['name' => 'Pro', 'slug' => 'pro', 'is_active' => true]);
+    $tenant = Tenant::create([
+        'name' => 'Acme Office',
+        'slug' => 'acme-office',
+        'plan_id' => $plan->id,
+        'subdomain' => 'acme',
+        'database_name' => 'tenant_'.Str::random(10),
+        'app_version' => 'v1.0.0',
+        'is_active' => true,
+    ]);
+
+    $admin = app(TenantDatabaseManager::class)->provision($tenant, [
+        'name' => 'Tenant Admin',
+        'username' => 'tenant.admin',
+        'email' => 'admin@acme.test',
+        'phone' => '09123456789',
+        'password' => 'Password123!',
+    ]);
+
+    AppVersion::query()->create([
+        'version' => '1.0.3',
+        'release_notes' => 'Apply flow release',
+        'released_at' => now(),
+        'is_forced' => false,
+        'download_url' => 'https://example.com/releases/v1.0.3.zip',
+    ]);
+
+    Artisan::shouldReceive('call')
+        ->once()
+        ->with('app:update', ['--version' => '1.0.3'])
+        ->andReturn(0);
+
+    Artisan::shouldReceive('output')
+        ->once()
+        ->andReturn("Update applied successfully.\n");
+
+    $this->actingAs($admin)
+        ->withServerVariables(tenantHost())
+        ->postJson(route('tenant.update.apply'), ['version' => '1.0.3'])
+        ->assertOk()
+        ->assertJson([
+            'message' => 'Update applied successfully.',
+            'version' => '1.0.3',
+            'output' => 'Update applied successfully.',
+        ]);
+
+    expect($tenant->fresh()->app_version)->toBe('v1.0.3');
 });
 
 test('tenant workspace login redirects authenticated staff to their dashboard', function () {

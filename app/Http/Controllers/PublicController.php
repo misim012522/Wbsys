@@ -7,11 +7,12 @@ use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\QueueEntry;
 use App\Models\User;
+use App\Services\LimitEnforcer;
+use App\Services\TenantDatabaseManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use App\Services\LimitEnforcer;
 
 class PublicController extends Controller
 {
@@ -29,11 +30,23 @@ class PublicController extends Controller
     /** Public page when user scans QR for an office (no login). */
     public function office(string $slug)
     {
+        // First, try to find office in current tenant connection
         $office = Office::query()
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
             ->where('slug', $slug)
             ->where('is_active', true)
-            ->firstOrFail();
+            ->first();
+
+
+
+        abort_unless($office, 404);
+
+        // If tenant is not bound, activate it from the office for public access
+        if (! app()->bound('current_tenant') && $office->tenant) {
+            app()->instance('current_tenant', $office->tenant);
+            app()->instance('current_tenant_id', $office->tenant->id);
+            app(TenantDatabaseManager::class)->activate($office->tenant);
+        }
+
         $office->load('schedules');
         $tenant = $office->tenant;
         $custom = [
@@ -56,11 +69,22 @@ class PublicController extends Controller
     /** Public page when user scans an office-staff-specific QR (signed URL). */
     public function officeForStaff(string $slug, int $userId)
     {
+        // First, try to find office in current tenant connection
         $office = Office::query()
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
             ->where('slug', $slug)
             ->where('is_active', true)
-            ->firstOrFail();
+            ->first();
+
+
+
+        abort_unless($office, 404);
+
+        // If tenant is not bound, activate it from the office for public access
+        if (! app()->bound('current_tenant') && $office->tenant) {
+            app()->instance('current_tenant', $office->tenant);
+            app()->instance('current_tenant_id', $office->tenant->id);
+            app(TenantDatabaseManager::class)->activate($office->tenant);
+        }
 
         $user = User::query()
             ->where('id', $userId)
@@ -91,11 +115,23 @@ class PublicController extends Controller
     /** Get a queue number (guest: name + optional contact). */
     public function getQueue(Request $request, string $slug)
     {
+        // First, try to find office in current tenant connection
         $office = Office::query()
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
             ->where('slug', $slug)
             ->where('is_active', true)
-            ->firstOrFail();
+            ->first();
+
+
+
+        abort_unless($office, 404);
+
+        // If tenant is not bound, activate it from the office for public access
+        if (! app()->bound('current_tenant') && $office->tenant) {
+            app()->instance('current_tenant', $office->tenant);
+            app()->instance('current_tenant_id', $office->tenant->id);
+            app(TenantDatabaseManager::class)->activate($office->tenant);
+        }
+
         if (! $office->is_active) {
             return back()->with('error', 'This office is not accepting queue numbers.');
         }

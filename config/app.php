@@ -80,6 +80,34 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'asset_url' => env('ASSET_URL'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | QR Code Base URL
+    |--------------------------------------------------------------------------
+    |
+    | This URL is used specifically for QR code generation. If set, QR codes
+    | will use this URL instead of APP_URL, allowing you to use ngrok or other
+    | tunneling services for QR codes while keeping the system APP_URL unchanged.
+    |
+    */
+
+    'qr_base_url' => env('QR_BASE_URL', null),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Asset URL for Cross-Device Access
+    |--------------------------------------------------------------------------
+    |
+    | This URL is used specifically for loading CSS/JS assets when accessing
+    | the application via ngrok or other tunneling services. Set this to your
+    | ngrok URL to ensure assets load correctly on external devices.
+    |
+    */
+
+    'asset_base_url' => env('ASSET_BASE_URL', null),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

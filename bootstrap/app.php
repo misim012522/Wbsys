@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('github:sync-releases')->hourly();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
         $middleware->validateCsrfTokens(except: [
             'logout',
         ]);

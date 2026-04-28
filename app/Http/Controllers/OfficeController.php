@@ -259,11 +259,17 @@ class OfficeController extends Controller
             return redirect()->route('office.dashboard')->with('error', 'No office assigned.');
         }
 
-        $queuePath = URL::signedRoute('queue.office.staff', [
-            'slug' => $office->slug,
-            'userId' => $staffUser->id,
-        ], null, false);
-        $queueUrl = \App\Support\TenantUrl::forPath($office->tenant, $queuePath);
+        $queuePath = '/o/'.$office->slug.'/staff/'.$staffUser->id;
+
+        // Use QR_BASE_URL if configured for cross-device scanning
+        $qrBaseUrl = config('app.qr_base_url');
+        if ($qrBaseUrl) {
+            $queueUrl = rtrim($qrBaseUrl, '/').'/'.ltrim($queuePath, '/');
+        } else {
+            // Fallback to dynamic request host
+            $qrHost = request()->getSchemeAndHttpHost();
+            $queueUrl = "{$qrHost}{$queuePath}";
+        }
 
         return view('office.qr', compact('office', 'queueUrl'));
     }
@@ -279,11 +285,21 @@ class OfficeController extends Controller
         if (! $this->limitEnforcer->canIssueQr($this->currentTenant())) {
             abort(403, 'QR issuance limit reached for your plan.');
         }
-        $path = URL::signedRoute('queue.office.staff', [
+        $path = URL::route('queue.office.staff', [
             'slug' => $office->slug,
             'userId' => $staffUser->id,
-        ], null, false);
-        $url = \App\Support\TenantUrl::forPath($office->tenant, $path);
+        ], false);
+
+        // Use QR_BASE_URL if configured for cross-device scanning
+        $qrBaseUrl = config('app.qr_base_url');
+        if ($qrBaseUrl) {
+            $url = rtrim($qrBaseUrl, '/').'/'.ltrim($path, '/');
+        } else {
+            // Fallback to current request host
+            $qrHost = request()->getSchemeAndHttpHost();
+            $url = "{$qrHost}{$path}";
+        }
+
         $result = $this->qrCodeService->build($url);
         $response = response($result->getString())
             ->header('Content-Type', $result->getMimeType());

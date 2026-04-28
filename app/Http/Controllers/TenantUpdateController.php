@@ -15,7 +15,6 @@ class TenantUpdateController extends Controller
     public function status(Request $request): JsonResponse
     {
         $currentVersion = $request->input('version', null);
-        $installedVersion = null;
         $latest = AppVersion::latest()->first();
         $tenant = null;
         if (auth()->check() && auth()->user()->tenant_id) {
@@ -25,29 +24,24 @@ class TenantUpdateController extends Controller
             $tenant = app('current_tenant');
         }
 
-        if ($tenant instanceof Tenant) {
-            $installedVersion = AppVersion::normalizeVersion($tenant->app_version);
-            if (! $currentVersion) {
-                $currentVersion = $tenant->app_version ?: config('app.version', '1.0.0');
-            }
+        if ($tenant instanceof Tenant && ! $currentVersion) {
+            $currentVersion = $tenant->app_version ?: cache('app_current_version', config('app.version', '1.0.0'));
         }
 
         if (! $currentVersion) {
-            $currentVersion = config('app.version', '1.0.0');
+            $currentVersion = cache('app_current_version', config('app.version', '1.0.0'));
         }
 
         $normalizedCurrentVersion = AppVersion::normalizeVersion($currentVersion) ?? $currentVersion;
-        $normalizedInstalledVersion = $installedVersion ?? $normalizedCurrentVersion;
         $normalizedLatestVersion = $latest ? AppVersion::normalizeVersion($latest->version) ?? $latest->version : null;
 
         $updateAvailable = (bool) $latest
             && $normalizedLatestVersion
-            && version_compare($normalizedLatestVersion, $normalizedInstalledVersion, '>');
+            && version_compare($normalizedLatestVersion, $normalizedCurrentVersion, '>');
 
         return response()->json([
             'latest_version' => $normalizedLatestVersion,
             'current_version' => $normalizedCurrentVersion,
-            'installed_version' => $normalizedInstalledVersion,
             'update_available' => $updateAvailable,
             'download_url' => $latest?->download_url,
             'is_forced' => (bool) ($latest?->is_forced ?? false),

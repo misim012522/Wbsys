@@ -73,12 +73,17 @@ class AdminController extends Controller
 
     private function staffQueueSignedUrl(Office $office, User $staff): string
     {
-        $path = URL::signedRoute('queue.office.staff', [
-            'slug' => $office->slug,
-            'userId' => $staff->id,
-        ], null, false);
+        $path = '/o/'.$office->slug.'/staff/'.$staff->id;
 
-        return \App\Support\TenantUrl::forPath($office->tenant, $path);
+        // Use QR_BASE_URL if configured, otherwise fall back to request host
+        $qrBaseUrl = config('app.qr_base_url');
+        if ($qrBaseUrl) {
+            return rtrim($qrBaseUrl, '/').'/'.ltrim($path, '/');
+        }
+
+        // Fallback to dynamic request host
+        $qrHost = request()->getSchemeAndHttpHost();
+        return "{$qrHost}{$path}";
     }
 
     private function assignedStaffColumnAvailable(): bool
@@ -211,8 +216,16 @@ class AdminController extends Controller
 
         $staffQrCards = collect();
         if ($office) {
-            $staffQrCards = $officeStaff->map(function (User $staff) use ($office) {
-                $queueUrl = $this->staffQueueSignedUrl($office, $staff);
+            $qrBaseUrl = config('app.qr_base_url');
+            $staffQrCards = $officeStaff->map(function (User $staff) use ($office, $qrBaseUrl) {
+                $path = '/o/'.$office->slug.'/staff/'.$staff->id;
+
+                if ($qrBaseUrl) {
+                    $queueUrl = rtrim($qrBaseUrl, '/').'/'.ltrim($path, '/');
+                } else {
+                    $qrHost = request()->getSchemeAndHttpHost();
+                    $queueUrl = "{$qrHost}{$path}";
+                }
 
                 return [
                     'id' => $staff->id,
@@ -227,7 +240,7 @@ class AdminController extends Controller
         return view('admin.qr', compact('office', 'staffQrCards'));
     }
 
-    /** Generate QR code image for the tenant's default office. Uses APP_URL so QR works from any device. */
+    /** Generate QR code image for the tenant's default office. Uses QR_BASE_URL for cross-device scanning. */
     public function qrCodeImage(): Response
     {
         abort_unless($this->currentTenant()?->getSetting('customization.guest_queue', true) ?? true, 404);
@@ -237,7 +250,17 @@ class AdminController extends Controller
         abort_unless($office, 404);
 
         $staffId = request()->integer('office_staff_id');
-        $url = $this->qrCodeService->queueOfficeUrl($office->slug, $this->currentTenant());
+
+        // Use QR_BASE_URL if configured for cross-device scanning
+        $qrBaseUrl = config('app.qr_base_url');
+        if ($qrBaseUrl) {
+            $url = rtrim($qrBaseUrl, '/').'/o/'.$office->slug;
+        } else {
+            // Fallback to current request host
+            $qrHost = request()->getSchemeAndHttpHost();
+            $url = "{$qrHost}/o/{$office->slug}";
+        }
+
         if ($staffId > 0) {
             $staff = User::query()
                 ->when($this->tenantId(), fn ($query, $tenantId) => $query->where('tenant_id', $tenantId))

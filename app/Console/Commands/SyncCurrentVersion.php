@@ -7,14 +7,14 @@ use Illuminate\Console\Command;
 
 class SyncCurrentVersion extends Command
 {
-    protected $signature = 'app:sync-version';
+    protected $signature = 'app:sync-current-version';
 
-    protected $description = 'Sync current app version from config to app_versions table';
+    protected $description = 'Sync the current deployed app version to app_versions table';
 
     public function handle(): int
     {
         $currentVersion = config('app.version', '1.0.0');
-        
+
         // Normalize version: remove 'v' prefix and '-dirty' suffix
         $normalized = preg_replace('/^v/', '', $currentVersion);
         $normalized = preg_replace('/-dirty$/', '', $normalized);

@@ -22,7 +22,10 @@ class ConfigureSessionCookie
         $baseCookie = (string) config('session.cookie', Str::slug((string) config('app.name', 'laravel')).'-session');
         $tenantBaseDomain = trim((string) env('LOCAL_TENANT_BASE_DOMAIN', 'lvh.me'));
 
-        if ($host !== '' && $tenantBaseDomain !== '' && str_ends_with($host, '.'.$tenantBaseDomain)) {
+        $isLocalTenant = $host !== '' && $tenantBaseDomain !== '' && str_ends_with($host, '.'.$tenantBaseDomain);
+        $isNgrok = $host !== '' && (str_contains($host, 'ngrok-free.app') || str_contains($host, 'ngrok-free.dev'));
+
+        if ($isLocalTenant || $isNgrok) {
             $tenantCookie = $baseCookie.'-'.Str::slug($host);
 
             // StartSession runs before ResolveTenant in the web stack, so resolve+activate here.
@@ -35,7 +38,7 @@ class ConfigureSessionCookie
 
             config([
                 'session.cookie' => $tenantCookie,
-                // Keep local tenant sessions host-only so each subdomain gets an isolated cookie jar.
+                // Keep sessions host-only so browsers accept them and each subdomain is isolated.
                 'session.domain' => null,
                 // Tenant workspace requests must persist sessions in the tenant database.
                 'session.connection' => 'tenant',

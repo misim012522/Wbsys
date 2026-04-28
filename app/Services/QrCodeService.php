@@ -32,10 +32,19 @@ class QrCodeService
     }
 
     /**
-     * Build public queue URL for an office (uses APP_URL for real-time / cross-device).
+     * Build public queue URL for an office (uses QR_BASE_URL for QR codes, APP_URL for other system functions).
      */
     public function queueOfficeUrl(string $officeSlug, ?Tenant $tenant = null): string
     {
-        return TenantUrl::forPath($tenant, route('queue.office', ['slug' => $officeSlug], false));
+        $path = route('queue.office', ['slug' => $officeSlug], false);
+        $qrBaseUrl = config('app.qr_base_url');
+
+        if ($qrBaseUrl) {
+            // Use QR_BASE_URL for QR codes
+            return rtrim($qrBaseUrl, '/').'/'.ltrim($path, '/');
+        }
+
+        // Fallback to default behavior
+        return TenantUrl::forPath($tenant, $path);
     }
 }
