@@ -18,11 +18,12 @@ class Tenant extends Model
         'database_name',
         'address', 'email', 'contact_name', 'contact_number',
         'settings', 'support_url', 'app_version', 'is_active', 'approved_at',
+        'email_notification_sent_at',
     ];
 
     protected function casts(): array
     {
-        return ['settings' => 'array', 'is_active' => 'boolean', 'approved_at' => 'datetime'];
+        return ['settings' => 'array', 'is_active' => 'boolean', 'approved_at' => 'datetime', 'email_notification_sent_at' => 'datetime'];
     }
 
     protected static function booted(): void

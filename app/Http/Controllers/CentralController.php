@@ -356,7 +356,7 @@ class CentralController extends Controller
     public function updateSubscription(Request $request, Tenant $tenant): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
-            'plan_id' => ['required', 'exists:plans,id'],
+            'plan_id' => ['required', 'exists:central.plans,id'],
             'status' => ['required', 'string', 'in:'.implode(',', [
                 TenantSubscription::STATUS_ACTIVE,
                 TenantSubscription::STATUS_CANCELLED,
@@ -376,7 +376,7 @@ class CentralController extends Controller
         $validated = $validator->validated();
         $startsAt = Carbon::parse($validated['starts_at']);
 
-        $plan = Plan::active()->findOrFail($validated['plan_id']);
+        $plan = Plan::findOrFail($validated['plan_id']);
         $subscription = $tenant->subscriptions()->latest('id')->first() ?? new TenantSubscription(['tenant_id' => $tenant->id]);
 
         $subscription->fill([

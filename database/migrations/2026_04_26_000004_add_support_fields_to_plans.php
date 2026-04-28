@@ -14,8 +14,12 @@ return new class extends Migration
     public function up()
     {
         Schema::connection('central')->table('plans', function (Blueprint $table) {
-            $table->string('support_level')->nullable()->after('qr_codes_per_office');
-            $table->integer('sla_hours')->nullable()->after('support_level');
+            if (! Schema::connection('central')->hasColumn('plans', 'support_level')) {
+                $table->string('support_level')->nullable()->after('qr_codes_per_office');
+            }
+            if (! Schema::connection('central')->hasColumn('plans', 'sla_hours')) {
+                $table->integer('sla_hours')->nullable()->after('support_level');
+            }
         });
     }
 
