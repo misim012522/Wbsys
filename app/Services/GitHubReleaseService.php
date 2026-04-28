@@ -24,15 +24,18 @@ class GitHubReleaseService
     public function fetchLatestRelease(): ?array
     {
         $cacheKey = "github_release_{$this->owner}_{$this->repo}";
-        
+
         return Cache::remember($cacheKey, 3600, function () {
             $url = "https://api.github.com/repos/{$this->owner}/{$this->repo}/releases/latest";
-            
+
             $response = Http::withHeaders([
                 'Accept' => 'application/vnd.github.v3+json',
                 'User-Agent' => 'Wbsys-Queueless',
             ])->when($this->token, fn ($http) => $http->withToken($this->token))
-            ->withOptions(['verify' => app()->environment('local') ? false : true])
+            ->withOptions([
+                'verify' => app()->environment('local') ? false : true,
+                'timeout' => 30,
+            ])
             ->get($url);
 
             if (! $response->successful()) {
@@ -84,6 +87,11 @@ class GitHubReleaseService
             'published_at' => $release['published_at'] ?? null,
             'prerelease' => $release['prerelease'] ?? false,
             'draft' => $release['draft'] ?? false,
+            'assets' => collect($release['assets'] ?? [])->map(fn ($asset) => [
+                'name' => $asset['name'] ?? null,
+                'browser_download_url' => $asset['browser_download_url'] ?? null,
+                'size' => $asset['size'] ?? 0,
+            ])->toArray(),
         ])->toArray();
     }
 
@@ -106,13 +114,16 @@ class GitHubReleaseService
                 continue;
             }
 
+            $asset = collect($release['assets'] ?? [])->first();
+            $downloadUrl = $asset['browser_download_url'] ?? ($release['html_url'] ?? null);
+
             $appVersion = \App\Models\AppVersion::query()->updateOrCreate(
                 ['version' => $version],
                 [
                     'release_notes' => $release['body'] ?? '',
                     'released_at' => $release['published_at'] ?? now(),
                     'is_forced' => false,
-                    'download_url' => $release['html_url'] ?? null,
+                    'download_url' => $downloadUrl,
                 ]
             );
 
