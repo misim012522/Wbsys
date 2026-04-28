@@ -117,6 +117,15 @@
                 </a>
             @endif
 
+            @if(Route::has('tenant.help-tickets.index'))
+                <a href="{{ route('tenant.help-tickets.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('tenant.help-tickets.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100' }}">
+                    <span class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                        Demo: Help Tickets
+                    </span>
+                </a>
+            @endif
+
             <form method="POST" action="{{ route('logout') }}" class="w-full" id="office-logout-form">
                 @csrf
                 <button

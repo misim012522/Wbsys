@@ -48,5 +48,8 @@ Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(f
         
         Route::get('/system-logs', [DemoSystemLogController::class, 'index'])->name('system-logs.index');
         Route::post('/system-logs', [DemoSystemLogController::class, 'store'])->name('system-logs.store');
+
+        Route::get('/help-tickets', [DemoHelpTicketController::class, 'index'])->name('help-tickets.index');
+        Route::post('/help-tickets', [DemoHelpTicketController::class, 'store'])->name('help-tickets.store');
     });
 });
