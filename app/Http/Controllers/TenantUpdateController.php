@@ -2,48 +2,56 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\GitHubReleaseService;
+use App\Models\AppVersion;
+use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
 
 class TenantUpdateController extends Controller
 {
     public function status(Request $request): JsonResponse
     {
-        $currentVersion = $request->input('version', config('app.version', '1.0.0'));
+        $currentVersion = $request->input('version', null);
+        $latest = AppVersion::latest()->first();
         $markerPath = storage_path('app/app-update.marker');
         $installedVersion = File::exists($markerPath) ? trim((string) File::get($markerPath)) : null;
+        $tenant = null;
+        if (auth()->check() && auth()->user()->tenant_id) {
+            $tenant = auth()->user()->tenant;
+        }
+        if (! $tenant && app()->bound('current_tenant')) {
+            $tenant = app('current_tenant');
+        }
 
-        // Fetch latest release from GitHub directly
-        $githubService = app(GitHubReleaseService::class);
-        $latestRelease = $githubService->fetchLatestRelease();
+        if ($tenant instanceof Tenant) {
+            if ($installedVersion) {
+                $normalizedInstalled = AppVersion::normalizeVersion($installedVersion);
+                $normalizedTenant = AppVersion::normalizeVersion($tenant->app_version);
+                if ($normalizedInstalled && $normalizedInstalled !== $normalizedTenant) {
+                    $tenant->update(['app_version' => 'v'.$normalizedInstalled]);
+                    Cache::forget('app_current_version');
+                }
+            }
+            if (! $currentVersion && $tenant->app_version) {
+                $currentVersion = $tenant->app_version;
+            }
+        }
 
-        $latestVersion = null;
-        $downloadUrl = null;
-        $releaseNotes = null;
-        $updateAvailable = false;
-
-        if ($latestRelease) {
-            $latestVersion = ltrim($latestRelease['tag_name'] ?? '', 'v');
-            $downloadUrl = $latestRelease['html_url'] ?? null;
-            $releaseNotes = $latestRelease['body'] ?? null;
-
-            // Compare versions
-            $updateAvailable = version_compare($latestVersion, $currentVersion, '>');
+        if (! $currentVersion) {
+            $currentVersion = config('app.version', '1.0.0');
         }
 
         return response()->json([
-            'latest_version' => $latestVersion,
+            'latest_version' => $latest?->version,
             'installed_version' => $installedVersion,
             'current_version' => $currentVersion,
-            'update_available' => $updateAvailable,
-            'needs_install' => $latestVersion ? $installedVersion !== $latestVersion : false,
-            'download_url' => $downloadUrl,
-            'release_notes' => $releaseNotes,
-            'is_forced' => false,
+            'update_available' => (bool) $latest && $latest->isNewerThan($currentVersion),
+            'needs_install' => $latest ? $installedVersion !== $latest->version : false,
+            'download_url' => $latest?->download_url,
+            'is_forced' => (bool) ($latest?->is_forced ?? false),
         ]);
     }
 
@@ -53,120 +61,71 @@ class TenantUpdateController extends Controller
             'version' => ['nullable', 'string', 'max:50'],
         ]);
 
-        // Fetch latest release from GitHub
-        $githubService = app(GitHubReleaseService::class);
-        $latestRelease = $githubService->fetchLatestRelease();
-
-        if (! $latestRelease) {
+        // Only allow tenant admins to apply updates
+        if (! auth()->check() || ! auth()->user()->isAdmin()) {
             return response()->json([
-                'message' => 'No published application version was found on GitHub.',
+                'message' => 'Only tenant administrators can apply updates.',
+            ], 403);
+        }
+
+        $latest = AppVersion::latest()->first();
+
+        if (! $latest) {
+            return response()->json([
+                'message' => 'No published application version was found.',
             ], 404);
         }
 
-        $targetVersion = $validated['version'] ?? ltrim($latestRelease['tag_name'] ?? '', 'v');
-
-        // Download the release asset (zip file)
-        $downloadUrl = null;
-        foreach ($latestRelease['assets'] ?? [] as $asset) {
-            if (str_ends_with($asset['name'] ?? '', '.zip')) {
-                $downloadUrl = $asset['browser_download_url'];
-                break;
-            }
+        // Check if download_url exists on the latest version
+        if (! $latest->download_url) {
+            return response()->json([
+                'message' => 'No download URL available for the latest version. The release may not have been published with assets.',
+            ], 400);
         }
 
-        if (! $downloadUrl) {
+        // Use the latest version, or the requested version if it matches the latest
+        $version = $validated['version'] ?? $latest->version;
+        $normalizedRequested = AppVersion::normalizeVersion($version);
+        $normalizedLatest = AppVersion::normalizeVersion($latest->version);
+
+        // Only allow updating to the latest version
+        if ($normalizedRequested !== $normalizedLatest) {
             return response()->json([
-                'message' => 'No downloadable asset found in the release.',
-            ], 404);
+                'message' => 'Can only update to the latest available version.',
+            ], 400);
         }
 
-        // Download the zip file
-        $zipPath = storage_path('app/update-'.$targetVersion.'.zip');
-        $response = Http::withOptions(['verify' => app()->environment('local') ? false : true])
-            ->get($downloadUrl);
+        $exitCode = Artisan::call('app:update', [
+            '--version' => $latest->version,
+        ]);
 
-        if (! $response->successful()) {
+        $output = trim(Artisan::output());
+
+        if ($exitCode !== 0) {
             return response()->json([
-                'message' => 'Failed to download the release.',
+                'message' => 'Update failed. Please check the logs for details.',
+                'output' => $output,
             ], 500);
         }
 
-        File::put($zipPath, $response->body());
-
-        // Extract and apply update
-        try {
-            $extractPath = storage_path('app/update-'.$targetVersion);
-            File::ensureDirectoryExists($extractPath);
-
-            $zip = new \ZipArchive();
-            if ($zip->open($zipPath) !== true) {
-                throw new \Exception('Failed to open zip file');
-            }
-
-            $zip->extractTo($extractPath);
-            $zip->close();
-
-            // Copy files to project root (excluding certain directories)
-            $this->copyUpdateFiles($extractPath, base_path());
-
-            // Run migrations
-            Artisan::call('migrate', ['--force' => true]);
-
-            // Clear caches
-            Artisan::call('optimize:clear');
-            Artisan::call('optimize');
-
-            // Update marker
-            File::put(storage_path('app/app-update.marker'), $targetVersion);
-
-            // Cleanup
-            File::delete($zipPath);
-            File::deleteDirectory($extractPath);
-
-            return response()->json([
-                'message' => 'Update applied successfully.',
-                'version' => $targetVersion,
-            ]);
-        } catch (\Throwable $e) {
-            // Cleanup on error
-            if (File::exists($zipPath)) {
-                File::delete($zipPath);
-            }
-            if (isset($extractPath) && File::exists($extractPath)) {
-                File::deleteDirectory($extractPath);
-            }
-
-            return response()->json([
-                'message' => 'Failed to apply update: '.$e->getMessage(),
-            ], 500);
+        $appliedVersion = $latest->version;
+        $tenant = null;
+        if (auth()->check() && auth()->user()->tenant_id) {
+            $tenant = auth()->user()->tenant;
         }
-    }
-
-    private function copyUpdateFiles(string $source, string $destination): void
-    {
-        $excludeDirs = ['node_modules', 'vendor', '.git', 'storage', 'bootstrap/cache'];
-        $excludeFiles = ['.env', '.gitignore'];
-
-        $files = File::allFiles($source);
-
-        foreach ($files as $file) {
-            $relativePath = $file->getRelativePath();
-
-            // Skip excluded directories
-            foreach ($excludeDirs as $exclude) {
-                if (str_starts_with($relativePath, $exclude)) {
-                    continue 2;
-                }
-            }
-
-            // Skip excluded files
-            if (in_array($file->getFilename(), $excludeFiles)) {
-                continue;
-            }
-
-            $targetPath = $destination.'/'.$relativePath.'/'.$file->getFilename();
-            File::ensureDirectoryExists(dirname($targetPath));
-            File::copy($file->getPathname(), $targetPath);
+        if (! $tenant && app()->bound('current_tenant')) {
+            $tenant = app('current_tenant');
         }
+        if ($tenant instanceof Tenant) {
+            $tenant->update(['app_version' => 'v'.$appliedVersion]);
+        }
+
+        Cache::forget('app_current_version');
+
+        return response()->json([
+            'message' => 'Update applied successfully.',
+            'version' => $appliedVersion,
+            'output' => $output,
+        ]);
     }
 }

@@ -1,0 +1,92 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    html {
+        overflow-x: clip;
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+        background-color: #f1f5f9;
+    }
+
+    body {
+        @apply min-w-[320px] overflow-x-clip bg-slate-100 text-slate-900;
+        overscroll-behavior-x: none;
+        overscroll-behavior-y: none;
+        position: relative;
+    }
+}
+
+@layer components {
+    .app-shell {
+        @apply mx-auto w-full max-w-7xl overflow-x-hidden px-4 py-6 sm:px-6 sm:py-8 lg:px-8;
+    }
+
+    .app-header-shell {
+        @apply flex w-full flex-wrap items-center justify-between gap-4 px-6 py-4;
+    }
+
+    .panel {
+        @apply rounded-[1.75rem] border border-slate-200/90 bg-white shadow-sm;
+    }
+
+    .panel-soft {
+        @apply rounded-[1.5rem] border border-slate-200/80 bg-slate-50/80 shadow-sm;
+    }
+
+    .panel-section {
+        @apply p-5 sm:p-6 lg:p-7;
+    }
+
+    .stats-grid {
+        @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+    }
+
+    .stat-card {
+        @apply rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6;
+    }
+
+    .info-kicker {
+        @apply text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400;
+    }
+
+    .auth-stage {
+        @apply min-h-[calc(100vh-5rem)] px-4 py-8 sm:px-6 sm:py-12;
+    }
+
+    .split-page {
+        @apply grid gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-start;
+    }
+
+    .split-page > * {
+        min-width: 0;
+    }
+
+    .scroll-region {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll-region-x {
+        overscroll-behavior-x: contain;
+        overscroll-behavior-y: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure important action buttons in tables are clickable above overlays */
+    .central-access-control-button,
+    button[aria-label="Open access control for tenant"] {
+        position: relative !important;
+        z-index: 20002 !important;
+        pointer-events: auto !important;
+    }
+}

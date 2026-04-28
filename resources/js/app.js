@@ -12,9 +12,6 @@ const initializeAppUi = () => {
     displaySessionToasts();
     setupFocusHandling();
 
-    // Check for app updates
-    checkForAppUpdates();
-
     // Setup real-time queue status updates for public track page
     if (window.queueData && window.Echo) {
         const { tenantId, queueEntryId, referenceCode } = window.queueData;
@@ -287,93 +284,57 @@ function showConfirm(message, options = {}) {
 
 window.showToast = showToast;
 window.showConfirm = showConfirm;
-
-// Check for app updates from GitHub
-function checkForAppUpdates() {
-    fetch('/api/tenant-update/status')
-        .then(response => response.json())
-        .then(data => {
-            if (data.update_available) {
-                const notification = document.createElement('div');
-                notification.className = 'fixed top-20 right-4 z-50 max-w-sm bg-amber-50 border border-amber-200 rounded-lg p-4 shadow-lg';
-                notification.innerHTML = `
-                    <div class="flex items-start gap-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-amber-800">Version outdated</p>
-                            <p class="mt-1 text-xs text-amber-700">
-                                Current: ${data.current_version} | Latest: ${data.latest_version}
-                            </p>
-                            <button id="apply-update-btn" class="mt-2 text-sm font-medium text-amber-800 hover:text-amber-900 underline">
-                                Click here to download and apply the latest release
-                            </button>
-                        </div>
-                        <button id="dismiss-update-btn" class="flex-shrink-0 text-amber-500 hover:text-amber-700">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                `;
-
-                document.body.appendChild(notification);
-
-                // Handle dismiss
-                document.getElementById('dismiss-update-btn').addEventListener('click', () => {
-                    notification.remove();
-                });
-
-                // Handle apply update
-                document.getElementById('apply-update-btn').addEventListener('click', () => {
-                    if (confirm('This will download and apply the latest update. The system may be temporarily unavailable. Continue?')) {
-                        notification.innerHTML = `
-                            <div class="flex items-center gap-3">
-                                <div class="animate-spin h-5 w-5 border-2 border-amber-600 border-t-transparent rounded-full"></div>
-                                <p class="text-sm text-amber-800">Downloading and applying update...</p>
-                            </div>
-                        `;
-
-                        fetch('/api/tenant-update/apply', {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                                'Content-Type': 'application/json',
-                            },
-                        })
-                        .then(response => response.json())
-                        .then(result => {
-                            notification.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <svg class="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <p class="text-sm text-emerald-800">Update applied successfully! Reloading...</p>
-                                </div>
-                            `;
-                            setTimeout(() => location.reload(), 2000);
-                        })
-                        .catch(error => {
-                            notification.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <svg class="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                    <p class="text-sm text-red-800">Failed to apply update: ${error.message}</p>
-                                </div>
-                            `;
-                        });
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Failed to check for updates:', error);
-        });
-}
 window.realtimeRefresh = realtimeRefresh;
 window.setupQueueRefresh = setupQueueRefresh;
 window.setupListRefresh = setupListRefresh;
+
+// Apply system update
+window.applyUpdate = async function(version) {
+    const confirmed = await showConfirm(
+        `This will download and install version ${version}. The system may be temporarily unavailable during the update. Continue?`,
+        { title: 'Apply System Update', confirmLabel: 'Apply Update', cancelLabel: 'Cancel' }
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    const btn = document.getElementById('apply-update-btn');
+    const btnText = document.getElementById('apply-update-text');
+
+    if (btn && btnText) {
+        btn.disabled = true;
+        btnText.textContent = 'Downloading...';
+    }
+
+    try {
+        const response = await fetch('/api/tenant-update/apply', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+            },
+            body: JSON.stringify({ version }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast.success(`Update to version ${data.version} applied successfully. The page will reload.`);
+            setTimeout(() => window.location.reload(), 2000);
+        } else {
+            showToast.error(data.message || 'Update failed. Please try again.');
+            if (btn && btnText) {
+                btn.disabled = false;
+                btnText.textContent = 'Apply Update';
+            }
+        }
+    } catch (error) {
+        console.error('Update error:', error);
+        showToast.error('Update failed. Please check your connection and try again.');
+        if (btn && btnText) {
+            btn.disabled = false;
+            btnText.textContent = 'Apply Update';
+        }
+    }
+};
