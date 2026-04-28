@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\AppVersion;
 use App\Models\Office;
 use App\Models\QueueEntry;
@@ -100,6 +101,11 @@ class HomeController extends Controller
         $latestVersion = AppVersion::latest()->first();
         $updateAvailable = $latestVersion && $latestVersion->isNewerThan($currentVersion) && $latestVersion->version !== AppVersion::normalizeVersion($currentVersion);
 
+        // Get active announcements
+        $announcements = Announcement::where('is_active', true)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
         return view('tenant.dashboard', [
             'tenant' => $tenant,
             'user' => $user,
@@ -108,6 +114,7 @@ class HomeController extends Controller
             'updateAvailable' => $updateAvailable,
             'latestVersion' => $latestVersion,
             'currentVersion' => $currentVersion,
+            'announcements' => $announcements,
         ]);
     }
 }

@@ -68,6 +68,36 @@
             </div>
             @endif
 
+            @if($announcements->count() > 0)
+            <div class="space-y-3 lg:max-w-md">
+                @foreach($announcements as $announcement)
+                <div class="rounded-xl border @if($announcement->type === 'success') border-emerald-200 bg-emerald-50 @elseif($announcement->type === 'warning') border-amber-200 bg-amber-50 @else border-slate-200 bg-slate-50 @endif p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            @if($announcement->type === 'success')
+                            <svg class="h-5 w-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            @elseif($announcement->type === 'warning')
+                            <svg class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            @else
+                            <svg class="h-5 w-5 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            @endif
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold @if($announcement->type === 'success') text-emerald-900 @elseif($announcement->type === 'warning') text-amber-900 @else text-slate-900 @endif">{{ $announcement->title }}</p>
+                            <p class="mt-1 text-sm @if($announcement->type === 'success') text-emerald-800 @elseif($announcement->type === 'warning') text-amber-800 @else text-slate-700 @endif">{{ $announcement->content }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @endif
+
             <div class="flex flex-wrap gap-2">
         @if($user->isAdmin())
             <a href="{{ route('admin.dashboard') }}" class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Open admin dashboard</a>

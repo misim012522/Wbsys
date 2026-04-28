@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApiController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailVerificationController;
 use App\Http\Controllers\GitHubWebhookController;
@@ -89,6 +90,12 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     });
     Route::post('/support/threads', [SupportChatController::class, 'tenantStoreThread'])->name('support.tenant.threads.store');
     Route::post('/support/threads/{thread}/messages', [SupportChatController::class, 'tenantStoreMessage'])->name('support.tenant.messages.store');
+
+    // Demo announcement feature for update testing
+    Route::get('/api/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::post('/api/announcements', [AnnouncementController::class, 'store'])->name('announcements.store')->middleware('can:admin');
+    Route::put('/api/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update')->middleware('can:admin');
+    Route::delete('/api/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy')->middleware('can:admin');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
