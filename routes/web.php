@@ -10,6 +10,7 @@ use App\Http\Controllers\OtaUpdateController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\TenantUpdateController;
+use App\Http\Controllers\OtaTestController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TenantAccountSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -30,7 +31,7 @@ Route::get('/example-toasts', function () {
 // Support & OTA updates
 Route::get('/api/ota/check', [OtaUpdateController::class, 'check'])->name('ota.check');
 Route::get('/api/tenant-update/status', [TenantUpdateController::class, 'status'])->name('tenant.update.status');
-Route::post('/api/tenant-update/apply', [TenantUpdateController::class, 'apply'])->middleware('auth')->name('tenant.update.apply');
+Route::post('/api/tenant-update/apply', [TenantUpdateController::class, 'apply'])->middleware(['auth', 'tenant.context'])->name('tenant.update.apply');
 
 // GitHub webhook for automatic release sync
 Route::post('/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook');
@@ -105,6 +106,13 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     Route::post('/api/system-settings', [SystemSettingController::class, 'store'])->name('system-settings.store')->middleware('can:admin');
     Route::put('/api/system-settings/{setting}', [SystemSettingController::class, 'update'])->name('system-settings.update')->middleware('can:admin');
     Route::delete('/api/system-settings/{setting}', [SystemSettingController::class, 'destroy'])->name('system-settings.destroy')->middleware('can:admin');
+
+    // ── OTA Update Demo ──────────────────────────────────────────────────────
+    // Used to verify that tenant OTA updates run migrations in isolation.
+    // Visit /ota-demo BEFORE update (table missing) and AFTER (table + notes).
+    Route::get('/ota-demo', [OtaTestController::class, 'index'])->name('ota.demo.index');
+    Route::post('/ota-demo', [OtaTestController::class, 'store'])->name('ota.demo.store');
+    Route::delete('/ota-demo/{id}', [OtaTestController::class, 'destroy'])->name('ota.demo.destroy');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
