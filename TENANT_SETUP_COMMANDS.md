@@ -6,6 +6,9 @@ This file contains all the commands needed to fully configure the system for ten
 
 Run these commands after deploying or when setting up a new environment:
 
+
+\
+
 ```bash
 # Clear all caches
 php artisan cache:clear

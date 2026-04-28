@@ -57,12 +57,6 @@
 
 <div class="central-layout">
     <aside class="central-sidebar">
-        <div class="mb-6">
-            <span class="inline-flex rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">
-                Central Admin
-            </span>
-        </div>
-
         <nav>
             <a href="{{ route('central.dashboard') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('central.dashboard') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                 Dashboard

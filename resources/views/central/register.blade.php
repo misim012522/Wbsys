@@ -128,8 +128,6 @@
                                     <div>
                                         <p class="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Plan</p>
                                         <p class="mt-2 text-3xl font-semibold text-slate-900">{{ $plan->name }}</p>
-                                        @php $planCount = $planCounts[$plan->slug] ?? 0; @endphp
-                                        <div class="text-sm text-slate-500">Tenants: {{ $planCount }}</div>
                                     </div>
                                     <span class="mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full {{ $theme['soft'] }}">
                                         <span class="h-2.5 w-2.5 rounded-full {{ $theme['dot'] }}"></span>
@@ -238,19 +236,28 @@
                     </div>
 
                     <div id="selected-plan-summary" class="register-reveal-soft rounded-[1.5rem] border border-slate-200 bg-slate-50 px-5 py-5 shadow-sm" style="--reveal-delay: 380ms;">
+                        @php
+                            $selectedPlan = $plans->firstWhere('id', old('plan_id')) ?? $plans->firstWhere('slug', 'pro');
+                            $selectedSummary = match ($selectedPlan->slug ?? 'pro') {
+                                'basic' => 'Essential queueing tools for smaller offices and straightforward daily operations.',
+                                'ultimate' => 'The fullest setup for high-volume offices that need broader tenant capabilities.',
+                                default => 'Balanced features and pricing for growing offices that need room to scale.',
+                            };
+                            $selectedFeatures = collect($selectedPlan->features ?? [])->take(4)->map(fn ($feature) => str($feature)->replace('_', ' ')->title())->implode(', ');
+                        @endphp
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">Chosen Plan</p>
-                                <h3 id="selected-plan-name" class="mt-2 text-2xl font-bold text-slate-900">Pro</h3>
+                                <h3 id="selected-plan-name" class="mt-2 text-2xl font-bold text-slate-900">{{ $selectedPlan->name ?? 'Pro' }}</h3>
                             </div>
                             <div class="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700">
-                                <span id="selected-plan-price">$20</span> / month
+                                <span id="selected-plan-price">${{ number_format((float) ($selectedPlan->price_monthly ?? 20), 0) }}</span> / month
                             </div>
                         </div>
                         <p id="selected-plan-summary-text" class="mt-4 text-sm leading-6 text-slate-600">
-                            Balanced features and pricing for growing offices that need room to scale.
+                            {{ $selectedSummary }}
                         </p>
-                        <p id="selected-plan-features" class="mt-4 text-sm text-slate-700">Queue, Email Notifications</p>
+                        <p id="selected-plan-features" class="mt-4 text-sm text-slate-700">{{ $selectedFeatures }}</p>
                     </div>
 
                     <div class="register-reveal-soft rounded-[1.5rem] border border-slate-200 bg-slate-900 px-5 py-5 text-white shadow-sm" style="--reveal-delay: 460ms;">

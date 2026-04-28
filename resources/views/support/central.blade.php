@@ -16,7 +16,6 @@
         <span id="central-support-unread-badge" class="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold text-sky-700 {{ $unreadCount > 0 ? '' : 'hidden' }}">
             {{ $unreadCount }} unread
         </span>
-        <a href="{{ route('central.dashboard') }}" class="rounded-full border border-slate-300 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50">Back to central dashboard</a>
     </div>
 </div>
 

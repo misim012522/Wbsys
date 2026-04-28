@@ -32,29 +32,31 @@
 </form>
 
 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-    <ul class="divide-y divide-slate-100">
-        @forelse($activities as $log)
-            <li class="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div class="min-w-0">
-                    <p class="text-slate-800">{{ $log->description }}</p>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                        <span class="inline-flex px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">{{ str_replace('_', ' ', $log->action) }}</span>
-                        @if($log->user)
-                            · {{ $log->user->name }}
-                        @else
-                            · Visitor
-                        @endif
-                        · {{ $log->created_at->diffForHumans() }}
-                        @if($log->created_at->format('Y-m-d') !== now()->format('Y-m-d'))
-                            ({{ $log->created_at->format('M j, Y g:i A') }})
-                        @endif
-                    </p>
-                </div>
-            </li>
-        @empty
-            <li class="px-4 py-12 text-slate-500 text-center">No activity yet.</li>
-        @endforelse
-    </ul>
+    <div class="max-h-[600px] overflow-y-auto">
+        <ul class="divide-y divide-slate-100">
+            @forelse($activities as $log)
+                <li class="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-slate-800">{{ $log->description }}</p>
+                        <p class="text-xs text-slate-500 mt-0.5">
+                            <span class="inline-flex px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-medium">{{ str_replace('_', ' ', $log->action) }}</span>
+                            @if($log->user)
+                                · {{ $log->user->name }}
+                            @else
+                                · Visitor
+                            @endif
+                            · {{ $log->created_at->diffForHumans() }}
+                            @if($log->created_at->format('Y-m-d') !== now()->format('Y-m-d'))
+                                ({{ $log->created_at->format('M j, Y g:i A') }})
+                            @endif
+                        </p>
+                    </div>
+                </li>
+            @empty
+                <li class="px-4 py-12 text-slate-500 text-center">No activity yet.</li>
+            @endforelse
+        </ul>
+    </div>
 </div>
 
 @if($activities->hasPages())
