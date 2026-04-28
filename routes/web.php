@@ -8,6 +8,7 @@ use App\Http\Controllers\GitHubWebhookController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OtaUpdateController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\TenantUpdateController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TenantAccountSettingsController;
@@ -97,6 +98,13 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     Route::post('/api/announcements', [AnnouncementController::class, 'store'])->name('announcements.store')->middleware('can:admin');
     Route::put('/api/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update')->middleware('can:admin');
     Route::delete('/api/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy')->middleware('can:admin');
+
+    // Demo system settings feature for update testing
+    Route::get('/api/system-settings', [SystemSettingController::class, 'index'])->name('system-settings.index');
+    Route::get('/api/system-settings/{key}', [SystemSettingController::class, 'show'])->name('system-settings.show');
+    Route::post('/api/system-settings', [SystemSettingController::class, 'store'])->name('system-settings.store')->middleware('can:admin');
+    Route::put('/api/system-settings/{setting}', [SystemSettingController::class, 'update'])->name('system-settings.update')->middleware('can:admin');
+    Route::delete('/api/system-settings/{setting}', [SystemSettingController::class, 'destroy'])->name('system-settings.destroy')->middleware('can:admin');
 
     require __DIR__.'/admin.php';
     require __DIR__.'/office.php';
