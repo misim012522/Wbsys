@@ -80,6 +80,25 @@
             <a href="{{ route('office.notifications') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('office.notifications') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-white/50/50 text-slate-700 hover:bg-white/50/30' }}">
                 Notifications
             </a>
+
+            @if(Route::has('tenant.notes.index'))
+                <a href="{{ route('tenant.notes.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('tenant.notes.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' }}">
+                    <span class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                        Demo: Quick Notes
+                    </span>
+                </a>
+            @endif
+
+            @if(Route::has('tenant.feedback.index'))
+                <a href="{{ route('tenant.feedback.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('tenant.feedback.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100' }}">
+                    <span class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                        Demo: Feedback
+                    </span>
+                </a>
+            @endif
+
             <form method="POST" action="{{ route('logout') }}" class="w-full" id="office-logout-form">
                 @csrf
                 <button

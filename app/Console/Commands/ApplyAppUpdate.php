@@ -45,26 +45,26 @@ class ApplyAppUpdate extends Command
         }
 
         $this->components->info('Running application migrations...');
+        
+        // Run migrations on the central/default database
         Artisan::call('migrate', [
             '--force' => true,
         ]);
+        $this->line(Artisan::output());
 
-        $migrationOutput = Artisan::output();
-        if (trim($migrationOutput) !== '') {
-            $this->line($migrationOutput);
+        // If we are in a tenant context, run migrations on the tenant connection too
+        if (app()->bound('current_tenant')) {
+            $this->components->info('Running tenant-specific migrations...');
+            Artisan::call('migrate', [
+                '--database' => 'tenant',
+                '--path' => 'database/migrations/tenants/_template',
+                '--realpath' => true,
+                '--force' => true,
+            ]);
+            $this->line(Artisan::output());
         }
 
         if (! $this->option('no-seed')) {
-            $this->components->info('Refreshing seed data...');
-            Artisan::call('db:seed', [
-                '--force' => true,
-            ]);
-
-            $seedOutput = Artisan::output();
-            if (trim($seedOutput) !== '') {
-                $this->line($seedOutput);
-            }
-        }
 
         Cache::flush();
         File::ensureDirectoryExists(dirname($markerPath));

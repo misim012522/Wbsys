@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('central')->table('tenants', function (Blueprint $table) {
-            $table->timestamp('email_notification_sent_at')->nullable()->after('approved_at');
-        });
+        if (!Schema::connection('central')->hasColumn('tenants', 'email_notification_sent_at')) {
+            Schema::connection('central')->table('tenants', function (Blueprint $table) {
+                $table->timestamp('email_notification_sent_at')->nullable()->after('approved_at');
+            });
+        }
     }
 
     /**
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('central')->table('tenants', function (Blueprint $table) {
-            $table->dropColumn('email_notification_sent_at');
-        });
+        if (Schema::connection('central')->hasColumn('tenants', 'email_notification_sent_at')) {
+            Schema::connection('central')->table('tenants', function (Blueprint $table) {
+                $table->dropColumn('email_notification_sent_at');
+            });
+        }
     }
 };

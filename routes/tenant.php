@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TenantAppController;
 use App\Http\Controllers\DemoNoteController;
+use App\Http\Controllers\DemoFeedbackController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,5 +37,8 @@ Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(f
     Route::middleware('auth')->group(function () {
         Route::get('/notes', [DemoNoteController::class, 'index'])->name('notes.index');
         Route::post('/notes', [DemoNoteController::class, 'store'])->name('notes.store');
+        
+        Route::get('/feedback', [DemoFeedbackController::class, 'index'])->name('feedback.index');
+        Route::post('/feedback', [DemoFeedbackController::class, 'store'])->name('feedback.store');
     });
 });
