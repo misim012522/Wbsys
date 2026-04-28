@@ -112,6 +112,7 @@ Route::middleware(['tenant.required', \App\Http\Middleware\DebugAuth::class, 'au
     // Visit /ota-demo BEFORE update (table missing) and AFTER (table + notes).
     Route::get('/ota-demo', [OtaTestController::class, 'index'])->name('ota.demo.index');
     Route::post('/ota-demo', [OtaTestController::class, 'store'])->name('ota.demo.store');
+    Route::post('/ota-demo/announcement', [OtaTestController::class, 'storeAnnouncement'])->name('ota.demo.announcement.store');
     Route::delete('/ota-demo/{id}', [OtaTestController::class, 'destroy'])->name('ota.demo.destroy');
 
     require __DIR__.'/admin.php';

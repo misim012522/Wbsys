@@ -1,164 +1,135 @@
 @extends('layouts.app')
 
-@section('title', 'OTA Update Demo — ' . ($tenant->name ?? 'Tenant'))
+@section('title', 'OTA Update Demo — Batch 2 Verification')
 
 @section('content')
 @php
     $tenantName = $tenant->name ?? 'This Tenant';
-    $tenantSlug = $tenant->slug ?? 'unknown';
     $tenantDb   = $tenant->database_name ?? config('database.connections.tenant.database', '—');
 @endphp
 
-<div class="max-w-3xl mx-auto py-8 px-4 space-y-6">
+<div class="max-w-4xl mx-auto py-8 px-4 space-y-8">
 
     {{-- ── Header ───────────────────────────────────────────────────────── --}}
-    <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
-            <svg class="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-100">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">OTA Update Demo <span class="text-indigo-600">Batch 2</span></h1>
+                <p class="text-sm text-slate-500">Verifying multi-feature isolation for <strong>{{ $tenantName }}</strong></p>
+            </div>
         </div>
-        <div>
-            <h1 class="text-xl font-bold text-slate-900">OTA Update Demo</h1>
-            <p class="text-sm text-slate-500">Testing migration isolation for <span class="font-semibold text-indigo-600">{{ $tenantName }}</span></p>
+        <div class="text-right">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Database</p>
+            <p class="font-mono text-sm text-slate-700 bg-slate-100 px-2 py-1 rounded">{{ $tenantDb }}</p>
         </div>
     </div>
 
     {{-- ── Flash messages ───────────────────────────────────────────────── --}}
     @if(session('success'))
-        <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
-            ✅ {{ session('success') }}
-        </div>
-    @endif
-    @if(session('error'))
-        <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
-            ❌ {{ session('error') }}
+        <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2">
+            <svg class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            {{ session('success') }}
         </div>
     @endif
 
-    {{-- ── Tenant Info Card ─────────────────────────────────────────────── --}}
-    <div class="panel p-5 space-y-2">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tenant Info</p>
-        <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-                <p class="text-slate-500">Name</p>
-                <p class="font-semibold text-slate-800">{{ $tenantName }}</p>
-            </div>
-            <div>
-                <p class="text-slate-500">Slug</p>
-                <p class="font-mono text-slate-800">{{ $tenantSlug }}</p>
-            </div>
-            <div class="col-span-2">
-                <p class="text-slate-500">Database</p>
-                <p class="font-mono text-slate-800">{{ $tenantDb }}</p>
-            </div>
-        </div>
-    </div>
+    <div class="grid md:grid-cols-2 gap-6">
 
-    {{-- ── Migration Status ─────────────────────────────────────────────── --}}
-    <div class="panel p-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Migration Status</p>
-        @if($tableExists)
-            <div class="flex items-center gap-3 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
-                <span class="text-2xl">✅</span>
-                <div>
-                    <p class="font-semibold text-emerald-800">Table <code class="font-mono">ota_test_notes</code> exists!</p>
-                    <p class="text-sm text-emerald-600 mt-0.5">OTA migration ran successfully on <strong>{{ $tenantDb }}</strong> only.</p>
+        {{-- ── Feature 1: Notes ─────────────────────────────────────────── --}}
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-bold text-slate-800">Feature 1: Notes</h2>
+                @if($notesTableExists)
+                    <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase">Online</span>
+                @else
+                    <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase">Missing Update</span>
+                @endif
+            </div>
+
+            @if($notesTableExists)
+                <div class="panel p-4 bg-white/60">
+                    <form method="POST" action="{{ route('ota.demo.store') }}" class="space-y-3">
+                        @csrf
+                        <input type="text" name="title" required maxlength="120" class="w-full rounded-lg border-slate-200 text-sm focus:ring-indigo-500" placeholder="Note Title...">
+                        <button type="submit" class="w-full bg-slate-800 text-white rounded-lg py-2 text-xs font-bold hover:bg-slate-900 transition-colors">Add Note</button>
+                    </form>
+                    <div class="mt-4 space-y-2 max-h-48 overflow-y-auto pr-1">
+                        @forelse($notes as $note)
+                            <div class="text-xs p-2 bg-slate-50 rounded border border-slate-100 flex justify-between items-center">
+                                <span class="truncate pr-2">{{ $note->title }}</span>
+                                <form method="POST" action="{{ route('ota.demo.destroy', $note->id) }}"> @csrf @method('DELETE') <button class="text-red-400">×</button> </form>
+                            </div>
+                        @empty
+                            <p class="text-[11px] text-slate-400 italic text-center py-4">No notes in {{ $tenantDb }}</p>
+                        @endforelse
+                    </div>
                 </div>
-            </div>
-        @else
-            <div class="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-                <span class="text-2xl">⏳</span>
-                <div>
-                    <p class="font-semibold text-amber-800">Table <code class="font-mono">ota_test_notes</code> does NOT exist yet.</p>
-                    <p class="text-sm text-amber-600 mt-0.5">
-                        Go to your <a href="{{ route('admin.dashboard') }}" class="underline font-medium">Admin Dashboard</a>
-                        and click <strong>"Apply Update"</strong> to run the OTA migration on this tenant's database.
-                    </p>
+            @else
+                <div class="panel p-8 text-center bg-slate-50 border-dashed border-2 border-slate-200">
+                    <p class="text-xs text-slate-500">Run the update to enable Notes.</p>
                 </div>
-            </div>
-        @endif
-    </div>
-
-    {{-- ── Add Note Form (only when table exists) ──────────────────────── --}}
-    @if($tableExists)
-    <div class="panel p-5">
-        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Add a Test Note</p>
-        <form method="POST" action="{{ route('ota.demo.store') }}" class="space-y-3">
-            @csrf
-            <div>
-                <label for="ota-title" class="block text-sm font-medium text-slate-700 mb-1">Title</label>
-                <input id="ota-title" type="text" name="title" required maxlength="120"
-                       class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-                       placeholder="e.g. Hello from Tenant {{ $tenantSlug }}">
-                @error('title')
-                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-            </div>
-            <div>
-                <label for="ota-body" class="block text-sm font-medium text-slate-700 mb-1">Body <span class="text-slate-400">(optional)</span></label>
-                <textarea id="ota-body" name="body" rows="2" maxlength="500"
-                          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none resize-none"
-                          placeholder="A note saved only on this tenant's database…"></textarea>
-            </div>
-            <button type="submit" id="ota-save-btn"
-                    class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Save Note to {{ $tenantDb }}
-            </button>
-        </form>
-    </div>
-
-    {{-- ── Notes List ───────────────────────────────────────────────────── --}}
-    <div class="panel p-5">
-        <div class="flex items-center justify-between mb-3">
-            <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Saved Notes ({{ $notes->count() }}) — in <span class="font-mono text-indigo-600">{{ $tenantDb }}</span>
-            </p>
+            @endif
         </div>
 
-        @forelse($notes as $note)
-            <div class="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 mb-2">
-                <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-slate-800 truncate">{{ $note->title }}</p>
-                    @if($note->body)
-                        <p class="text-sm text-slate-600 mt-0.5">{{ $note->body }}</p>
-                    @endif
-                    <p class="text-xs text-slate-400 mt-1">
-                        By {{ $note->created_by ?? 'Unknown' }} · {{ $note->created_at->diffForHumans() }}
-                    </p>
-                </div>
-                <form method="POST" action="{{ route('ota.demo.destroy', $note->id) }}"
-                      onsubmit="return confirm('Delete this note?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                            class="text-red-400 hover:text-red-600 transition-colors text-xs font-medium shrink-0 mt-1">
-                        Delete
-                    </button>
-                </form>
+        {{-- ── Feature 2: Announcements ────────────────────────────────── --}}
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="font-bold text-slate-800">Feature 2: Announcements</h2>
+                @if($annTableExists)
+                    <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold uppercase">Online</span>
+                @else
+                    <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase">Missing Update</span>
+                @endif
             </div>
-        @empty
-            <p class="text-sm text-slate-400 italic">No notes yet. Add one above to verify data isolation.</p>
-        @endforelse
-    </div>
-    @endif
 
-    {{-- ── How to Test Instructions ─────────────────────────────────────── --}}
-    <div class="rounded-xl border border-blue-200 bg-blue-50 p-5 text-sm text-blue-800 space-y-2">
-        <p class="font-semibold text-blue-900">🧪 How to test tenant OTA isolation</p>
-        <ol class="list-decimal list-inside space-y-1.5 text-blue-800">
-            <li>Open this page — you should see <strong>"Table does NOT exist"</strong>.</li>
-            <li>Go to <strong>Admin Dashboard → Apply Update</strong> for THIS tenant.</li>
-            <li>Refresh this page — table should now exist, and the note form appears.</li>
-            <li>Add a note. It is saved only in <code class="font-mono">{{ $tenantDb }}</code>.</li>
-            <li>Log in as a <strong>different tenant</strong> and visit their <code>/ota-demo</code>.</li>
-            <li>Before they apply their update, they still see <strong>"Table does NOT exist"</strong>.</li>
-            <li>After they apply, their table is created in their own database — their notes are separate.</li>
-        </ol>
+            @if($annTableExists)
+                <div class="panel p-4 bg-white/60">
+                    <form method="POST" action="{{ route('ota.demo.announcement.store') }}" class="space-y-3">
+                        @csrf
+                        <input type="text" name="content" required maxlength="255" class="w-full rounded-lg border-slate-200 text-sm focus:ring-indigo-500" placeholder="Announcement text...">
+                        <select name="priority" class="w-full rounded-lg border-slate-200 text-sm">
+                            <option value="low">Low Priority</option>
+                            <option value="medium" selected>Medium Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                        <button type="submit" class="w-full bg-indigo-600 text-white rounded-lg py-2 text-xs font-bold hover:bg-indigo-700 transition-colors">Post Announcement</button>
+                    </form>
+                    <div class="mt-4 space-y-2 max-h-48 overflow-y-auto pr-1">
+                        @forelse($announcements as $ann)
+                            <div class="text-xs p-2 rounded border flex justify-between items-center {{ $ann->priority === 'high' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-indigo-50 border-indigo-100 text-indigo-700' }}">
+                                <span class="truncate pr-2">{{ $ann->content }}</span>
+                                <span class="text-[9px] uppercase font-bold opacity-60">{{ $ann->priority }}</span>
+                            </div>
+                        @empty
+                            <p class="text-[11px] text-slate-400 italic text-center py-4">No announcements in {{ $tenantDb }}</p>
+                        @endforelse
+                    </div>
+                </div>
+            @else
+                <div class="panel p-8 text-center bg-slate-50 border-dashed border-2 border-slate-200">
+                    <p class="text-xs text-slate-500">Run the update to enable Announcements.</p>
+                </div>
+            @endif
+        </div>
+
+    </div>
+
+    {{-- ── Final Test Instructions ────────────────────────────────────── --}}
+    <div class="rounded-2xl bg-slate-900 p-6 text-white shadow-xl shadow-slate-200">
+        <h3 class="font-bold flex items-center gap-2 mb-4">
+            <svg class="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 8.001 8.001 0 0118 0z"/></svg>
+            Final OTA Multi-Feature Test
+        </h3>
+        <ul class="text-xs space-y-3 text-slate-300 list-disc list-inside px-2">
+            <li>Push this code. If you see <span class="text-amber-400 font-bold">"Missing Update"</span> above, it means your database is still on the old version.</li>
+            <li>Click <strong>"Apply Update"</strong> in your Dashboard.</li>
+            <li>Both features should instantly turn <span class="text-emerald-400 font-bold">"Online"</span>.</li>
+            <li>This confirms that multiple new tables are created and managed separately within each tenant's database.</li>
+        </ul>
     </div>
 
 </div>

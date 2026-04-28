@@ -81,7 +81,7 @@ class ApplyAppUpdate extends Command
                 }
             }
 
-            Artisan::call('migrate', [
+            $exitCode = Artisan::call('migrate', [
                 '--database' => 'tenant',
                 '--path'     => $tenantPath,
                 '--realpath' => true,
@@ -90,6 +90,12 @@ class ApplyAppUpdate extends Command
             $output = Artisan::output();
             Log::info("[Update] Tenant migration output: " . $output);
             $this->line($output);
+
+            if ($exitCode !== 0) {
+                Log::error("[Update] Tenant migration failed with exit code: {$exitCode}");
+                $this->components->error("Migration failed for tenant: {$tenant->slug}");
+                return self::FAILURE;
+            }
 
             // The seeder only seeds central reference data (plans, announcements,
             // system settings). It must NOT run in tenant context — doing so would
@@ -110,17 +116,29 @@ class ApplyAppUpdate extends Command
             // CENTRAL (non-tenant) CONTEXT: Run central migrations + seeder.
             // ---------------------------------------------------------------
             Log::info('[Update] Running central migrations...');
-            Artisan::call('migrate', [
+            $exitCode = Artisan::call('migrate', [
                 '--force' => true,
             ]);
             $this->line(Artisan::output());
 
+            if ($exitCode !== 0) {
+                Log::error("[Update] Central migration failed with exit code: {$exitCode}");
+                $this->components->error('Central migration failed.');
+                return self::FAILURE;
+            }
+
             if (! $this->option('no-seed')) {
                 $this->components->info('Refreshing central seed data...');
-                Artisan::call('db:seed', [
+                $seedExit = Artisan::call('db:seed', [
                     '--force' => true,
                 ]);
                 $this->line(Artisan::output());
+
+                if ($seedExit !== 0) {
+                    Log::error("[Update] Central seeding failed with exit code: {$seedExit}");
+                    $this->components->error('Central seeding failed.');
+                    return self::FAILURE;
+                }
             }
 
             // In central context, full cache flush is acceptable.
@@ -190,16 +208,13 @@ class ApplyAppUpdate extends Command
                 return false;
             }
 
-            // ── Detect the top-level prefix GitHub adds to every zip ──────────
-            // e.g. "Wbsys-main-1.0.2/" — every entry starts with it.
+            // ── Detect prefix ────────────────────────────────────────────────
             $topLevelPrefix = '';
             if ($zip->numFiles > 0) {
                 $firstName = $zip->getNameIndex(0);
-                // If the first entry is itself a directory (ends with /), treat it as the prefix.
                 if (str_ends_with($firstName, '/')) {
                     $topLevelPrefix = $firstName;
                 } else {
-                    // Derive prefix from the first segment of the path.
                     $segments = explode('/', $firstName);
                     if (count($segments) > 1) {
                         $topLevelPrefix = $segments[0] . '/';
@@ -207,47 +222,41 @@ class ApplyAppUpdate extends Command
                 }
             }
 
-            Log::info("[Update] Zip top-level prefix detected: '{$topLevelPrefix}'");
-            $this->components->info('Extracting files to project root...');
-
+            Log::info("[Update] Zip top-level prefix: '{$topLevelPrefix}'");
             $prefixLen = strlen($topLevelPrefix);
             $base      = rtrim(base_path(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
+            $protectedFiles = ['.env', 'storage/', '.git/', 'database/database.sqlite'];
+
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $name = $zip->getNameIndex($i);
-
-                // Strip the top-level prefix.
                 $relative = $prefixLen > 0 ? substr($name, $prefixLen) : $name;
 
-                // Skip the prefix directory entry itself and empty paths.
-                if ($relative === '' || $relative === false) {
-                    continue;
+                if ($relative === '' || $relative === false) continue;
+
+                // Protect configuration and data files from being overwritten
+                foreach ($protectedFiles as $protected) {
+                    if (str_starts_with($relative, $protected)) {
+                        Log::info("[Update] Skipping protected entry: {$relative}");
+                        continue 2;
+                    }
                 }
 
                 $destPath = $base . str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
-                // Directory entry — ensure it exists and move on.
                 if (str_ends_with($name, '/')) {
                     File::ensureDirectoryExists($destPath);
                     continue;
                 }
 
-                // File entry — ensure parent dir and write content.
                 File::ensureDirectoryExists(dirname($destPath));
                 $content = $zip->getFromIndex($i);
-
-                if ($content === false) {
-                    Log::warning("[Update] Could not read zip entry: {$name}");
-                    continue;
+                if ($content !== false) {
+                    File::put($destPath, $content);
                 }
-
-                File::put($destPath, $content);
             }
-
             $zip->close();
             File::delete($tempZip);
-
-            Log::info('[Update] Files extracted successfully to project root.');
             return true;
 
         } catch (\Exception $e) {
