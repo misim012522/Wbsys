@@ -90,7 +90,7 @@ class TenantUpdateController extends Controller
         }
 
         $exitCode = Artisan::call('app:update', [
-            '--version' => $latest->version,
+            '--app-version' => $latest->version,
             '--force' => true,
         ]);
 

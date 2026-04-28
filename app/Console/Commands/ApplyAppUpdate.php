@@ -14,7 +14,7 @@ use ZipArchive;
 class ApplyAppUpdate extends Command
 {
     protected $signature = 'app:update
-        {--version= : Expected version to apply}
+        {--app-version= : Expected version to apply}
         {--force : Apply even if the version marker is unchanged}
         {--no-seed : Skip database seeding after migrations}
         {--no-download : Skip downloading and extracting release files}';
@@ -23,7 +23,7 @@ class ApplyAppUpdate extends Command
 
     public function handle(): int
     {
-        $version = trim((string) $this->option('version'));
+        $version = trim((string) $this->option('app-version'));
         $markerPath = storage_path('app/app-update.marker');
         $currentMarker = $version !== '' ? $version : 'latest';
 
