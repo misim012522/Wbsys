@@ -99,6 +99,15 @@
                 </a>
             @endif
 
+            @if(Route::has('tenant.faqs.index'))
+                <a href="{{ route('tenant.faqs.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('tenant.faqs.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100' }}">
+                    <span class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                        Demo: FAQs
+                    </span>
+                </a>
+            @endif
+
             <form method="POST" action="{{ route('logout') }}" class="w-full" id="office-logout-form">
                 @csrf
                 <button

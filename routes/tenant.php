@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TenantAppController;
 use App\Http\Controllers\DemoNoteController;
 use App\Http\Controllers\DemoFeedbackController;
+use App\Http\Controllers\DemoFaqController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,5 +41,8 @@ Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(f
         
         Route::get('/feedback', [DemoFeedbackController::class, 'index'])->name('feedback.index');
         Route::post('/feedback', [DemoFeedbackController::class, 'store'])->name('feedback.store');
+        
+        Route::get('/faqs', [DemoFaqController::class, 'index'])->name('faqs.index');
+        Route::post('/faqs', [DemoFaqController::class, 'store'])->name('faqs.store');
     });
 });

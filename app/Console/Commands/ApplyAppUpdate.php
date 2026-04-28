@@ -54,7 +54,9 @@ class ApplyAppUpdate extends Command
 
         // If we are in a tenant context, run migrations on the tenant connection too
         if (app()->bound('current_tenant')) {
-            $this->components->info('Running tenant-specific migrations...');
+            $dbName = config('database.connections.tenant.database');
+            $this->components->info("Running tenant-specific migrations on database: {$dbName}...");
+            
             Artisan::call('migrate', [
                 '--database' => 'tenant',
                 '--path' => 'database/migrations/tenants/_template',
@@ -65,6 +67,12 @@ class ApplyAppUpdate extends Command
         }
 
         if (! $this->option('no-seed')) {
+            $this->components->info('Refreshing seed data...');
+            Artisan::call('db:seed', [
+                '--force' => true,
+            ]);
+            $this->line(Artisan::output());
+        }
 
         Cache::flush();
         File::ensureDirectoryExists(dirname($markerPath));
