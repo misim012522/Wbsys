@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TenantAppController;
+use App\Http\Controllers\DemoNoteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,4 +31,10 @@ Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(f
     Route::get('/track/{referenceCode}', function ($referenceCode) {
         return redirect()->route('queue.track', ['referenceCode' => $referenceCode]);
     })->name('track');
+
+    // Demo Routes
+    Route::middleware('auth')->group(function () {
+        Route::get('/notes', [DemoNoteController::class, 'index'])->name('notes.index');
+        Route::post('/notes', [DemoNoteController::class, 'store'])->name('notes.store');
+    });
 });
