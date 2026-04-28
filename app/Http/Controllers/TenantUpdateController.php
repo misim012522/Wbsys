@@ -15,6 +15,7 @@ class TenantUpdateController extends Controller
     public function status(Request $request): JsonResponse
     {
         $currentVersion = $request->input('version', null);
+        $installedVersion = null;
         $latest = AppVersion::latest()->first();
         $tenant = null;
         if (auth()->check() && auth()->user()->tenant_id) {
@@ -25,6 +26,7 @@ class TenantUpdateController extends Controller
         }
 
         if ($tenant instanceof Tenant) {
+            $installedVersion = AppVersion::normalizeVersion($tenant->app_version);
             if (! $currentVersion) {
                 $currentVersion = $tenant->app_version ?: config('app.version', '1.0.0');
             }
@@ -35,17 +37,21 @@ class TenantUpdateController extends Controller
         }
 
         $normalizedCurrentVersion = AppVersion::normalizeVersion($currentVersion) ?? $currentVersion;
+        $normalizedInstalledVersion = $installedVersion ?? $normalizedCurrentVersion;
+        $normalizedLatestVersion = $latest ? AppVersion::normalizeVersion($latest->version) ?? $latest->version : null;
 
-        if ($latest && $latest->download_url === null) {
-            // Keep the response stable even if the release exists without assets.
-        }
+        $updateAvailable = (bool) $latest
+            && $normalizedLatestVersion
+            && version_compare($normalizedLatestVersion, $normalizedInstalledVersion, '>');
 
         return response()->json([
-            'latest_version' => $latest?->version,
+            'latest_version' => $normalizedLatestVersion,
             'current_version' => $normalizedCurrentVersion,
-            'update_available' => (bool) $latest && $latest->isNewerThan($normalizedCurrentVersion),
+            'installed_version' => $normalizedInstalledVersion,
+            'update_available' => $updateAvailable,
             'download_url' => $latest?->download_url,
             'is_forced' => (bool) ($latest?->is_forced ?? false),
+            'release_notes' => $latest?->release_notes,
         ]);
     }
 

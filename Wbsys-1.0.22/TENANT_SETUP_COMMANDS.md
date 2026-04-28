@@ -123,7 +123,7 @@ For automatic GitHub release syncing:
 1. Go to your GitHub repository settings
 2. Navigate to Webhooks
 3. Add a new webhook:
-   - Payload URL: `https://your-domain.com/api/github/webhook`
+   - Payload URL: `https://your-domain.com/github/webhook` or `https://your-domain.com/api/github/webhook`
    - Content type: `application/json`
    - Secret: Use your `GITHUB_WEBHOOK_SECRET` value
    - Events: Select "Releases" (published, edited, created)

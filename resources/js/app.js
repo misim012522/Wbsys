@@ -180,6 +180,8 @@ const initializeAppUi = () => {
     const updateBannerTemplate = document.getElementById('system-update-banner-template');
 
     if (updateStatusUrl && updateBannerTemplate) {
+        let updateBannerShown = Boolean(updateBanner);
+
         const showUpdateBanner = (payload) => {
             const banner = updateBanner || updateBannerTemplate.cloneNode(true);
 
@@ -209,9 +211,11 @@ const initializeAppUi = () => {
                 if (anchor && anchor.parentElement) {
                     anchor.parentElement.insertBefore(banner, anchor);
                     window.latestSystemVersion = payload?.latest_version || window.latestSystemVersion;
+                    updateBannerShown = true;
                 }
             } else {
                 updateBanner.classList.remove('hidden');
+                updateBannerShown = true;
             }
         };
 
@@ -219,6 +223,7 @@ const initializeAppUi = () => {
             const banner = document.getElementById('system-update-banner');
             if (banner && banner !== updateBannerTemplate) {
                 banner.remove();
+                updateBannerShown = false;
             }
         };
 
@@ -251,7 +256,15 @@ const initializeAppUi = () => {
         };
 
         pollUpdateStatus();
-        window.setInterval(pollUpdateStatus, 60000);
+        window.clearInterval(window.__systemUpdatePollInterval);
+        window.__systemUpdatePollInterval = window.setInterval(() => {
+            if (!updateBannerShown) {
+                pollUpdateStatus();
+                return;
+            }
+
+            pollUpdateStatus();
+        }, 60000);
     }
 };
 
