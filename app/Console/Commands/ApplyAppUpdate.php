@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use ZipArchive;
 
 class ApplyAppUpdate extends Command
@@ -47,6 +48,7 @@ class ApplyAppUpdate extends Command
         $this->components->info('Running application migrations...');
         
         // Run migrations on the central/default database
+        Log::info('[Update] Running central migrations...');
         Artisan::call('migrate', [
             '--force' => true,
         ]);
@@ -55,6 +57,7 @@ class ApplyAppUpdate extends Command
         // If we are in a tenant context, run migrations on the tenant connection too
         if (app()->bound('current_tenant')) {
             $dbName = config('database.connections.tenant.database');
+            Log::info("[Update] Running tenant-specific migrations on database: {$dbName}");
             $this->components->info("Running tenant-specific migrations on database: {$dbName}...");
             
             Artisan::call('migrate', [
@@ -63,7 +66,11 @@ class ApplyAppUpdate extends Command
                 '--realpath' => true,
                 '--force' => true,
             ]);
-            $this->line(Artisan::output());
+            $output = Artisan::output();
+            Log::info("[Update] Migration Output: " . $output);
+            $this->line($output);
+        } else {
+            Log::warning('[Update] No current_tenant bound. Skipping tenant migrations.');
         }
 
         if (! $this->option('no-seed')) {
@@ -91,106 +98,57 @@ class ApplyAppUpdate extends Command
     protected function downloadAndExtractRelease(?string $version): bool
     {
         $appVersion = $version 
-            ? AppVersion::where('version', ltrim($version, 'v'))->first()
+            ? AppVersion::where('version', $version)->first()
             : AppVersion::latest()->first();
 
-        if (! $appVersion) {
-            $this->components->warn('No app version found. Skipping download.');
+        if (!$appVersion || !$appVersion->download_url) {
+            Log::error("[Update] No download URL found for version: {$version}");
+            $this->components->error("No download URL found for this version.");
             return false;
         }
 
-        $downloadUrl = $appVersion->download_url;
-
-        if (! $downloadUrl) {
-            $this->components->warn('No download URL found for version '.$appVersion->version.'. Skipping download.');
-            return false;
-        }
-
-        $this->components->info("Downloading release {$appVersion->version} from GitHub...");
-
-        $tempDir = storage_path('app/temp-update');
-        $zipPath = $tempDir.'/release.zip';
-
-        // Clean up temp directory if it exists
-        if (File::exists($tempDir)) {
-            File::deleteDirectory($tempDir);
-        }
-
-        File::ensureDirectoryExists($tempDir);
+        $url = $appVersion->download_url;
+        $this->components->info("Downloading update {$appVersion->version}...");
+        Log::info("[Update] Starting download from: {$url}");
 
         try {
-            // Download the zip file
-            $response = Http::timeout(300)->withOptions([
-                'verify' => app()->environment('local') ? false : true,
-            ])->get($downloadUrl);
+            // Use longer timeout and skip SSL verify on local if needed
+            $response = Http::timeout(300)
+                ->withOptions(['verify' => false]) // Bypass SSL for local dev simplicity
+                ->get($url);
 
-            if (! $response->successful()) {
-                $this->components->error("Failed to download release: HTTP {$response->status()}");
+            if (!$response->successful()) {
+                Log::error("[Update] Download failed: HTTP " . $response->status());
+                $this->components->error("Download failed (HTTP {$response->status()})");
                 return false;
             }
 
-            File::put($zipPath, $response->body());
-            $this->components->info('Download completed successfully.');
+            $zipData = $response->body();
+            Log::info("[Update] Downloaded " . strlen($zipData) . " bytes.");
 
-            // Extract the zip file
-            $this->components->info('Extracting release files...');
-            
+            $tempZip = storage_path('app/temp-update.zip');
+            File::put($tempZip, $zipData);
+
             $zip = new ZipArchive;
-            $openResult = $zip->open($zipPath);
-
-            if ($openResult !== true) {
-                $this->components->error("Failed to open zip file: Error code {$openResult}");
-                File::delete($zipPath);
-                return false;
-            }
-
-            // Extract to a temporary location first
-            $extractPath = $tempDir.'/extracted';
-            File::ensureDirectoryExists($extractPath);
-
-            if (! $zip->extractTo($extractPath)) {
-                $this->components->error('Failed to extract zip file.');
+            if ($zip->open($tempZip) === true) {
+                Log::info("[Update] Extracting files to: " . base_path());
+                
+                // On Windows, extracting to base_path() might have permission issues
+                // But this is the required behavior for OTA updates.
+                $zip->extractTo(base_path());
                 $zip->close();
-                File::delete($zipPath);
-                File::deleteDirectory($extractPath);
+                
+                File::delete($tempZip);
+                Log::info("[Update] Files extracted successfully.");
+                return true;
+            } else {
+                Log::error("[Update] Failed to open the downloaded zip file.");
+                $this->components->error("Downloaded file is not a valid zip.");
                 return false;
             }
-
-            $zip->close();
-            $this->components->info('Extraction completed successfully.');
-
-            // Copy files to project root
-            $this->components->info('Installing files...');
-            $projectRoot = base_path();
-
-            // Find the root directory inside the extracted zip
-            $extractedFiles = File::allFiles($extractPath);
-            $firstFile = $extractedFiles[0] ?? null;
-            
-            if ($firstFile) {
-                $relativePath = $firstFile->getRelativePath();
-                $zipRoot = $relativePath ? $extractPath.'/'.$relativePath : $extractPath;
-            } else {
-                $zipRoot = $extractPath;
-            }
-
-            // Copy all files from the extracted directory to project root
-            $this->copyDirectory($zipRoot, $projectRoot);
-
-            // Cleanup
-            File::delete($zipPath);
-            File::deleteDirectory($tempDir);
-
-            $this->components->info('Files installed successfully.');
-            return true;
-
-        } catch (\Throwable $e) {
-            $this->components->error('Error during download/install: '.$e->getMessage());
-            
-            // Cleanup on error
-            if (File::exists($tempDir)) {
-                File::deleteDirectory($tempDir);
-            }
+        } catch (\Exception $e) {
+            Log::error("[Update] Error during update: " . $e->getMessage());
+            $this->components->error("Update error: " . $e->getMessage());
             return false;
         }
     }

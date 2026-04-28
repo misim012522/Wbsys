@@ -5,6 +5,7 @@ use App\Http\Controllers\TenantAppController;
 use App\Http\Controllers\DemoNoteController;
 use App\Http\Controllers\DemoFeedbackController;
 use App\Http\Controllers\DemoFaqController;
+use App\Http\Controllers\DemoSystemLogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -44,5 +45,8 @@ Route::middleware('tenant.required')->prefix('tenant')->name('tenant.')->group(f
         
         Route::get('/faqs', [DemoFaqController::class, 'index'])->name('faqs.index');
         Route::post('/faqs', [DemoFaqController::class, 'store'])->name('faqs.store');
+        
+        Route::get('/system-logs', [DemoSystemLogController::class, 'index'])->name('system-logs.index');
+        Route::post('/system-logs', [DemoSystemLogController::class, 'store'])->name('system-logs.store');
     });
 });

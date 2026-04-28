@@ -108,6 +108,15 @@
                 </a>
             @endif
 
+            @if(Route::has('tenant.system-logs.index'))
+                <a href="{{ route('tenant.system-logs.index') }}" class="block w-full rounded-lg px-4 py-3 text-sm font-medium transition {{ request()->routeIs('tenant.system-logs.*') ? 'border border-slate-900 bg-slate-900 text-white' : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100' }}">
+                    <span class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
+                        Demo: System Logs
+                    </span>
+                </a>
+            @endif
+
             <form method="POST" action="{{ route('logout') }}" class="w-full" id="office-logout-form">
                 @csrf
                 <button
