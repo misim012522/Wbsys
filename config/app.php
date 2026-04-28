@@ -107,6 +107,8 @@ return [
     */
 
     'asset_base_url' => env('ASSET_BASE_URL', null),
+    'local_asset_url' => env('ASSET_URL_LOCAL', 'http://localhost:8000'),
+    'ngrok_asset_url' => env('ASSET_URL_NGROK', null),
 
     /*
     |--------------------------------------------------------------------------

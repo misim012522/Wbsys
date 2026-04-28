@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -25,6 +26,7 @@ class QueueUpdated implements ShouldBroadcastNow
     {
         return [
             new PrivateChannel('tenant.'.$this->tenantId),
+            new Channel('tenant.public.'.$this->tenantId),
         ];
     }
 

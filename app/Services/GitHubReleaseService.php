@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AppVersion;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 
@@ -141,10 +142,12 @@ class GitHubReleaseService
         }
 
         if ($latestPublishedRelease) {
-            Cache::put('app_current_version', AppVersion::normalizeVersion($latestPublishedRelease->version) ?? $latestPublishedRelease->version, now()->addHour());
+            Cache::put('latest_system_version', AppVersion::normalizeVersion($latestPublishedRelease->version) ?? $latestPublishedRelease->version, now()->addHour());
         }
 
-        // Clear cache
+        // Clear caches
+        Cache::forget('latest_system_version');
+        Cache::forget('app_current_version');
         Cache::forget("github_release_{$this->owner}_{$this->repo}");
 
         return $synced;

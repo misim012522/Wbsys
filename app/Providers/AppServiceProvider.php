@@ -17,6 +17,32 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Detect if accessing via ngrok and set asset URLs accordingly
+        if ($this->app->bound('request')) {
+            $request = $this->app->make('request');
+            $host = $request->getHost();
+            $isNgrok = str_contains($host, 'ngrok-free.app') || str_contains($host, 'ngrok-free.dev');
+
+            if ($isNgrok) {
+                $ngrokUrl = config('app.ngrok_asset_url');
+                config(['app.asset_base_url' => $ngrokUrl]);
+                // Also set Laravel's standard asset_url so asset() helper works
+                config(['app.asset_url' => $ngrokUrl]);
+
+                // Force Vite to use the manifest instead of the 'hot' dev server on ngrok
+                if (class_exists(\Illuminate\Support\Facades\Vite::class)) {
+                    \Illuminate\Support\Facades\Vite::useHotFile(storage_path('framework/ignore_hot_on_ngrok'));
+                }
+            } else {
+                $localUrl = config('app.local_asset_url');
+                config(['app.asset_base_url' => $localUrl]);
+                // Only override if not already set via .env ASSET_URL
+                if (! config('app.asset_url')) {
+                    config(['app.asset_url' => $localUrl]);
+                }
+            }
+        }
+
         try {
             TenantSubscription::backfillMissingMonthlyEndDates();
             TenantSubscription::expirePastDue();

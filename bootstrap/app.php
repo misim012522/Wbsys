@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->validateCsrfTokens(except: [
             'logout',
+            'github/webhook',
+            'api/github/webhook',
         ]);
         $middleware->prependToGroup('web', [\App\Http\Middleware\ConfigureSessionCookie::class]);
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenant::class]);
