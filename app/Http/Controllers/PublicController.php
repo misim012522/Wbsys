@@ -27,25 +27,126 @@ class PublicController extends Controller
         return $this->hasAssignedStaffColumn = Schema::connection('tenant')->hasColumn('queue_entries', 'assigned_staff_user_id');
     }
 
-    /** Public page when user scans QR for an office (no login). */
-    public function office(string $slug)
+    /**
+     * Find an office by slug across all tenant databases when the current
+     * tenant connection is not activated (e.g. public QR scanned from ngrok).
+     */
+    private function resolveOfficeForPublicAccess(string $slug): ?Office
     {
-        // First, try to find office in current tenant connection
+        // 1. Try the current tenant connection first (normal subdomain access)
         $office = Office::query()
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();
 
+        if ($office) {
+            return $office;
+        }
 
+        // 2. If no tenant is bound, search across all active tenants
+        if (! app()->bound('current_tenant')) {
+            $manager = app(TenantDatabaseManager::class);
+
+            // Quick path: office slug often matches tenant slug for default offices
+            $tenant = \App\Models\Tenant::query()
+                ->where('slug', $slug)
+                ->where('is_active', true)
+                ->first();
+
+            if ($tenant) {
+                $manager->activate($tenant);
+                $office = Office::query()
+                    ->where('slug', $slug)
+                    ->where('is_active', true)
+                    ->first();
+
+                if ($office) {
+                    app()->instance('current_tenant', $tenant);
+                    app()->instance('current_tenant_id', $tenant->id);
+                    return $office;
+                }
+            }
+
+            // Full scan across remaining tenants
+            $tenants = \App\Models\Tenant::query()
+                ->where('is_active', true)
+                ->when($tenant, fn ($q) => $q->where('id', '!=', $tenant->id))
+                ->cursor();
+
+            foreach ($tenants as $t) {
+                try {
+                    $manager->activate($t);
+                    $office = Office::query()
+                        ->where('slug', $slug)
+                        ->where('is_active', true)
+                        ->first();
+
+                    if ($office) {
+                        app()->instance('current_tenant', $t);
+                        app()->instance('current_tenant_id', $t->id);
+                        return $office;
+                    }
+                } catch (\Throwable $e) {
+                    // Skip tenants with inaccessible databases
+                    continue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Find a queue entry by reference code across all tenant databases when the
+     * current tenant connection is not activated (e.g. tracking from ngrok).
+     */
+    private function resolveQueueEntryForPublicAccess(string $referenceCode): ?QueueEntry
+    {
+        // 1. Try the current tenant connection first (normal subdomain access)
+        $entry = QueueEntry::with('office')
+            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
+            ->where('reference_code', $referenceCode)
+            ->first();
+
+        if ($entry) {
+            return $entry;
+        }
+
+        // 2. If no tenant is bound, search across all active tenants
+        if (! app()->bound('current_tenant')) {
+            $manager = app(TenantDatabaseManager::class);
+
+            $tenants = \App\Models\Tenant::query()->where('is_active', true)->cursor();
+
+            foreach ($tenants as $t) {
+                try {
+                    $manager->activate($t);
+                    $entry = QueueEntry::with('office')
+                        ->where('tenant_id', $t->id)
+                        ->where('reference_code', $referenceCode)
+                        ->first();
+
+                    if ($entry) {
+                        app()->instance('current_tenant', $t);
+                        app()->instance('current_tenant_id', $t->id);
+                        return $entry;
+                    }
+                } catch (\Throwable $e) {
+                    // Skip tenants with inaccessible databases
+                    continue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** Public page when user scans QR for an office (no login). */
+    public function office(string $slug)
+    {
+        $office = $this->resolveOfficeForPublicAccess($slug);
 
         abort_unless($office, 404);
-
-        // If tenant is not bound, activate it from the office for public access
-        if (! app()->bound('current_tenant') && $office->tenant) {
-            app()->instance('current_tenant', $office->tenant);
-            app()->instance('current_tenant_id', $office->tenant->id);
-            app(TenantDatabaseManager::class)->activate($office->tenant);
-        }
 
         $office->load('schedules');
         $tenant = $office->tenant;
@@ -69,22 +170,9 @@ class PublicController extends Controller
     /** Public page when user scans an office-staff-specific QR (signed URL). */
     public function officeForStaff(string $slug, int $userId)
     {
-        // First, try to find office in current tenant connection
-        $office = Office::query()
-            ->where('slug', $slug)
-            ->where('is_active', true)
-            ->first();
-
-
+        $office = $this->resolveOfficeForPublicAccess($slug);
 
         abort_unless($office, 404);
-
-        // If tenant is not bound, activate it from the office for public access
-        if (! app()->bound('current_tenant') && $office->tenant) {
-            app()->instance('current_tenant', $office->tenant);
-            app()->instance('current_tenant_id', $office->tenant->id);
-            app(TenantDatabaseManager::class)->activate($office->tenant);
-        }
 
         $user = User::query()
             ->where('id', $userId)
@@ -115,22 +203,9 @@ class PublicController extends Controller
     /** Get a queue number (guest: name + optional contact). */
     public function getQueue(Request $request, string $slug)
     {
-        // First, try to find office in current tenant connection
-        $office = Office::query()
-            ->where('slug', $slug)
-            ->where('is_active', true)
-            ->first();
-
-
+        $office = $this->resolveOfficeForPublicAccess($slug);
 
         abort_unless($office, 404);
-
-        // If tenant is not bound, activate it from the office for public access
-        if (! app()->bound('current_tenant') && $office->tenant) {
-            app()->instance('current_tenant', $office->tenant);
-            app()->instance('current_tenant_id', $office->tenant->id);
-            app(TenantDatabaseManager::class)->activate($office->tenant);
-        }
 
         if (! $office->is_active) {
             return back()->with('error', 'This office is not accepting queue numbers.');
@@ -246,10 +321,7 @@ class PublicController extends Controller
     /** Public queue tracker by reference code (no login). */
     public function track(string $referenceCode)
     {
-        $queueEntry = QueueEntry::with('office')
-            ->when(app()->bound('current_tenant_id'), fn ($q) => $q->where('tenant_id', app('current_tenant_id')))
-            ->where('reference_code', $referenceCode)
-            ->first();
+        $queueEntry = $this->resolveQueueEntryForPublicAccess($referenceCode);
 
         abort_unless($queueEntry, 404);
 

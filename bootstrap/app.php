@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'logout',
             'github/webhook',
             'api/github/webhook',
+            // Public queue submission from scanned QR (cross-domain / no session)
+            'o/*/queue',
         ]);
         $middleware->prependToGroup('web', [\App\Http\Middleware\ConfigureSessionCookie::class]);
         $middleware->appendToGroup('web', [\App\Http\Middleware\ResolveTenant::class]);
