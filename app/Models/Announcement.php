@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\UsesOtaConnection;
 use Illuminate\Database\Eloquent\Model;
 
 class Announcement extends Model
 {
+    use UsesOtaConnection;
+
     protected $fillable = [
         'title',
         'content',

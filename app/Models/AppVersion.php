@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\UsesCentralConnection;
+use App\Models\Concerns\UsesOtaConnection;
 use Illuminate\Database\Eloquent\Model;
 
 class AppVersion extends Model
 {
-    use UsesCentralConnection;
+    use UsesOtaConnection;
 
     protected $fillable = ['version', 'release_notes', 'released_at', 'is_forced', 'download_url'];
 

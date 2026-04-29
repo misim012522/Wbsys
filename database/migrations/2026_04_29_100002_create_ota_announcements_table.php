@@ -13,11 +13,9 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    protected $connection = 'tenant';
-
     public function up(): void
     {
-        Schema::connection('tenant')->create('ota_announcements', function (Blueprint $table) {
+        Schema::create('ota_announcements', function (Blueprint $table) {
             $table->id();
             $table->string('content');
             $table->enum('priority', ['low', 'medium', 'high'])->default('medium');
@@ -28,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection('tenant')->dropIfExists('ota_announcements');
+        Schema::dropIfExists('ota_announcements');
     }
 };

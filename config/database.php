@@ -71,6 +71,20 @@ return [
             ]) : [],
         ],
 
+        'ota' => [
+            'driver' => env('OTA_DB_CONNECTION', env('DB_CONNECTION', 'mysql')),
+            'host' => env('OTA_DB_HOST', env('CENTRAL_DB_HOST', env('DB_HOST', '127.0.0.1'))),
+            'port' => env('OTA_DB_PORT', env('CENTRAL_DB_PORT', env('DB_PORT', '3306'))),
+            'database' => env('OTA_DB_DATABASE', env('CENTRAL_DB_DATABASE', env('DB_DATABASE', 'laravel'))),
+            'username' => env('OTA_DB_USERNAME', env('CENTRAL_DB_USERNAME', env('DB_USERNAME', 'root'))),
+            'password' => env('OTA_DB_PASSWORD', env('CENTRAL_DB_PASSWORD', env('DB_PASSWORD', ''))),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
