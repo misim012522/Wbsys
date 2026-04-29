@@ -14,6 +14,7 @@ use App\Http\Controllers\OtaTestController;
 use App\Http\Controllers\SupportChatController;
 use App\Http\Controllers\TenantAccountSettingsController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ModuleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,7 +33,7 @@ Route::get('/example-toasts', function () {
 Route::get('/api/ota/check', [OtaUpdateController::class, 'check'])->name('ota.check');
 Route::get('/api/tenant-update/status', [TenantUpdateController::class, 'status'])->name('tenant.update.status');
 Route::post('/api/tenant-update/apply', [TenantUpdateController::class, 'apply'])->middleware(['auth', 'tenant.context'])->name('tenant.update.apply');
-
+Route::resource('modules', ModuleController::class);
 // GitHub webhook for automatic release sync
 Route::post('/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook');
 Route::post('/api/github/webhook', [GitHubWebhookController::class, 'handle'])->name('github.webhook.api');
